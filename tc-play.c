@@ -521,6 +521,8 @@ process_hdr(const char *dev, unsigned char *pass, int passlen,
 	unsigned char *key;
 	int i, j, found, error;
 
+	*pinfo = NULL;
+
 	if ((key = alloc_safe_mem(MAX_KEYSZ)) == NULL) {
 		err(1, "could not allocate safe key memory");
 	}
@@ -700,13 +702,12 @@ main(int argc, char *argv[])
 	const char *dev = NULL, *sys_dev = NULL, *map_name = NULL;
 	const char *keyfiles[MAX_KEYFILES];
 	char *pass;
-	struct tchdr_enc *ehdr;
+	struct tchdr_enc *ehdr, *hehdr;
 	struct tcplay_info *info;
 	int nkeyfiles;
-	int ch, error;
+	int ch, error, r = 0;
 	int sflag = 0, iflag = 0, mflag = 0, hflag = 0;
 	size_t sz;
-	off_t hdr_offset;
 
 	OpenSSL_add_all_algorithms();
 
@@ -781,14 +782,34 @@ main(int argc, char *argv[])
 		err(1, "read hdr_enc: %s", dev);
 	}
 
+	if (!sflag) {
+		sz = HDRSZ;
+		hehdr = (struct tchdr_enc *)read_to_safe_mem(dev, HDR_OFFSET_HIDDEN, &sz);
+		if (hehdr == NULL) {
+			err(1, "read hdr_enc: %s", dev);
+		}
+	} else {
+		hehdr = NULL;
+	}
+
 #if 1
 	if ((error = process_hdr(dev, pass, (nkeyfiles > 0)?MAX_PASSSZ:strlen(pass),
 	    ehdr, &info)) != 0) {
-		free_safe_mem(ehdr);
-		err(1, "XXX: process_hdr failed\n");
+		if (hehdr) {
+			if ((error = process_hdr(dev, pass, (nkeyfiles > 0)?MAX_PASSSZ:strlen(pass),
+			hehdr, &info)) != 0) {
+				free_safe_mem(hehdr);
+				r = 1;
+				fprintf(stderr, "Incorrect password or not a TrueCrypt volume\n");
+				goto out;
+			}
+		} else {
+			r = 1;
+			fprintf(stderr, "Incorrect password or not a TrueCrypt volume\n");
+			goto out;
+		}
 	}
 #endif
-	free_safe_mem(ehdr);
 
 	if (iflag) {
 		print_info(info);
@@ -796,12 +817,16 @@ main(int argc, char *argv[])
 		if ((error = dm_setup(map_name, info)) != 0) {
 			err(1, "could not set up dm-crypt mapping");
 		}
-
 		printf("All ok!");
 	}
 
+out:
+	if (hehdr)
+		free_safe_mem(hehdr);
+	free_safe_mem(ehdr);
 	free_safe_mem(pass);
-	free_safe_mem(info);
+	if (info)
+		free_safe_mem(info);
 
-	return 0;
+	return r;
 }
