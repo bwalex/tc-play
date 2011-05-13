@@ -1,0 +1,29 @@
+*NOTE* This code is *EXPERIMENTAL*, use it at your own risk!
+
+This is a free (BSD-licensed) TrueCrypt implementation. It is based solely on
+the documentation available on the TrueCrypt website, many hours of
+trial and error and the output of the Linux' TrueCrypt client. As it turns out,
+every single technical document on TrueCrypt contains mistakes, hence the
+trial and error approach :)
+
+Some notable differences between actual implementation and documentation:
+ - PBKDF using RIPEMD160 only uses 2000 iterations if the volume isn't a system
+   volume.
+ - The keyfile pool is not XOR'ed with the passphrase but modulo-8 summed.
+ - Every field *except* the minimum version field of the volume header are in
+   big endian.
+ - Some volume header fields (creation time of volume and header) are missing
+   in the documentation.
+
+It is designed for DragonFly BSD, but would work, with minor changes, on any
+OS with device mapper and dm-crypt. This is also the reason for the dependency
+on libprop, since the DragonFly libdevmapper uses libprop.
+
+Additionally it depends on the current OpenSSL CVS version for the XTS
+support. The next major release of OpenSSL will probably include the needed
+support, too.
+
+Cascaded encryption algorithms are not supported (yet), and neither is
+creating new TrueCrypt volumes. Support for these things might or might not
+be added at a later stage.
+
