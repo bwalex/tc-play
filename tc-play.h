@@ -31,20 +31,25 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-#define MAX_BLKSZ	4096
-#define MAX_KEYSZ	128
-#define HDRSZ		512
-#define HDR_OFFSET_SYS	31744 /* 512 * (63 -1) */
-#define TC_SIG		"TRUE"
-#define MAX_PASSSZ	64
-#define KPOOL_SZ	64
-#define MAX_KFILE_SZ	1048576
-#define MAX_KEYFILES	256
+#define MAX_BLKSZ		4096
+#define MAX_KEYSZ		128
+#define HDRSZ			512
+#define HDR_OFFSET_SYS		31744	/* 512 * (63 -1) */
+#define TC_SIG			"TRUE"
+#define MAX_PASSSZ		64
+#define KPOOL_SZ		64
+#define MAX_KFILE_SZ		1048576	/* 1 MB */
+#define MAX_KEYFILES		256
+#define HDR_OFFSET_HIDDEN	65536
+
+/* TrueCrypt Volume flags */
+#define TC_VOLFLAG_SYSTEM	0x01	/* system encryption */
+#define TC_VOLFLAG_INPLACE	0x02	/* non-system in-place-encrypted volume */
+
 
 struct pbkdf_prf_algo {
 	char *name;
 	int iteration_count;
-	int sysenc_iteration_count;
 };
 
 struct tc_crypto_algo {

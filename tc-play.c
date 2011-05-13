@@ -93,10 +93,11 @@ Volume "/home/alex/tc-play/tctest.container" has been mounted.
 
 /* Supported algorithms */
 struct pbkdf_prf_algo pbkdf_prf_algos[] = {
-	{ "RIPEMD160",	2000,	1000 },
-	{ "SHA512",	1000,	1000 },
-	{ "whirlpool",	1000,	1000 },
-	{ NULL,		0,	0    }
+	{ "RIPEMD160",	2000 },
+	{ "RIPEMD160",	1000 },
+	{ "SHA512",	1000 },
+	{ "whirlpool",	1000 },
+	{ NULL,		0    }
 };
 
 struct tc_crypto_algo tc_crypto_algos[] = {
@@ -346,7 +347,7 @@ decrypt_hdr(struct tchdr_enc *ehdr, char *algo, unsigned char *key)
 	error = tc_decrypt(algo, key, iv, ehdr->enc, sizeof(struct tchdr_dec),
 	    (unsigned char *)dhdr);
 	if (error) {
-		fprintf(stderr, "Header decryption failed");
+		fprintf(stderr, "Header decryption failed\n");
 		free_safe_mem(dhdr);
 		return NULL;
 	}
@@ -385,6 +386,19 @@ verify_hdr(struct tchdr_dec *hdr)
 		fprintf(stderr, "CRC32 mismatch (crc_keys)\n");
 #endif
 		return 0;
+	}
+
+	switch(hdr->tc_ver) {
+	case 1:
+	case 2:
+		/* Unsupported header version */
+		fprintf(stderr, "Header version %d unsupported\n", hdr->tc_ver);
+		return 0;
+
+	case 3:
+	case 4:
+		hdr->sec_sz = 512;
+		break;
 	}
 
 	return 1;
@@ -497,6 +511,82 @@ new_info(const char *dev, struct tc_crypto_algo *cipher,
 	return info;
 }
 
+
+int
+process_hdr(const char *dev, unsigned char *pass, int passlen,
+    struct tchdr_enc *ehdr, struct tcplay_info **pinfo)
+{
+	struct tchdr_dec *dhdr;
+	struct tcplay_info *info;
+	unsigned char *key;
+	int i, j, found, error;
+
+	if ((key = alloc_safe_mem(MAX_KEYSZ)) == NULL) {
+		err(1, "could not allocate safe key memory");
+	}
+
+	/* Start search for correct algorithm combination */
+	found = 0;
+	for (i = 0; !found && pbkdf_prf_algos[i].name != NULL; i++) {
+#ifdef DEBUG
+		printf("\nTrying PRF algo %s (%d)\n", pbkdf_prf_algos[i].name,
+		    pbkdf_prf_algos[i].iteration_count);
+		printf("Salt: ");
+		print_hex(ehdr->salt, 0, sizeof(ehdr->salt));
+#endif
+		error = pbkdf2(pass, passlen,
+		    ehdr->salt, sizeof(ehdr->salt),
+		    pbkdf_prf_algos[i].iteration_count,
+		    pbkdf_prf_algos[i].name, MAX_KEYSZ, key);
+
+		if (error)
+			continue;
+
+#if 0
+		printf("Derived Key: ");
+		print_hex(key, 0, MAX_KEYSZ);
+#endif
+
+		for (j = 0; !found && tc_crypto_algos[j].name != NULL; j++) {
+#ifdef DEBUG
+			printf("\nTrying cipher %s\n", tc_crypto_algos[j].name);
+#endif
+
+			dhdr = decrypt_hdr(ehdr, tc_crypto_algos[j].name, key);
+			if (dhdr == NULL) {
+				continue;
+			}
+
+			if (verify_hdr(dhdr)) {
+#ifdef DEBUG
+				printf("tc_str: %.4s, tc_ver: %zd, tc_min_ver: %zd, "
+				    "crc_keys: %d, sz_vol: %"PRIu64", "
+				    "off_mk_scope: %"PRIu64", sz_mk_scope: %"PRIu64", "
+				    "flags: %d, sec_sz: %d crc_dhdr: %d\n",
+				    dhdr->tc_str, dhdr->tc_ver, dhdr->tc_min_ver,
+				    dhdr->crc_keys, dhdr->sz_vol, dhdr->off_mk_scope,
+				    dhdr->sz_mk_scope, dhdr->flags, dhdr->sec_sz,
+				    dhdr->crc_dhdr);
+#endif
+				found = 1;
+			}
+		}
+	}
+
+	free_safe_mem(key);
+
+	if (!found)
+		return EINVAL;
+
+	if ((info = new_info(dev, &tc_crypto_algos[j-1], &pbkdf_prf_algos[i-1],
+	    dhdr, 0)) == NULL) {
+		return ENOMEM;
+	}
+
+	*pinfo = info;
+	return 0;
+}
+
 int
 dm_setup(const char *mapname, struct tcplay_info *info)
 {
@@ -597,6 +687,8 @@ usage(void)
 	    "\t specifies the path to the volume to operate on (e.g. /dev/da0s1)\n"
 	    " -s <disk path>\n"
 	    "\t specifies that the disk (e.g. /dev/da0) is using system encryption\n"
+	    " -e\n"
+	    " protect a hidden volume when mounting the outer volume\n"
 	    );
 
 	exit(1);
@@ -608,24 +700,25 @@ main(int argc, char *argv[])
 	const char *dev = NULL, *sys_dev = NULL, *map_name = NULL;
 	const char *keyfiles[MAX_KEYFILES];
 	char *pass;
-	unsigned char *key;
 	struct tchdr_enc *ehdr;
-	struct tchdr_dec *dhdr;
 	struct tcplay_info *info;
-	int i, j, found;
 	int nkeyfiles;
 	int ch, error;
-	int sflag = 0, iflag = 0, mflag = 0;
+	int sflag = 0, iflag = 0, mflag = 0, hflag = 0;
 	size_t sz;
+	off_t hdr_offset;
 
 	OpenSSL_add_all_algorithms();
 
 	nkeyfiles = 0;
 
-	while ((ch = getopt(argc, argv, "d:ik:m:s:v")) != -1) {
+	while ((ch = getopt(argc, argv, "d:eik:m:s:v")) != -1) {
 		switch(ch) {
 		case 'd':
 			dev = optarg;
+			break;
+		case 'e':
+			hflag = 1;
 			break;
 		case 'i':
 			iflag = 1;
@@ -665,19 +758,8 @@ main(int argc, char *argv[])
 		/* NOT REACHED */
 	}
 
-	sz = HDRSZ;
-	ehdr = (struct tchdr_enc *)read_to_safe_mem((sflag) ? sys_dev : dev,
-	    (sflag) ? HDR_OFFSET_SYS : 0, &sz);
-	if (ehdr == NULL) {
-		err(1, "read hdr_enc: %s", dev);
-	}
-
 	if ((pass = alloc_safe_mem(MAX_PASSSZ)) == NULL) {
 		err(1, "could not allocate safe passphrase memory");
-	}
-
-	if ((key = alloc_safe_mem(MAX_KEYSZ)) == NULL) {
-		err(1, "could not allocate safe key memory");
 	}
 
 	if ((error = read_passphrase(pass, MAX_PASSSZ))) {
@@ -692,69 +774,21 @@ main(int argc, char *argv[])
 		}
 	}
 
-	/* Start search for correct algorithm combination */
-	found = 0;
-	for (i = 0; !found && pbkdf_prf_algos[i].name != NULL; i++) {
-#ifdef DEBUG
-		printf("\nTrying PRF algo %s (%d)\n", pbkdf_prf_algos[i].name,
-		    ((sflag) ? pbkdf_prf_algos[i].sysenc_iteration_count :
-			pbkdf_prf_algos[i].iteration_count));
-		printf("Salt: ");
-		print_hex(ehdr->salt, 0, sizeof(ehdr->salt));
-#endif
-		error = pbkdf2(pass, (nkeyfiles > 0)?MAX_PASSSZ:strlen(pass),
-		    ehdr->salt, sizeof(ehdr->salt),
-		    ((sflag) ? pbkdf_prf_algos[i].sysenc_iteration_count :
-			pbkdf_prf_algos[i].iteration_count),
-		    pbkdf_prf_algos[i].name, MAX_KEYSZ, key);
-
-		if (error)
-			continue;
-
-#if 0
-		printf("Derived Key: ");
-		print_hex(key, 0, MAX_KEYSZ);
-#endif
-
-		for (j = 0; !found && tc_crypto_algos[j].name != NULL; j++) {
-#ifdef DEBUG
-			printf("\nTrying cipher %s\n", tc_crypto_algos[j].name);
-#endif
-
-			dhdr = decrypt_hdr(ehdr, tc_crypto_algos[j].name, key);
-			if (dhdr == NULL) {
-				continue;
-			}
-
-			if (verify_hdr(dhdr)) {
-#ifdef DEBUG
-				printf("All happy!\n");
-				printf("tc_str: %.4s, tc_ver: %zd, tc_min_ver: %zd, "
-				    "crc_keys: %d, sz_vol: %"PRIu64", "
-				    "off_mk_scope: %"PRIu64", sz_mk_scope: %"PRIu64", "
-				    "flags: %d, sec_sz: %d crc_dhdr: %d\n",
-				    dhdr->tc_str, dhdr->tc_ver, dhdr->tc_min_ver,
-				    dhdr->crc_keys, dhdr->sz_vol, dhdr->off_mk_scope,
-				    dhdr->sz_mk_scope, dhdr->flags, dhdr->sec_sz,
-				    dhdr->crc_dhdr);
-#endif
-				found = 1;
-			}
-		}
+	sz = HDRSZ;
+	ehdr = (struct tchdr_enc *)read_to_safe_mem((sflag) ? sys_dev : dev,
+	    (sflag) ? HDR_OFFSET_SYS : 0, &sz);
+	if (ehdr == NULL) {
+		err(1, "read hdr_enc: %s", dev);
 	}
 
-	free_safe_mem(key);
-
-	if (!found) {
-		fprintf(stderr, "Incorrect password or not a TrueCrypt volume\n");
-		free_safe_mem(pass);
-		return 1;
+#if 1
+	if ((error = process_hdr(dev, pass, (nkeyfiles > 0)?MAX_PASSSZ:strlen(pass),
+	    ehdr, &info)) != 0) {
+		free_safe_mem(ehdr);
+		err(1, "XXX: process_hdr failed\n");
 	}
-
-	if ((info = new_info(dev, &tc_crypto_algos[j-1], &pbkdf_prf_algos[i-1],
-	    dhdr, 0)) == NULL) {
-		err(1, "could not allocate safe info memory");
-	}
+#endif
+	free_safe_mem(ehdr);
 
 	if (iflag) {
 		print_info(info);
