@@ -50,6 +50,10 @@
 #include "crc32.h"
 #include "tc-play.h"
 
+#define free_safe_mem(x) \
+	_free_safe_mem(x, __FILE__, __LINE__)
+
+
 /* XXX TODO:
  *  - LRW-benbi support? needs further work in dm-crypt and even opencrypto
  *  - secure buffer review (i.e: is everything that needs it using secure mem?)
@@ -167,7 +171,7 @@ alloc_safe_mem(size_t req_sz)
 }
 
 void
-free_safe_mem(void *mem)
+_free_safe_mem(void *mem, const char *file, int line)
 {
 	struct safe_mem_hdr *hdr;
 	struct safe_mem_tail *tail;
@@ -179,7 +183,9 @@ free_safe_mem(void *mem)
 	/* Integrity checks */
 	if ((memcmp(hdr->sig, "SAFEMEM\0", 8) != 0) ||
 	    (memcmp(tail->sig, "SAFEMEM\0", 8) != 0)) {
-		fprintf(stderr, "BUG: safe_mem buffer under- or overflow!!!\n");
+		fprintf(stderr, "BUG: safe_mem buffer under- or overflow at "
+		    "%s:%d !!!\n", file, line);
+		
 		exit(1);
 	}
 
@@ -293,7 +299,7 @@ pbkdf2(const char *pass, int passlen, const unsigned char *salt, int saltlen,
 }
 
 int
-read_passphrase(char *pass, size_t passlen)
+read_passphrase(char *prompt, char *pass, size_t passlen)
 {
 	struct termios termios_old, termios_new;
 	ssize_t n;
@@ -304,7 +310,7 @@ read_passphrase(char *pass, size_t passlen)
 		cfd = 1;
 	}
 
-	printf("Passphrase: ");
+	printf(prompt);
 	fflush(stdout);
 
 	memset(pass, 0, passlen);
@@ -481,6 +487,8 @@ print_info(struct tcplay_info *info)
 	printf("Cipher:\t\t\t%s\n", info->cipher->name);
 	printf("Key Length:\t\t%d bits\n", info->cipher->klen*8);
 	printf("CRC Key Data:\t\t%#x\n", info->hdr->crc_keys);
+	printf("Sector size:\t\t%d\n", info->hdr->sec_sz);
+	printf("Volume size:\t\t%d sectors\n", info->size);
 }
 
 struct tcplay_info *
@@ -511,6 +519,15 @@ new_info(const char *dev, struct tc_crypto_algo *cipher,
 	return info;
 }
 
+int
+adjust_info(struct tcplay_info *info, struct tcplay_info *hinfo)
+{
+	if (hinfo->hdr->sz_hidvol == 0)
+		return 1;
+
+	info->size -= hinfo->hdr->sz_hidvol / hinfo->hdr->sec_sz;
+	return 0;
+}
 
 int
 process_hdr(const char *dev, unsigned char *pass, int passlen,
@@ -689,8 +706,14 @@ usage(void)
 	    "\t specifies the path to the volume to operate on (e.g. /dev/da0s1)\n"
 	    " -s <disk path>\n"
 	    "\t specifies that the disk (e.g. /dev/da0) is using system encryption\n"
+	    " -k <key file>\n"
+	    "\t specifies a key file to use for the password derivation, can appear\n"
+	    "\t multiple times.\n"
 	    " -e\n"
-	    " protect a hidden volume when mounting the outer volume\n"
+	    "\t protect a hidden volume when mounting the outer volume\n"
+	    " -f <key file>\n"
+	    "\t specifies a key file to use for the hidden volume password derivation.\n"
+	    "\t This option is only valid in combination with -e\n"
 	    );
 
 	exit(1);
@@ -701,25 +724,32 @@ main(int argc, char *argv[])
 {
 	const char *dev = NULL, *sys_dev = NULL, *map_name = NULL;
 	const char *keyfiles[MAX_KEYFILES];
+	const char *h_keyfiles[MAX_KEYFILES];
 	char *pass;
-	struct tchdr_enc *ehdr, *hehdr;
-	struct tcplay_info *info;
+	char *h_pass = NULL;
+	struct tchdr_enc *ehdr, *hehdr = NULL;
+	struct tcplay_info *info, *hinfo = NULL;
 	int nkeyfiles;
-	int ch, error, r = 0;
+	int n_hkeyfiles;
+	int ch, error, error2, r = 0;
 	int sflag = 0, iflag = 0, mflag = 0, hflag = 0;
 	size_t sz;
 
 	OpenSSL_add_all_algorithms();
 
 	nkeyfiles = 0;
+	n_hkeyfiles = 0;
 
-	while ((ch = getopt(argc, argv, "d:eik:m:s:v")) != -1) {
+	while ((ch = getopt(argc, argv, "d:ef:ik:m:s:v")) != -1) {
 		switch(ch) {
 		case 'd':
 			dev = optarg;
 			break;
 		case 'e':
 			hflag = 1;
+			break;
+		case 'f':
+			h_keyfiles[n_hkeyfiles++] = optarg;
 			break;
 		case 'i':
 			iflag = 1;
@@ -754,7 +784,8 @@ main(int argc, char *argv[])
 	if (!((mflag || iflag) && dev != NULL) ||
 	    (mflag && iflag) ||
 	    (sflag && (sys_dev == NULL)) ||
-	    (mflag && (map_name == NULL))) {
+	    (mflag && (map_name == NULL)) ||
+	    (!hflag && n_hkeyfiles > 0)) {
 		usage();
 		/* NOT REACHED */
 	}
@@ -763,7 +794,7 @@ main(int argc, char *argv[])
 		err(1, "could not allocate safe passphrase memory");
 	}
 
-	if ((error = read_passphrase(pass, MAX_PASSSZ))) {
+	if ((error = read_passphrase("Passphrase: ", pass, MAX_PASSSZ))) {
 		err(1, "could not read passphrase");
 	}
 
@@ -772,6 +803,25 @@ main(int argc, char *argv[])
 		if ((error = apply_keyfiles(pass, MAX_PASSSZ, keyfiles,
 		    nkeyfiles))) {
 			err(1, "could not apply keyfiles");
+		}
+	}
+
+	if (hflag) {
+		if ((h_pass = alloc_safe_mem(MAX_PASSSZ)) == NULL) {
+			err(1, "could not allocate safe passphrase memory");
+		}
+
+		if ((error = read_passphrase("Passphrase for hidden volume: ",
+		    h_pass, MAX_PASSSZ))) {
+			err(1, "could not read passphrase");
+		}
+
+		if (n_hkeyfiles > 0) {
+			/* Apply keyfiles to 'h_pass' */
+			if ((error = apply_keyfiles(h_pass, MAX_PASSSZ, h_keyfiles,
+			n_hkeyfiles))) {
+				err(1, "could not apply keyfiles");
+			}
 		}
 	}
 
@@ -792,7 +842,7 @@ main(int argc, char *argv[])
 		hehdr = NULL;
 	}
 
-#if 1
+#if 0
 	if ((error = process_hdr(dev, pass, (nkeyfiles > 0)?MAX_PASSSZ:strlen(pass),
 	    ehdr, &info)) != 0) {
 		if (hehdr) {
@@ -810,6 +860,34 @@ main(int argc, char *argv[])
 		}
 	}
 #endif
+	
+	error = process_hdr(dev, pass, (nkeyfiles > 0)?MAX_PASSSZ:strlen(pass),
+	    ehdr, &info);
+
+	if (hehdr && (error || hflag)) {
+		if (error) {
+			error2 = process_hdr(dev, pass,
+			    (nkeyfiles > 0)?MAX_PASSSZ:strlen(pass), hehdr,
+			    &info);
+		} else if (hflag) {
+			error2 = process_hdr(dev, h_pass,
+			    (n_hkeyfiles > 0)?MAX_PASSSZ:strlen(h_pass), hehdr,
+			    &hinfo);
+		}
+	}
+
+	if ((hflag && (error || error2)) || /* We need both to protect a h. vol */
+	    (error && error2)) {
+		fprintf(stderr, "Incorrect password or not a TrueCrypt volume\n");
+		goto out;
+	}
+
+	if (hflag) {
+		if (adjust_info(info, hinfo) != 0) {
+			fprintf(stderr, "Could not protected hidden volume\n");
+			goto out;
+		}
+	}
 
 	if (iflag) {
 		print_info(info);
@@ -821,12 +899,16 @@ main(int argc, char *argv[])
 	}
 
 out:
+	free_safe_mem(ehdr);
 	if (hehdr)
 		free_safe_mem(hehdr);
-	free_safe_mem(ehdr);
 	free_safe_mem(pass);
+	if (h_pass)
+		free_safe_mem(h_pass);
 	if (info)
 		free_safe_mem(info);
+	if (hinfo)
+		free_safe_mem(hinfo);
 
 	return r;
 }
