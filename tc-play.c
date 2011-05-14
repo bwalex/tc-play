@@ -88,10 +88,10 @@ Volume "/home/alex/tc-play/tctest.container" has been mounted.
 
 /* Version of tc-play */
 #define MAJ_VER		0
-#define MIN_VER		2
+#define MIN_VER		3
 
 /* Comment out to disable debug info */
-#define DEBUG		1
+/* #define DEBUG		1 */
 
 /* Endianess macros */
 #define BE_TO_HOST(n, v) v = be ## n ## toh(v)
@@ -646,6 +646,8 @@ process_hdr(const char *dev, unsigned char *pass, int passlen,
 				    dhdr->crc_dhdr);
 #endif
 				found = 1;
+			} else {
+				free_safe_mem(dhdr);
 			}
 		}
 	}
@@ -952,7 +954,8 @@ main(int argc, char *argv[])
 		print_info(info);
 	} else if (mflag) {
 		if ((error = dm_setup(map_name, info)) != 0) {
-			err(1, "could not set up dm-crypt mapping");
+			fprintf(stderr, "could not set up dm-crypt mapping");
+			goto out;
 		}
 		printf("All ok!");
 	}
@@ -964,10 +967,14 @@ out:
 	free_safe_mem(pass);
 	if (h_pass)
 		free_safe_mem(h_pass);
-	if (info)
+	if (info) {
+		free_safe_mem(info->hdr);
 		free_safe_mem(info);
-	if (hinfo)
+	}
+	if (hinfo) {
+		free_safe_mem(hinfo->hdr);
 		free_safe_mem(hinfo);
+	}
 
 	return r;
 }
