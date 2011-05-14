@@ -35,6 +35,7 @@
 #include <sys/mman.h>
 #include <sys/uio.h>
 #include <sys/endian.h>
+#include <getopt.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -61,6 +62,7 @@
  *  - LRW-benbi support? needs further work in dm-crypt and even opencrypto
  *  - secure buffer review (i.e: is everything that needs it using secure mem?)
  *  - mlockall? (at least MCL_FUTURE, which is the only one we support)
+ *  - replace err(...) with r = 1; fprintf(); goto out;
  */
 
 #if 0
@@ -779,6 +781,17 @@ usage(void)
 	exit(1);
 }
 
+static struct option longopts[] = {
+	{ "info",		no_argument,		NULL, 'i' },
+	{ "map",		required_argument,	NULL, 'm' },
+	{ "keyfile",		required_argument,	NULL, 'k' },
+	{ "keyfile-hidden",	required_argument,	NULL, 'f' },
+	{ "protect-hidden",	no_argument,		NULL, 'e' },
+	{ "device",		required_argument,	NULL, 'd' },
+	{ "system-encryption",	required_argument,	NULL, 's' },
+	{ NULL,			0,			NULL, 0   },
+};
+
 int
 main(int argc, char *argv[])
 {
@@ -801,7 +814,7 @@ main(int argc, char *argv[])
 	nkeyfiles = 0;
 	n_hkeyfiles = 0;
 
-	while ((ch = getopt(argc, argv, "d:ef:ik:m:s:v")) != -1) {
+	while ((ch = getopt_long(argc, argv, "d:ef:ik:m:s:v", longopts, NULL)) != -1) {
 		switch(ch) {
 		case 'd':
 			dev = optarg;
