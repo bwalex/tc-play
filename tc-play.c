@@ -50,6 +50,9 @@
 #include "crc32.h"
 #include "tc-play.h"
 
+#define alloc_safe_mem(x) \
+	_alloc_safe_mem(x, __FILE__, __LINE__)
+
 #define free_safe_mem(x) \
 	_free_safe_mem(x, __FILE__, __LINE__)
 
@@ -140,10 +143,12 @@ print_hex(unsigned char *buf, off_t start, size_t len)
 }
 #endif
 
+static struct safe_mem_hdr *safe_mem_hdr_first = NULL;
+
 void *
-alloc_safe_mem(size_t req_sz)
+_alloc_safe_mem(size_t req_sz, const char *file, int line)
 {
-	struct safe_mem_hdr *hdr;
+	struct safe_mem_hdr *hdr, *hdrp;
 	struct safe_mem_tail *tail;
 	size_t alloc_sz;
 	void *mem, *user_mem;
@@ -165,7 +170,20 @@ alloc_safe_mem(size_t req_sz)
 
 	strcpy(hdr->sig, "SAFEMEM");
 	strcpy(tail->sig, "SAFEMEM");
+	hdr->tail = tail;
 	hdr->alloc_sz = alloc_sz;
+	hdr->file = file;
+	hdr->line = line;
+
+	if (safe_mem_hdr_first == NULL) {
+		safe_mem_hdr_first = hdr;
+	} else {
+		hdrp = safe_mem_hdr_first;
+		while (hdrp->next != NULL)
+			hdrp = hdrp->next;
+		hdr->prev = hdrp;
+		hdrp->next = hdr;
+	}
 
 	return user_mem;
 }
@@ -180,18 +198,58 @@ _free_safe_mem(void *mem, const char *file, int line)
 	hdr = (struct safe_mem_hdr *)mem;
 	tail = (struct safe_mem_tail *)(mem + hdr->alloc_sz - sizeof(*tail));
 
+	if (hdr->alloc_sz == 0) {
+		fprintf(stderr, "BUG: double-free at %s:%d !!!\n", file, line);
+		exit(1);
+	}
+
 	/* Integrity checks */
 	if ((memcmp(hdr->sig, "SAFEMEM\0", 8) != 0) ||
 	    (memcmp(tail->sig, "SAFEMEM\0", 8) != 0)) {
 		fprintf(stderr, "BUG: safe_mem buffer under- or overflow at "
 		    "%s:%d !!!\n", file, line);
-		
 		exit(1);
 	}
+
+	if (safe_mem_hdr_first == NULL) {
+		fprintf(stderr, "BUG: safe_mem list should not be empty at "
+		    "%s:%d !!!\n", file, line);
+		exit(1);
+	}
+
+	if (hdr->prev != NULL)
+		hdr->prev->next = hdr->next;
+	if (hdr->next != NULL)
+		hdr->next->prev = hdr->prev;
+	if (safe_mem_hdr_first == hdr)
+		safe_mem_hdr_first = hdr->next;
 
 	memset(mem, 0, hdr->alloc_sz);
 
 	free(mem);
+}
+
+void
+check_safe_mem(void)
+{
+	struct safe_mem_hdr *hdr;
+	int ok;
+
+	if (safe_mem_hdr_first == NULL)
+		return;
+
+	for (hdr = safe_mem_hdr_first; hdr != NULL; hdr = hdr->next) {
+		if ((hdr->alloc_sz > 0) &&
+		    (memcmp(hdr->sig, "SAFEMEM\0", 8) == 0) &&
+		    (memcmp(hdr->tail->sig, "SAFEMEM\0", 8) == 0))
+			ok = 1;
+		else
+			ok = 0;
+
+		fprintf(stderr, "un-freed safe_mem: %#lx (%s:%d) [integrity=%s]\n",
+		    (unsigned long)(void *)hdr, hdr->file, hdr->line,
+		    ok? "ok" : "failed");
+	}
 }
 
 void *
@@ -736,6 +794,7 @@ main(int argc, char *argv[])
 	size_t sz;
 
 	OpenSSL_add_all_algorithms();
+	atexit(check_safe_mem);
 
 	nkeyfiles = 0;
 	n_hkeyfiles = 0;

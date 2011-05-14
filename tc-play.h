@@ -105,9 +105,13 @@ struct tcplay_info {
 };
 
 struct safe_mem_hdr {
-	struct safe_mem_tail *tail;
-	size_t	alloc_sz;
-	char	sig[8]; /* SAFEMEM */
+	struct safe_mem_hdr	*prev;
+	struct safe_mem_hdr	*next;
+	struct safe_mem_tail	*tail;
+	const char	*file;
+	int 		line;
+	size_t		alloc_sz;
+	char		sig[8]; /* SAFEMEM */
 };
 
 struct safe_mem_tail {
