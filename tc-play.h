@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  */
 #define MAX_BLKSZ		4096
-#define MAX_KEYSZ		128
+#define MAX_KEYSZ		192
 #define HDRSZ			512
 #define HDR_OFFSET_SYS		31744	/* 512 * (63 -1) */
 #define TC_SIG			"TRUE"
@@ -41,6 +41,8 @@
 #define MAX_KFILE_SZ		1048576	/* 1 MB */
 #define MAX_KEYFILES		256
 #define HDR_OFFSET_HIDDEN	65536
+#define SALT_LEN		64
+#define MIN_VOL_BLOCKS		256
 
 /* TrueCrypt Volume flags */
 #define TC_VOLFLAG_SYSTEM	0x01	/* system encryption */
@@ -60,7 +62,7 @@ struct tc_crypto_algo {
 };
 
 struct tchdr_enc {
-	unsigned char salt[64];		/* Salt for PBKDF */
+	unsigned char salt[SALT_LEN];	/* Salt for PBKDF */
 	unsigned char enc[448];		/* Encrypted part of the header */
 } __attribute__((__packed__));
 

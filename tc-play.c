@@ -45,7 +45,10 @@
 #include <err.h>
 #include <uuid.h>
 #include <termios.h>
+#include <errno.h>
+#include <time.h>
 #include <libdevmapper.h>
+#include <libutil.h>
 #include <openssl/evp.h>
 
 #include "crc32.h"
@@ -98,11 +101,13 @@ Volume "/home/alex/tc-play/tctest.container" has been mounted.
 /* Endianess macros */
 #define BE_TO_HOST(n, v) v = be ## n ## toh(v)
 #define LE_TO_HOST(n, v) v = le ## n ## toh(v)
+#define HOST_TO_BE(n, v) v = htobe ## n (v)
+#define HOST_TO_LE(n, v) v = htobe ## n (v)
 
 
 /* Supported algorithms */
 struct pbkdf_prf_algo pbkdf_prf_algos[] = {
-	{ "RIPEMD160",	2000 },
+	{ "RIPEMD160",	2000 }, /* needs to come before the other RIPEMD160 */
 	{ "RIPEMD160",	1000 },
 	{ "SHA512",	1000 },
 	{ "whirlpool",	1000 },
@@ -226,21 +231,23 @@ _free_safe_mem(void *mem, const char *file, int line)
 	if (safe_mem_hdr_first == hdr)
 		safe_mem_hdr_first = hdr->next;
 
+	memset(mem, 0xFF, hdr->alloc_sz);
 	memset(mem, 0, hdr->alloc_sz);
 
 	free(mem);
 }
 
 void
-check_safe_mem(void)
+check_and_purge_safe_mem(void)
 {
-	struct safe_mem_hdr *hdr;
+	struct safe_mem_hdr *hdr, *hdrp;
 	int ok;
 
 	if (safe_mem_hdr_first == NULL)
 		return;
 
-	for (hdr = safe_mem_hdr_first; hdr != NULL; hdr = hdr->next) {
+	hdr = safe_mem_hdr_first;
+	while (hdr != NULL) {
 		if ((hdr->alloc_sz > 0) &&
 		    (memcmp(hdr->sig, "SAFEMEM\0", 8) == 0) &&
 		    (memcmp(hdr->tail->sig, "SAFEMEM\0", 8) == 0))
@@ -248,9 +255,14 @@ check_safe_mem(void)
 		else
 			ok = 0;
 
+#ifdef DEBUG
 		fprintf(stderr, "un-freed safe_mem: %#lx (%s:%d) [integrity=%s]\n",
 		    (unsigned long)(void *)hdr, hdr->file, hdr->line,
 		    ok? "ok" : "failed");
+#endif
+		hdrp = hdr;
+		hdr = hdr->next;
+		free_safe_mem(hdrp);
 	}
 }
 
@@ -258,6 +270,7 @@ void *
 read_to_safe_mem(const char *file, off_t offset, size_t *sz)
 {
 	void *mem = NULL;
+	ssize_t r;
 	int fd;
 
 	if ((fd = open(file, O_RDONLY)) < 0) {
@@ -275,12 +288,13 @@ read_to_safe_mem(const char *file, off_t offset, size_t *sz)
 		goto m_err;
 	}
 
-	if ((*sz = read(fd, mem, *sz)) <= 0) {
+	if ((r = read(fd, mem, *sz)) <= 0) {
 		fprintf(stderr, "Error reading from file %s\n", file);
 		goto m_err;
 	}
 
 out:
+	*sz = r;
 	close(fd);
 	return mem;
 	/* NOT REACHED */
@@ -289,6 +303,112 @@ m_err:
 	free_safe_mem(mem);
 	close(fd);
 	return NULL;
+}
+
+int
+get_random(unsigned char *buf, size_t len)
+{
+	int fd;
+	ssize_t r;
+	size_t rd = 0;
+	struct timespec ts = { .tv_sec = 0, .tv_nsec = 10000000 }; /* 10 ms */
+
+
+	if ((fd = open("/dev/random", O_RDONLY)) < 0) {
+		fprintf(stderr, "Error opening /dev/random\n");
+		return -1;
+	}
+
+	while (rd < len) {
+		if ((r = read(fd, buf+rd, len-rd)) < 0) {
+			fprintf(stderr, "Error reading from /dev/random\n");
+			close(fd);
+			return -1;
+		}
+		rd += r;
+		nanosleep(&ts, NULL);
+	}
+
+	close(fd);
+	return 0;
+}
+
+int
+secure_erase(char *dev, size_t bytes, size_t blksz)
+{
+	size_t erased = 0;
+	size_t left;
+	int error;
+	int fd_rand, fd;
+	char buf[MAX_BLKSZ];
+	ssize_t r, w;
+
+	if (blksz > MAX_BLKSZ) {
+		fprintf(stderr, "blksz > MAX_BLKSZ\n");
+		return -1;
+	}
+
+	if ((fd_rand = open("/dev/urandom", O_RDONLY)) < 0) {
+		fprintf(stderr, "Error opening /dev/urandom\n");
+		return -1;
+	}
+
+	if ((fd = open(dev, O_WRONLY)) < 0) {
+		close(fd_rand);
+		fprintf(stderr, "Error opening %s\n", dev);
+		return -1;
+	}
+
+	while (erased < bytes) {
+		if ((r = read(fd_rand, buf, blksz)) < 0) {
+			fprintf(stderr, "Error reading from /dev/urandom\n");
+			close(fd);
+			close(fd_rand);
+			return -1;
+		}
+
+		if (r < blksz)
+			continue;
+
+		if ((w = write(fd, buf, blksz)) < 0) {
+			fprintf(stderr, "Error writing to %s\n", dev);
+			close(fd);
+			close(fd_rand);
+			return -1;
+		}
+
+		erased += (size_t)w;
+	}
+
+	close(fd);
+	close(fd_rand);
+
+	return 0;
+}
+
+int
+get_disk_info(char *dev, size_t *blocks, size_t *bsize)
+{
+	struct partinfo pinfo;
+	int fd;
+
+	if ((fd = open(dev, O_RDONLY)) < 0) {
+		fprintf(stderr, "Error opening %s\n", dev);
+		return -1;
+	}
+
+	memset(&pinfo, 0, sizeof(struct partinfo));
+
+	if (ioctl(fd, DIOCGPART, &pinfo) < 0) {
+		close(fd);
+		return -1;
+	}
+
+	*blocks = pinfo.media_blocks;
+	*bsize = pinfo.media_blksize;
+
+	close(fd);
+	return 0;
 }
 
 int
@@ -668,6 +788,241 @@ process_hdr(const char *dev, unsigned char *pass, int passlen,
 	return 0;
 }
 
+struct tchdr_enc *
+create_hdr(unsigned char *pass, int passlen, struct pbkdf_prf_algo *prf_algo,
+    struct tc_crypto_algo *cipher, size_t sec_sz, size_t total_blocks,
+    off_t offset, size_t blocks, int hidden)
+{
+	struct tchdr_enc *ehdr;
+	struct tchdr_dec *dhdr;
+	unsigned char *key;
+	unsigned char salt[SALT_LEN];
+	unsigned char iv[128];
+	int error;
+
+	if ((dhdr = (struct tchdr_dec *)alloc_safe_mem(sizeof(*dhdr))) == NULL) {
+		fprintf(stderr, "could not allocate safe dhdr memory\n");
+		return NULL;
+	}
+
+	if ((ehdr = (struct tchdr_enc *)alloc_safe_mem(sizeof(*ehdr))) == NULL) {
+		fprintf(stderr, "could not allocate safe ehdr memory\n");
+		return NULL;
+	}
+
+	if ((key = alloc_safe_mem(MAX_KEYSZ)) == NULL) {
+		fprintf(stderr, "could not allocate safe key memory\n");
+		return NULL;
+	}
+
+	if ((error = get_random(ehdr->salt, sizeof(ehdr->salt))) != 0) {
+		fprintf(stderr, "could not get salt\n");
+		return NULL;
+	}
+
+	error = pbkdf2(pass, passlen,
+	    ehdr->salt, sizeof(ehdr->salt),
+	    prf_algo->iteration_count,
+	    prf_algo->name, MAX_KEYSZ, key);
+	if (error) {
+		fprintf(stderr, "could not derive key\n");
+		return NULL;
+	}
+
+	memset(dhdr, 0, sizeof(*dhdr));
+
+	if ((error = get_random(dhdr->keys, sizeof(dhdr->keys))) != 0) {
+		fprintf(stderr, "could not get key random bits\n");
+		return NULL;
+	}
+
+	memcpy(dhdr->tc_str, "TRUE", 4);
+	dhdr->tc_ver = 5;
+	dhdr->tc_min_ver = 7;
+	dhdr->crc_keys = crc32((void *)&dhdr->keys, 256);
+	dhdr->sz_vol = total_blocks * sec_sz;
+	if (hidden)
+		dhdr->sz_hidvol = dhdr->sz_vol;
+	dhdr->off_mk_scope = offset * sec_sz;
+	dhdr->sz_mk_scope = blocks * sec_sz;
+	dhdr->sec_sz = sec_sz;
+	dhdr->flags = 0;
+
+	HOST_TO_BE(16, dhdr->tc_ver);
+	HOST_TO_LE(16, dhdr->tc_min_ver);
+	HOST_TO_BE(32, dhdr->crc_keys);
+	HOST_TO_BE(64, dhdr->sz_vol);
+	HOST_TO_BE(64, dhdr->sz_hidvol);
+	HOST_TO_BE(64, dhdr->off_mk_scope);
+	HOST_TO_BE(64, dhdr->sz_mk_scope);
+	HOST_TO_BE(32, dhdr->sec_sz);
+	HOST_TO_BE(32, dhdr->flags);
+
+	dhdr->crc_dhdr = crc32((void *)dhdr, 188);
+	HOST_TO_BE(32, dhdr->crc_dhdr);
+
+	memset(iv, 0, sizeof(iv));
+	error = tc_encrypt(cipher->name, key, iv, (unsigned char *)dhdr,
+	    sizeof(struct tchdr_dec), ehdr->enc);
+	if (error) {
+		fprintf(stderr, "Header encryption failed\n");
+		free_safe_mem(dhdr);
+		return NULL;
+	}
+
+	free_safe_mem(dhdr);
+	return ehdr;
+}
+
+int
+create_volume(char *dev, int hidden, const char *keyfiles[], int nkeyfiles,
+    const char *h_keyfiles[], int n_hkeyfiles, struct pbkdf_prf_algo *prf_algo,
+    struct tc_crypto_algo *cipher)
+{
+	char *pass;
+	char *h_pass = NULL;
+	char buf[1024];
+	size_t blocks, blksz, hidden_blocks;
+	struct tchdr_enc *ehdr, *hehdr;
+	int error, r;
+
+	if ((error = get_disk_info(dev, &blocks, &blksz)) != 0) {
+		fprintf(stderr, "could not get disk info\n");
+		return -1;
+	}
+
+	if (blocks <= MIN_VOL_BLOCKS) {
+		fprintf(stderr, "Cannot create volumes on devices with less "
+		    "than 256 blocks/sectors\n");
+		return -1;
+	}
+
+	if ((pass = alloc_safe_mem(MAX_PASSSZ)) == NULL) {
+		fprintf(stderr, "could not allocate safe passphrase memory\n");
+		return -1;
+	}
+
+	if ((error = read_passphrase("Passphrase: ", pass, MAX_PASSSZ))) {
+		fprintf(stderr, "could not read passphrase\n");
+		return -1;
+	}
+
+	if (nkeyfiles > 0) {
+		/* Apply keyfiles to 'pass' */
+		if ((error = apply_keyfiles(pass, MAX_PASSSZ, keyfiles,
+		    nkeyfiles))) {
+			fprintf(stderr, "could not apply keyfiles\n");
+		}
+	}
+
+	if (hidden) {
+		if ((h_pass = alloc_safe_mem(MAX_PASSSZ)) == NULL) {
+			fprintf(stderr, "could not allocate safe passphrase memory\n");
+			return -1;
+		}
+
+		if ((error = read_passphrase("Passphrase for hidden volume: ",
+		    h_pass, MAX_PASSSZ))) {
+			fprintf(stderr, "could not read passphrase\n");
+			return -1;
+		}
+
+		if (n_hkeyfiles > 0) {
+			/* Apply keyfiles to 'h_pass' */
+			if ((error = apply_keyfiles(h_pass, MAX_PASSSZ, h_keyfiles,
+			n_hkeyfiles))) {
+				fprintf(stderr, "could not apply keyfiles\n");
+				return -1;
+			}
+		}
+
+		hidden_blocks = 0;
+
+		while(hidden_blocks == 0) {
+			if ((r = humanize_number(buf, strlen("XXXX MB "),
+			    (int64_t)(blocks * blksz), 'B', 0, 0)) < 0) {
+				sprintf(buf, "%" PRIu64 " bytes", (blocks * blksz));
+			}
+
+			printf("The total volume size of %s is %s (bytes)\n", dev, buf);
+			memset(buf, 0, sizeof(buf));
+			printf("Size of hidden volume (e.g. 127M): ");
+			fflush(stdout);
+
+			if ((fgets(buf, sizeof(buf), stdin)) == NULL) {
+				fprintf(stderr, "Could not read from stdin\n");
+				return -1;
+			}
+
+			/* get rid of trailing newline */
+			buf[strlen(buf)-1] = '\0';
+			if ((error = dehumanize_number(buf,
+			    (int64_t *)&hidden_blocks)) != 0) {
+				fprintf(stderr, "Could not interpret input: %s\n", buf);
+				return -1;
+			}
+
+			hidden_blocks /= blksz;
+			if (hidden_blocks >= blocks - MIN_VOL_BLOCKS) {
+				fprintf(stderr, "Hidden volume needs to be "
+				    "smaller than the outer volume\n");
+				hidden_blocks = 0;
+				continue;
+			}
+		}
+	}
+
+	/* Show summary and ask for confirmation */
+	printf("Summary of actions:\n");
+	printf(" - Completely erase *EVERYTHING* on %s\n", dev);
+	printf(" - Create %svolume on %s\n", hidden?("outer "):" ", dev);
+	if (hidden) {
+		printf(" - Create hidden volume of %" PRIu64
+		    " bytes at end of outer volume\n",
+		    hidden_blocks * blksz);
+	}
+
+	printf("\n Are you sure you want to proceed? (y/n)\n");
+	if ((fgets(buf, sizeof(buf), stdin)) == NULL) {
+		fprintf(stderr, "Could not read from stdin\n");
+		return -1;
+	}
+
+	if ((buf[0] != 'y') && (buf[0] != 'Y')) {
+		fprintf(stderr, "User cancelled action(s)\n");
+		return -1;
+	}
+
+	/* erase volume */
+	if ((error = secure_erase(dev, blocks * blksz, blksz)) != 0) {
+		fprintf(stderr, "could not securely erase device %s\n", dev);
+		return -1;
+	}
+
+	/* create encrypted headers */
+	ehdr = create_hdr(pass, (nkeyfiles > 0)?MAX_PASSSZ:strlen(pass),
+	    prf_algo, cipher, blksz, blocks, MIN_VOL_BLOCKS,
+	    blocks-MIN_VOL_BLOCKS, 0);
+	if (ehdr == NULL) {
+		fprintf(stderr, "Could not create header\n");
+		return -1;
+	}
+
+	if (hidden) {
+		hehdr = create_hdr(h_pass,
+		    (n_hkeyfiles > 0)?MAX_PASSSZ:strlen(h_pass), prf_algo, cipher,
+		    blksz, blocks, blocks - hidden_blocks, hidden_blocks, 1);
+		if (hehdr == NULL) {
+			fprintf(stderr, "Could not create hidden volume header\n");
+			return -1;
+		}
+	}
+
+	/* XXX: write encrypted headers */
+
+	return 0;
+}
+
 int
 dm_setup(const char *mapname, struct tcplay_info *info)
 {
@@ -753,7 +1108,56 @@ out:
 	return ret;
 }
 
-static void
+static
+struct tc_crypto_algo *
+check_cipher(char *cipher)
+{
+	int i, found = 0;
+
+	for (i = 0; tc_crypto_algos[i].name != NULL; i++) {
+		if (strcmp(cipher, tc_crypto_algos[i].name) == 0) {
+			found = 1;
+			break;
+		}
+	}
+
+	if (!found) {
+		fprintf(stderr, "Valid ciphers are: ");
+		for (i = 0; tc_crypto_algos[i].name != NULL; i++)
+			fprintf(stderr, "%s ", tc_crypto_algos[i].name);
+		fprintf(stderr, "\n");
+		return NULL;
+	}
+
+	return &tc_crypto_algos[i];
+}
+
+static
+struct pbkdf_prf_algo *
+check_prf_algo(char *algo)
+{
+	int i, found = 0;
+
+	for (i = 0; pbkdf_prf_algos[i].name != NULL; i++) {
+		if (strcmp(algo, pbkdf_prf_algos[i].name) == 0) {
+			found = 1;
+			break;
+		}
+	}
+
+	if (!found) {
+		fprintf(stderr, "Valid PBKDF PRF algorithms are: ");
+		for (i = 0; pbkdf_prf_algos[i].name != NULL; i++)
+			fprintf(stderr, "%s ", pbkdf_prf_algos[i].name);
+		fprintf(stderr, "\n");
+		return NULL;
+	}
+
+	return &pbkdf_prf_algos[i];
+}
+
+static
+void
 usage(void)
 {
 	fprintf(stderr,
@@ -809,7 +1213,7 @@ main(int argc, char *argv[])
 	size_t sz;
 
 	OpenSSL_add_all_algorithms();
-	atexit(check_safe_mem);
+	atexit(check_and_purge_safe_mem);
 
 	nkeyfiles = 0;
 	n_hkeyfiles = 0;
