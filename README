@@ -23,9 +23,11 @@ Additionally it depends on the current OpenSSL CVS version for the XTS
 support. The next major release of OpenSSL will probably include the needed
 support, too.
 
-Cascaded encryption algorithms are not supported (yet), and neither is
-creating new TrueCrypt volumes. Support for these things might or might not
-be added at a later stage.
+This implementation supports mapping (opening) both system and normal TrueCrypt
+volumes, as well as opening hidden volumes and opening an outer volume while
+protecting a hidden volume.
 
-Hidden volume support is not present yet either.
+Support for creating volume was only recently added and has not been tested yet.
+It is highly experimental.
 
+Cascaded encryption algorithms are not supported (yet).

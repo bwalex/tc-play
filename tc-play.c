@@ -35,6 +35,7 @@
 #include <sys/mman.h>
 #include <sys/uio.h>
 #include <sys/endian.h>
+#include <sys/diskslice.h>
 #include <getopt.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -334,11 +335,9 @@ get_random(unsigned char *buf, size_t len)
 }
 
 int
-secure_erase(char *dev, size_t bytes, size_t blksz)
+secure_erase(const char *dev, size_t bytes, size_t blksz)
 {
 	size_t erased = 0;
-	size_t left;
-	int error;
 	int fd_rand, fd;
 	char buf[MAX_BLKSZ];
 	ssize_t r, w;
@@ -387,7 +386,7 @@ secure_erase(char *dev, size_t bytes, size_t blksz)
 }
 
 int
-get_disk_info(char *dev, size_t *blocks, size_t *bsize)
+get_disk_info(const char *dev, size_t *blocks, size_t *bsize)
 {
 	struct partinfo pinfo;
 	int fd;
@@ -788,6 +787,33 @@ process_hdr(const char *dev, unsigned char *pass, int passlen,
 	return 0;
 }
 
+int
+write_hdr(const char *dev, off_t offset, size_t blksz, struct tchdr_enc *hdr)
+{
+	ssize_t w;
+	int fd;
+
+	if ((fd = open(dev, O_WRONLY)) < 0) {
+		fprintf(stderr, "Error opening device %s\n", dev);
+		return -1;
+	}
+
+	if ((lseek(fd, offset, SEEK_SET) < 0)) {
+		fprintf(stderr, "Error seeking on device %s\n", dev);
+		close(fd);
+		return -1;
+	}
+
+	if ((w = write(fd, hdr, sizeof(*hdr))) <= 0) {
+		fprintf(stderr, "Error writing to device %s\n", dev);
+		close(fd);
+		return -1;
+	}
+
+	close(fd);
+	return 0;
+}
+
 struct tchdr_enc *
 create_hdr(unsigned char *pass, int passlen, struct pbkdf_prf_algo *prf_algo,
     struct tc_crypto_algo *cipher, size_t sec_sz, size_t total_blocks,
@@ -796,7 +822,6 @@ create_hdr(unsigned char *pass, int passlen, struct pbkdf_prf_algo *prf_algo,
 	struct tchdr_enc *ehdr;
 	struct tchdr_dec *dhdr;
 	unsigned char *key;
-	unsigned char salt[SALT_LEN];
 	unsigned char iv[128];
 	int error;
 
@@ -875,7 +900,7 @@ create_hdr(unsigned char *pass, int passlen, struct pbkdf_prf_algo *prf_algo,
 }
 
 int
-create_volume(char *dev, int hidden, const char *keyfiles[], int nkeyfiles,
+create_volume(const char *dev, int hidden, const char *keyfiles[], int nkeyfiles,
     const char *h_keyfiles[], int n_hkeyfiles, struct pbkdf_prf_algo *prf_algo,
     struct tc_crypto_algo *cipher)
 {
@@ -885,6 +910,11 @@ create_volume(char *dev, int hidden, const char *keyfiles[], int nkeyfiles,
 	size_t blocks, blksz, hidden_blocks;
 	struct tchdr_enc *ehdr, *hehdr;
 	int error, r;
+
+	if (cipher == NULL)
+		cipher = &tc_crypto_algos[0];
+	if (prf_algo == NULL)
+		prf_algo = &pbkdf_prf_algos[0];
 
 	if ((error = get_disk_info(dev, &blocks, &blksz)) != 0) {
 		fprintf(stderr, "could not get disk info\n");
@@ -940,8 +970,8 @@ create_volume(char *dev, int hidden, const char *keyfiles[], int nkeyfiles,
 
 		while(hidden_blocks == 0) {
 			if ((r = humanize_number(buf, strlen("XXXX MB "),
-			    (int64_t)(blocks * blksz), 'B', 0, 0)) < 0) {
-				sprintf(buf, "%" PRIu64 " bytes", (blocks * blksz));
+			    (int64_t)(blocks * blksz), "B", 0, 0)) < 0) {
+				sprintf(buf, "%zu bytes", (blocks * blksz));
 			}
 
 			printf("The total volume size of %s is %s (bytes)\n", dev, buf);
@@ -977,8 +1007,8 @@ create_volume(char *dev, int hidden, const char *keyfiles[], int nkeyfiles,
 	printf(" - Completely erase *EVERYTHING* on %s\n", dev);
 	printf(" - Create %svolume on %s\n", hidden?("outer "):" ", dev);
 	if (hidden) {
-		printf(" - Create hidden volume of %" PRIu64
-		    " bytes at end of outer volume\n",
+		printf(" - Create hidden volume of %zu bytes at end of outer "
+		    "volume\n",
 		    hidden_blocks * blksz);
 	}
 
@@ -1018,7 +1048,18 @@ create_volume(char *dev, int hidden, const char *keyfiles[], int nkeyfiles,
 		}
 	}
 
-	/* XXX: write encrypted headers */
+	if ((error = write_hdr(dev, 0, blksz, ehdr)) != 0) {
+		fprintf(stderr, "Could not write volume header to device\n");
+		return -1;
+	}
+
+	if (hidden) {
+		if ((error = write_hdr(dev, HDR_OFFSET_HIDDEN, blksz, hehdr)) != 0) {
+			fprintf(stderr, "Could not write hidden volume header to "
+			    "device\n");
+			return -1;
+		}
+	}
 
 	return 0;
 }
@@ -1163,11 +1204,19 @@ usage(void)
 	fprintf(stderr,
 	    "Usage: tc-play <command> [options]\n"
 	    "Valid commands and its arguments are:\n"
+	    " -c\n"
+	    "\t Creates a new TC volume on the device specified by -d\n"
 	    " -i\n"
 	    "\t Gives information about the TC volume specified by -d\n"
 	    " -m <mapping name>\n"
 	    "\t Creates a dm-crypt mapping for the device specified by -d\n"
 	    "Valid options and its arguments are:\n"
+	    " -a <pbkdf prf algorithm>\n"
+	    "\t specifies which hashing function to use for the PBKDF password derivation\n"
+	    "\t when creating a new volume. To see valid options, specify -a help.\n"
+	    " -b <cipher>\n"
+	    "\t specifies which cipher to use when creating a new TC volume.\n"
+	    "\t To see valid options, specify -a help\n"
 	    " -d <device path>\n"
 	    "\t specifies the path to the volume to operate on (e.g. /dev/da0s1)\n"
 	    " -s <disk path>\n"
@@ -1180,12 +1229,19 @@ usage(void)
 	    " -f <key file>\n"
 	    "\t specifies a key file to use for the hidden volume password derivation.\n"
 	    "\t This option is only valid in combination with -e\n"
+	    " -g\n"
+	    "\t specifies that the newly created volume will contain a hidden volume.\n"
+	    "\t Option is only valid when creating a new TC volume\n"
 	    );
 
 	exit(1);
 }
 
 static struct option longopts[] = {
+	{ "create",		no_argument,		NULL, 'c' },
+	{ "cipher",		required_argument,	NULL, 'b' },
+	{ "hidden",		no_argument,		NULL, 'g' },
+	{ "pbkdf-prf",		required_argument,	NULL, 'a' },
 	{ "info",		no_argument,		NULL, 'i' },
 	{ "map",		required_argument,	NULL, 'm' },
 	{ "keyfile",		required_argument,	NULL, 'k' },
@@ -1209,7 +1265,9 @@ main(int argc, char *argv[])
 	int nkeyfiles;
 	int n_hkeyfiles;
 	int ch, error, error2, r = 0;
-	int sflag = 0, iflag = 0, mflag = 0, hflag = 0;
+	int sflag = 0, iflag = 0, mflag = 0, hflag = 0, cflag = 0, hidflag = 0;
+	struct pbkdf_prf_algo *prf = NULL;
+	struct tc_crypto_algo *cipher = NULL;
 	size_t sz;
 
 	OpenSSL_add_all_algorithms();
@@ -1218,8 +1276,23 @@ main(int argc, char *argv[])
 	nkeyfiles = 0;
 	n_hkeyfiles = 0;
 
-	while ((ch = getopt_long(argc, argv, "d:ef:ik:m:s:v", longopts, NULL)) != -1) {
+	while ((ch = getopt_long(argc, argv, "a:b:cd:ef:ik:m:s:v", longopts, NULL)) != -1) {
 		switch(ch) {
+		case 'a':
+			if (prf != NULL)
+				usage();
+			if ((prf = check_prf_algo(optarg)) == NULL)
+				usage();
+			break;
+		case 'b':
+			if (cipher != NULL)
+				usage();
+			if ((cipher = check_cipher(optarg)) == NULL)
+				usage();
+			break;
+		case 'c':
+			cflag = 0;
+			break;
 		case 'd':
 			dev = optarg;
 			break;
@@ -1228,6 +1301,9 @@ main(int argc, char *argv[])
 			break;
 		case 'f':
 			h_keyfiles[n_hkeyfiles++] = optarg;
+			break;
+		case 'g':
+			hidflag = 1;
 			break;
 		case 'i':
 			iflag = 1;
@@ -1259,8 +1335,11 @@ main(int argc, char *argv[])
 	argv += optind;
 
 	/* Check arguments */
-	if (!((mflag || iflag) && dev != NULL) ||
+	if (!((mflag || iflag || cflag) && dev != NULL) ||
 	    (mflag && iflag) ||
+	    (mflag && cflag) ||
+	    (cflag && iflag) ||
+	    (hidflag && !cflag) ||
 	    (sflag && (sys_dev == NULL)) ||
 	    (mflag && (map_name == NULL)) ||
 	    (!hflag && n_hkeyfiles > 0)) {
@@ -1268,6 +1347,18 @@ main(int argc, char *argv[])
 		/* NOT REACHED */
 	}
 
+	if (cflag) {
+		error = create_volume(dev, hidflag, keyfiles, nkeyfiles,
+		    h_keyfiles, n_hkeyfiles, prf, cipher);
+		if (error) {
+			fprintf(stderr, "could not create new volume on %s\n", dev);
+			exit(1);
+		}
+		exit(0);
+		/* NOT REACHED */
+	}
+
+	/* This is only for iflag and mflag: */
 	if ((pass = alloc_safe_mem(MAX_PASSSZ)) == NULL) {
 		err(1, "could not allocate safe passphrase memory");
 	}
