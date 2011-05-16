@@ -971,7 +971,7 @@ create_volume(const char *dev, int hidden, const char *keyfiles[], int nkeyfiles
 		hidden_blocks = 0;
 
 		while(hidden_blocks == 0) {
-			if ((r = humanize_number(buf, strlen("XXXX MB "),
+			if ((r = humanize_number(buf, strlen("XXX MB"),
 			    (int64_t)(blocks * blksz), "B", 0, 0)) < 0) {
 				sprintf(buf, "%zu bytes", (blocks * blksz));
 			}
@@ -1007,14 +1007,15 @@ create_volume(const char *dev, int hidden, const char *keyfiles[], int nkeyfiles
 	/* Show summary and ask for confirmation */
 	printf("Summary of actions:\n");
 	printf(" - Completely erase *EVERYTHING* on %s\n", dev);
-	printf(" - Create %svolume on %s\n", hidden?("outer "):" ", dev);
+	printf(" - Create %svolume on %s\n", hidden?("outer "):"", dev);
 	if (hidden) {
 		printf(" - Create hidden volume of %zu bytes at end of outer "
 		    "volume\n",
 		    hidden_blocks * blksz);
 	}
 
-	printf("\n Are you sure you want to proceed? (y/n)\n");
+	printf("\n Are you sure you want to proceed? (y/n) ");
+	fflush(stdout);
 	if ((fgets(buf, sizeof(buf), stdin)) == NULL) {
 		fprintf(stderr, "Could not read from stdin\n");
 		return -1;
@@ -1283,17 +1284,25 @@ main(int argc, char *argv[])
 		case 'a':
 			if (prf != NULL)
 				usage();
-			if ((prf = check_prf_algo(optarg)) == NULL)
-				usage();
+			if ((prf = check_prf_algo(optarg)) == NULL) {
+				if (strcmp(optarg, "help") == 0)
+					exit(0);
+				else
+					usage();
+			}
 			break;
 		case 'b':
 			if (cipher != NULL)
 				usage();
-			if ((cipher = check_cipher(optarg)) == NULL)
-				usage();
+			if ((cipher = check_cipher(optarg)) == NULL) {
+				if (strcmp(optarg, "help") == 0)
+					exit(0);
+				else
+					usage();
+			}
 			break;
 		case 'c':
-			cflag = 0;
+			cflag = 1;
 			break;
 		case 'd':
 			dev = optarg;
