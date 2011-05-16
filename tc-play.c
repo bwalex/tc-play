@@ -201,6 +201,7 @@ _free_safe_mem(void *mem, const char *file, int line)
 {
 	struct safe_mem_hdr *hdr;
 	struct safe_mem_tail *tail;
+	size_t alloc_sz;
 
 	mem -= sizeof(*hdr);
 	hdr = (struct safe_mem_hdr *)mem;
@@ -232,8 +233,9 @@ _free_safe_mem(void *mem, const char *file, int line)
 	if (safe_mem_hdr_first == hdr)
 		safe_mem_hdr_first = hdr->next;
 
-	memset(mem, 0xFF, hdr->alloc_sz);
-	memset(mem, 0, hdr->alloc_sz);
+	alloc_sz = hdr->alloc_sz;
+	memset(mem, 0xFF, alloc_sz);
+	memset(mem, 0, alloc_sz);
 
 	free(mem);
 }
