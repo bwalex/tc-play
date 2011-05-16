@@ -70,6 +70,12 @@
  */
 
 #if 0
+otc_str: TRUE, tc_ver: 5, tc_min_ver: 7, crc_keys: 1146105393, sz_vol: 133955584, off_mk_scope: 131072, sz_mk_scope: 133955584, flags: 0, sec_sz: 512 crc_dhdr: -1501829203
+mtc_str: TRUE, tc_ver: 5, tc_min_ver: 1792, crc_keys: 2079567247, sz_vol: 16777216, off_mk_scope: 131072, sz_mk_scope: 16646144, flags: 0, sec_sz: 512 crc_dhdr: -82517198
+
+
+
+
 /* Volume times:
  * return wxDateTime ((time_t) (volumeTime / 1000ULL / 1000 / 10 - 134774ULL * 24 * 3600));
  */
@@ -103,7 +109,7 @@ Volume "/home/alex/tc-play/tctest.container" has been mounted.
 #define BE_TO_HOST(n, v) v = be ## n ## toh(v)
 #define LE_TO_HOST(n, v) v = le ## n ## toh(v)
 #define HOST_TO_BE(n, v) v = htobe ## n (v)
-#define HOST_TO_LE(n, v) v = htobe ## n (v)
+#define HOST_TO_LE(n, v) v = htole ## n (v)
 
 
 /* Supported algorithms */
@@ -867,7 +873,7 @@ create_hdr(unsigned char *pass, int passlen, struct pbkdf_prf_algo *prf_algo,
 	dhdr->tc_ver = 5;
 	dhdr->tc_min_ver = 7;
 	dhdr->crc_keys = crc32((void *)&dhdr->keys, 256);
-	dhdr->sz_vol = total_blocks * sec_sz;
+	dhdr->sz_vol = blocks * sec_sz;
 	if (hidden)
 		dhdr->sz_hidvol = dhdr->sz_vol;
 	dhdr->off_mk_scope = offset * sec_sz;
