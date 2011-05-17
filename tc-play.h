@@ -1,8 +1,6 @@
 /*
- * Copyright (c) 2011 The DragonFly Project.  All rights reserved.
- *
- * This code is derived from software contributed to The DragonFly Project
- * by Alex Hornung <ahornung@gmail.com>
+ * Copyright (c) 2011 Alex Hornung <alex@alexhornung.com>.
+ * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -14,9 +12,6 @@
  *    notice, this list of conditions and the following disclaimer in
  *    the documentation and/or other materials provided with the
  *    distribution.
- * 3. Neither the name of The DragonFly Project nor the names of its
- *    contributors may be used to endorse or promote products derived
- *    from this software without specific, prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
@@ -48,6 +43,7 @@
 #define TC_VOLFLAG_SYSTEM	0x01	/* system encryption */
 #define TC_VOLFLAG_INPLACE	0x02	/* non-system in-place-encrypted volume */
 
+#include <uuid.h>
 
 struct pbkdf_prf_algo {
 	char *name;
@@ -106,16 +102,37 @@ struct tcplay_info {
 	uuid_t uuid;
 };
 
-struct safe_mem_hdr {
-	struct safe_mem_hdr	*prev;
-	struct safe_mem_hdr	*next;
-	struct safe_mem_tail	*tail;
-	const char	*file;
-	int 		line;
-	size_t		alloc_sz;
-	char		sig[8]; /* SAFEMEM */
-};
+void *read_to_safe_mem(const char *file, off_t offset, size_t *sz);
+int get_random(unsigned char *buf, size_t len);
+int secure_erase(const char *dev, size_t bytes, size_t blksz);
+int get_disk_info(const char *dev, size_t *blocks, size_t *bsize);
+int write_mem(const char *dev, off_t offset, size_t blksz, void *mem, size_t bytes);
+int read_passphrase(char *prompt, char *pass, size_t passlen);
 
-struct safe_mem_tail {
-	char sig[8]; /* SAFEMEM */
-};
+int tc_crypto_init(void);
+int tc_encrypt(const char *cipher_name, unsigned char *key, unsigned char *iv,
+    unsigned char *in, int in_len, unsigned char *out);
+int tc_decrypt(const char *cipher_name, unsigned char *key, unsigned char *iv,
+    unsigned char *in, int in_len, unsigned char *out);
+int pbkdf2(const char *pass, int passlen, const unsigned char *salt, int saltlen,
+    int iter, const char *hash_name, int keylen, unsigned char *out);
+int apply_keyfiles(unsigned char *pass, size_t pass_memsz, const char *keyfiles[],
+    int nkeyfiles);
+
+struct tchdr_enc *create_hdr(unsigned char *pass, int passlen,
+    struct pbkdf_prf_algo *prf_algo, struct tc_crypto_algo *cipher,
+    size_t sec_sz, size_t total_blocks,
+    off_t offset, size_t blocks, int hidden);
+struct tchdr_dec *decrypt_hdr(struct tchdr_enc *ehdr, char *algo,
+    unsigned char *key);
+int verify_hdr(struct tchdr_dec *hdr);
+
+void *_alloc_safe_mem(size_t req_sz, const char *file, int line);
+void _free_safe_mem(void *mem, const char *file, int line);
+void check_and_purge_safe_mem(void);
+
+#define alloc_safe_mem(x) \
+	_alloc_safe_mem(x, __FILE__, __LINE__)
+
+#define free_safe_mem(x) \
+	_free_safe_mem(x, __FILE__, __LINE__)
