@@ -63,7 +63,10 @@ struct pbkdf_prf_algo pbkdf_prf_algos[] = {
 };
 
 struct tc_crypto_algo tc_crypto_algos[] = {
+#if 0
+	/* XXX: turns out TC doesn't support AES-128-XTS */
 	{ "AES-128-XTS",	"aes-xts-plain",	32,	8 },
+#endif
 	{ "AES-256-XTS",	"aes-xts-plain",	64,	8 },
 	{ NULL,			NULL,			0,	0 }
 };
