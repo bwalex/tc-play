@@ -511,7 +511,7 @@ dm_setup(const char *mapname, struct tcplay_info *info)
 	uint32_t status;
 	int ret = 0;
 	int j;
-	off_t start, skip, offset;
+	off_t start, offset;
 	char dev[PATH_MAX];
 	char map[PATH_MAX];
 
@@ -521,7 +521,6 @@ dm_setup(const char *mapname, struct tcplay_info *info)
 	}
 
 	strcpy(dev, info->dev);
-	skip = info->skip;
 	start = info->start;
 	offset = info->offset;
 
@@ -536,7 +535,7 @@ dm_setup(const char *mapname, struct tcplay_info *info)
 		/*			   iv off---^  block off--^ */
 		snprintf(params, 512, "%s %s %"PRIu64 " %s %"PRIu64,
 		    cipher_chain->cipher->dm_crypt_str, cipher_chain->dm_key,
-		    skip, dev, offset);
+		    info->skip, dev, offset);
 #ifdef DEBUG
 		printf("Params: %s\n", params);
 #endif
@@ -603,7 +602,6 @@ dm_setup(const char *mapname, struct tcplay_info *info)
 			goto out;
 		}
 
-		skip = 0;
 		offset = 0;
 		start = 0;
 		sprintf(dev, "/dev/mapper/%s.%d", mapname, j);
