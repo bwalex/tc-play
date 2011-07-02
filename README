@@ -17,11 +17,18 @@ Some notable differences between actual implementation and documentation:
 
 It is designed for DragonFly BSD, but would work, with minor changes, on any
 OS with device mapper and dm-crypt. This is also the reason for the dependency
-on libprop, since the DragonFly libdevmapper uses libprop.
+on libprop, since the DragonFly libdevmapper uses libprop. One of the main
+bits that would need porting is the crypto.c or crypto-dev.c implementation;
+for Linux a reasonable approach would be to create a crypto-gcrypt.c that uses
+libgcrypt instead of a mix of OpenSSL and cryptodev(9).
 
-Additionally it depends on the current OpenSSL CVS version for the XTS
-support. The next major release of OpenSSL will probably include the needed
-support, too.
+The implementation in crypto.c is not very useful right now; it's just a proof
+of concept of how to use OpenSSL to do the crypto and hashing, but since the
+current OpenSSL version doesn't support XTS mode, and the coming versions will
+only support AES-XTS, it is not for real use. DragonFly BSD uses the hybrid
+OpenSSL + cryptodev(9) approach that can be found in crypto-dev.c. OpenSSL is
+only used for the hash/pbkdf2. The encryption/decryption is performed via
+cryptodev(9) with enabled cryptosoft.
 
 This implementation supports mapping (opening) both system and normal TrueCrypt
 volumes, as well as opening hidden volumes and opening an outer volume while
@@ -30,4 +37,4 @@ protecting a hidden volume.
 Support for creating volume was only recently added and has not been tested yet.
 It is highly experimental.
 
-Cascaded encryption algorithms are not supported (yet).
+Cascaded encryption algorithms are not supported (yet), but are coming soon :)
