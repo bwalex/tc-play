@@ -32,12 +32,14 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "tc-play.h"
+
 struct safe_mem_hdr {
 	struct safe_mem_hdr	*prev;
 	struct safe_mem_hdr	*next;
 	struct safe_mem_tail	*tail;
 	const char	*file;
-	int 		line;
+	int		line;
 	size_t		alloc_sz;
 	char		sig[8]; /* SAFEMEM */
 };
@@ -54,7 +56,7 @@ _alloc_safe_mem(size_t req_sz, const char *file, int line)
 	struct safe_mem_hdr *hdr, *hdrp;
 	struct safe_mem_tail *tail;
 	size_t alloc_sz;
-	void *mem, *user_mem;
+	char *mem, *user_mem;
 
 	alloc_sz = req_sz + sizeof(*hdr) + sizeof(*tail);
 	if ((mem = malloc(alloc_sz)) == NULL)
@@ -93,11 +95,12 @@ _alloc_safe_mem(size_t req_sz, const char *file, int line)
 }
 
 void
-_free_safe_mem(void *mem, const char *file, int line)
+_free_safe_mem(void *mem_ptr, const char *file, int line)
 {
 	struct safe_mem_hdr *hdr;
 	struct safe_mem_tail *tail;
 	size_t alloc_sz;
+	char *mem = mem_ptr;
 
 	mem -= sizeof(*hdr);
 	hdr = (struct safe_mem_hdr *)mem;
@@ -145,7 +148,7 @@ void
 check_and_purge_safe_mem(void)
 {
 	struct safe_mem_hdr *hdr;
-	void *mem;
+	char *mem;
 	int ok;
 
 	if (safe_mem_hdr_first == NULL)
@@ -165,7 +168,7 @@ check_and_purge_safe_mem(void)
 		    (unsigned long)(void *)hdr, hdr->file, hdr->line,
 		    ok? "ok" : "failed");
 #endif
-		mem = hdr;
+		mem = (void *)hdr;
 		mem += sizeof(*hdr);
 		_free_safe_mem(mem, "check_and_purge_safe_mem", 0);
 	}
