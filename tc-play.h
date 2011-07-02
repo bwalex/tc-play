@@ -44,7 +44,7 @@
 #define TC_VOLFLAG_SYSTEM	0x01	/* system encryption */
 #define TC_VOLFLAG_INPLACE	0x02	/* non-system in-place-encrypted volume */
 
-#if 1
+#if 0
 #define DEBUG 1
 #endif
 
