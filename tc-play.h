@@ -38,10 +38,12 @@
 #define HDR_OFFSET_HIDDEN	65536
 #define SALT_LEN		64
 #define MIN_VOL_BLOCKS		256
+#define MAX_CIPHER_CHAINS	64
 
 /* TrueCrypt Volume flags */
 #define TC_VOLFLAG_SYSTEM	0x01	/* system encryption */
 #define TC_VOLFLAG_INPLACE	0x02	/* non-system in-place-encrypted volume */
+
 
 #include <uuid.h>
 
@@ -55,6 +57,14 @@ struct tc_crypto_algo {
 	char *dm_crypt_str;
 	int klen;
 	int ivlen;
+};
+
+struct tc_cipher_chain {
+	struct tc_crypto_algo *cipher;
+	unsigned char *key;
+
+	struct tc_cipher_chain *prev;
+	struct tc_cipher_chain *next;
 };
 
 struct tchdr_enc {
@@ -89,7 +99,7 @@ struct tchdr_dec {
 struct tcplay_info {
 	const char *dev;
 	struct tchdr_dec *hdr;
-	struct tc_crypto_algo *cipher;
+	struct tc_cipher_chain *cipher_chain;
 	struct pbkdf_prf_algo *pbkdf_prf;
 	char key[MAX_KEYSZ*2];
 	off_t start;	/* Logical volume offset in table */
@@ -110,10 +120,10 @@ int write_mem(const char *dev, off_t offset, size_t blksz, void *mem, size_t byt
 int read_passphrase(char *prompt, char *pass, size_t passlen);
 
 int tc_crypto_init(void);
-int tc_encrypt(struct tc_crypto_algo *cipher, unsigned char *key,
+int tc_encrypt(struct tc_cipher_chain *cipher_chain, unsigned char *key,
     unsigned char *iv,
     unsigned char *in, int in_len, unsigned char *out);
-int tc_decrypt(struct tc_crypto_algo *cipher, unsigned char *key,
+int tc_decrypt(struct tc_cipher_chain *cipher_chain, unsigned char *key,
     unsigned char *iv,
     unsigned char *in, int in_len, unsigned char *out);
 int pbkdf2(const char *pass, int passlen, const unsigned char *salt, int saltlen,
@@ -122,11 +132,11 @@ int apply_keyfiles(unsigned char *pass, size_t pass_memsz, const char *keyfiles[
     int nkeyfiles);
 
 struct tchdr_enc *create_hdr(unsigned char *pass, int passlen,
-    struct pbkdf_prf_algo *prf_algo, struct tc_crypto_algo *cipher,
+    struct pbkdf_prf_algo *prf_algo, struct tc_cipher_chain *cipher_chain,
     size_t sec_sz, size_t total_blocks,
     off_t offset, size_t blocks, int hidden);
-struct tchdr_dec *decrypt_hdr(struct tchdr_enc *ehdr, struct tc_crypto_algo *cipher,
-    unsigned char *key);
+struct tchdr_dec *decrypt_hdr(struct tchdr_enc *ehdr,
+    struct tc_cipher_chain *cipher_chain, unsigned char *key);
 int verify_hdr(struct tchdr_dec *hdr);
 
 void *_alloc_safe_mem(size_t req_sz, const char *file, int line);

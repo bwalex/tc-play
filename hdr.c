@@ -43,7 +43,7 @@
 #define HOST_TO_LE(n, v) v = htole ## n (v)
 
 struct tchdr_dec *
-decrypt_hdr(struct tchdr_enc *ehdr, struct tc_crypto_algo *cipher,
+decrypt_hdr(struct tchdr_enc *ehdr, struct tc_cipher_chain *cipher_chain,
     unsigned char *key)
 {
 	struct tchdr_dec *dhdr;
@@ -57,7 +57,7 @@ decrypt_hdr(struct tchdr_enc *ehdr, struct tc_crypto_algo *cipher,
 
 	memset(iv, 0, sizeof(iv));
 
-	error = tc_decrypt(cipher, key, iv, ehdr->enc,
+	error = tc_decrypt(cipher_chain, key, iv, ehdr->enc,
 	    sizeof(struct tchdr_dec), (unsigned char *)dhdr);
 	if (error) {
 		fprintf(stderr, "Header decryption failed\n");
@@ -119,7 +119,7 @@ verify_hdr(struct tchdr_dec *hdr)
 
 struct tchdr_enc *
 create_hdr(unsigned char *pass, int passlen, struct pbkdf_prf_algo *prf_algo,
-    struct tc_crypto_algo *cipher, size_t sec_sz, size_t total_blocks,
+    struct tc_cipher_chain *cipher_chain, size_t sec_sz, size_t total_blocks,
     off_t offset, size_t blocks, int hidden)
 {
 	struct tchdr_enc *ehdr;
@@ -190,7 +190,7 @@ create_hdr(unsigned char *pass, int passlen, struct pbkdf_prf_algo *prf_algo,
 	HOST_TO_BE(32, dhdr->crc_dhdr);
 
 	memset(iv, 0, sizeof(iv));
-	error = tc_encrypt(cipher, key, iv, (unsigned char *)dhdr,
+	error = tc_encrypt(cipher_chain, key, iv, (unsigned char *)dhdr,
 	    sizeof(struct tchdr_dec), ehdr->enc);
 	if (error) {
 		fprintf(stderr, "Header encryption failed\n");

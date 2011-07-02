@@ -51,7 +51,10 @@
 
 /* Version of tc-play */
 #define MAJ_VER		0
-#define MIN_VER		5
+#define MIN_VER		7
+
+static struct tc_crypto_algo *check_cipher(char *cipher);
+
 
 /* Supported algorithms */
 struct pbkdf_prf_algo pbkdf_prf_algos[] = {
@@ -74,6 +77,80 @@ struct tc_crypto_algo tc_crypto_algos[] = {
 	{ "SERPENT-256-XTS",	"serpent-xts-plain",	64,	8 },
 	{ NULL,			NULL,			0,	0 }
 };
+
+char *valid_cipher_chains[][MAX_CIPHER_CHAINS] = {
+	{ "AES-256-XTS", NULL },
+	{ "TWOFISH-256-XTS", NULL },
+	{ "SERPENT-256-XTS", NULL },
+	{ "AES-256-XTS", "TWOFISH-256-XTS", NULL },
+	{ "AES-256-XTS", "TWOFISH-256-XTS", "SERPENT-256-XTS", NULL },
+	{ "SERPENT-256-XTS", "AES-256-XTS", NULL },
+	{ "SERPENT-256-XTS", "TWOFISH-256-XTS", "AES-256-XTS", NULL },
+	{ "TWOFISH-256-XTS", "SERPENT-256-XTS", NULL },
+	{ NULL }
+};
+
+struct tc_cipher_chain *tc_cipher_chains[MAX_CIPHER_CHAINS];
+
+static
+void
+tc_build_cipher_chains(void)
+{
+	struct tc_cipher_chain *chain, *elem, *prev;
+	int i = 0;
+	int k;
+
+	while (valid_cipher_chains[i][0] != NULL) {
+		chain = NULL;
+		prev = NULL;
+		k = 0;
+
+		while (valid_cipher_chains[i][k] != NULL) {
+			if ((elem = alloc_safe_mem(sizeof(*elem))) == NULL) {
+				fprintf(stderr, "Error allocating memory for "
+				   "cipher chain\n");
+				exit(1);
+			}
+
+			/* Initialize first element of chain */
+			if (chain == NULL) {
+				chain = elem;
+				elem->prev = NULL;
+			}
+
+			/* Populate previous element */
+			if (prev != NULL) {
+				prev->next = elem;
+				elem->prev = prev;
+			}
+
+			/* Assume we are the last element in the chain */
+			elem->next = NULL;
+
+			/* Initialize other fields */
+			elem->cipher = check_cipher(valid_cipher_chains[i][k]);
+			if (elem->cipher == NULL)
+				exit(1);
+
+			elem->key = NULL;
+
+			prev = elem;
+			++k;
+		}
+
+		/* Store cipher chain */
+		tc_cipher_chains[i++] = chain;
+
+		/* Integrity check */
+		if (i >= MAX_CIPHER_CHAINS) {
+			fprintf(stderr, "FATAL: tc_cipher_chains is full!!\n");
+			exit(1);
+		}
+
+		/* Make sure array is NULL terminated */
+		tc_cipher_chains[i] = NULL;
+	}
+}
 
 int
 hex2key(char *hex, size_t key_len, unsigned char *key)
@@ -108,17 +185,29 @@ print_hex(unsigned char *buf, off_t start, size_t len)
 void
 print_info(struct tcplay_info *info)
 {
+	struct tc_cipher_chain *cipher_chain;
+	int klen = 0;
+
 	printf("PBKDF2 PRF:\t\t%s\n", info->pbkdf_prf->name);
 	printf("PBKDF2 iterations:\t%d\n", info->pbkdf_prf->iteration_count);
-	printf("Cipher:\t\t\t%s\n", info->cipher->name);
-	printf("Key Length:\t\t%d bits\n", info->cipher->klen*8);
+
+	printf("Cipher:\t\t\t");
+	for (cipher_chain = info->cipher_chain;
+	    cipher_chain != NULL;
+	    cipher_chain = cipher_chain->next) {
+		printf("%s%c", cipher_chain->cipher->name,
+		    (cipher_chain->next != NULL) ? ',' : '\n');
+		klen += cipher_chain->cipher->klen;
+	}
+
+	printf("Key Length:\t\t%d bits\n", klen*8);
 	printf("CRC Key Data:\t\t%#x\n", info->hdr->crc_keys);
 	printf("Sector size:\t\t%d\n", info->hdr->sec_sz);
 	printf("Volume size:\t\t%d sectors\n", info->size);
 }
 
 struct tcplay_info *
-new_info(const char *dev, struct tc_crypto_algo *cipher,
+new_info(const char *dev, struct tc_cipher_chain *cipher_chain,
     struct pbkdf_prf_algo *prf, struct tchdr_dec *hdr, off_t start)
 {
 	struct tcplay_info *info;
@@ -130,7 +219,7 @@ new_info(const char *dev, struct tc_crypto_algo *cipher,
 	}
 
 	info->dev = dev;
-	info->cipher = cipher;
+	info->cipher_chain = cipher_chain;
 	info->pbkdf_prf = prf;
 	info->start = start;
 	info->hdr = hdr;
@@ -138,9 +227,12 @@ new_info(const char *dev, struct tc_crypto_algo *cipher,
 	info->skip = hdr->off_mk_scope / hdr->sec_sz;	/* iv skip */
 	info->offset = hdr->off_mk_scope / hdr->sec_sz;	/* block offset */
 
+#if 0
+	/* XXX: broken */
 	for (i = 0; i < cipher->klen; i++) {
 		sprintf(&info->key[i*2], "%02x", hdr->keys[i]);
 	}
+#endif
 
 	return info;
 }
@@ -192,12 +284,12 @@ process_hdr(const char *dev, unsigned char *pass, int passlen,
 		print_hex(key, 0, MAX_KEYSZ);
 #endif
 
-		for (j = 0; !found && tc_crypto_algos[j].name != NULL; j++) {
+		for (j = 0; !found && tc_cipher_chains[j] != NULL; j++) {
 #ifdef DEBUG
-			printf("\nTrying cipher %s\n", tc_crypto_algos[j].name);
+			printf("\nTrying cipher chain %d\n", j);
 #endif
 
-			dhdr = decrypt_hdr(ehdr, &tc_crypto_algos[j], key);
+			dhdr = decrypt_hdr(ehdr, tc_cipher_chains[j], key);
 			if (dhdr == NULL) {
 				continue;
 			}
@@ -225,7 +317,7 @@ process_hdr(const char *dev, unsigned char *pass, int passlen,
 	if (!found)
 		return EINVAL;
 
-	if ((info = new_info(dev, &tc_crypto_algos[j-1], &pbkdf_prf_algos[i-1],
+	if ((info = new_info(dev, tc_cipher_chains[j-1], &pbkdf_prf_algos[i-1],
 	    dhdr, 0)) == NULL) {
 		return ENOMEM;
 	}
@@ -237,7 +329,7 @@ process_hdr(const char *dev, unsigned char *pass, int passlen,
 int
 create_volume(const char *dev, int hidden, const char *keyfiles[], int nkeyfiles,
     const char *h_keyfiles[], int n_hkeyfiles, struct pbkdf_prf_algo *prf_algo,
-    struct tc_crypto_algo *cipher)
+    struct tc_cipher_chain *cipher_chain)
 {
 	char *pass;
 	char *h_pass = NULL;
@@ -246,8 +338,8 @@ create_volume(const char *dev, int hidden, const char *keyfiles[], int nkeyfiles
 	struct tchdr_enc *ehdr, *hehdr;
 	int error, r;
 
-	if (cipher == NULL)
-		cipher = &tc_crypto_algos[0];
+	if (cipher_chain == NULL)
+		cipher_chain = tc_cipher_chains[0];
 	if (prf_algo == NULL)
 		prf_algo = &pbkdf_prf_algos[0];
 
@@ -367,7 +459,7 @@ create_volume(const char *dev, int hidden, const char *keyfiles[], int nkeyfiles
 
 	/* create encrypted headers */
 	ehdr = create_hdr(pass, (nkeyfiles > 0)?MAX_PASSSZ:strlen(pass),
-	    prf_algo, cipher, blksz, blocks, MIN_VOL_BLOCKS,
+	    prf_algo, cipher_chain, blksz, blocks, MIN_VOL_BLOCKS,
 	    blocks-MIN_VOL_BLOCKS, 0);
 	if (ehdr == NULL) {
 		fprintf(stderr, "Could not create header\n");
@@ -376,7 +468,8 @@ create_volume(const char *dev, int hidden, const char *keyfiles[], int nkeyfiles
 
 	if (hidden) {
 		hehdr = create_hdr(h_pass,
-		    (n_hkeyfiles > 0)?MAX_PASSSZ:strlen(h_pass), prf_algo, cipher,
+		    (n_hkeyfiles > 0)?MAX_PASSSZ:strlen(h_pass), prf_algo,
+		    cipher_chain,
 		    blksz, blocks, blocks - hidden_blocks, hidden_blocks, 1);
 		if (hehdr == NULL) {
 			fprintf(stderr, "Could not create hidden volume header\n");
@@ -419,7 +512,8 @@ dm_setup(const char *mapname, struct tcplay_info *info)
 	/* aes-cbc-essiv:sha256 7997f8af... 0 /dev/ad0s0a 8 */
 	/*			   iv off---^  block off--^ */
 	snprintf(params, 512, "%s %s %"PRIu64 " %s %"PRIu64,
-	    info->cipher->dm_crypt_str, info->key,
+	    /* XXX: broken */
+	    info->cipher_chain->cipher->dm_crypt_str, info->key,
 	    info->skip, info->dev, info->offset);
 #ifdef DEBUG
 	printf("Params: %s\n", params);
@@ -507,6 +601,62 @@ check_cipher(char *cipher)
 	}
 
 	return &tc_crypto_algos[i];
+}
+
+static
+struct tc_cipher_chain *
+check_cipher_chain(char *cipher_chain)
+{
+	int i,k, found = 0, nciphers = 0, mismatch = 0;
+	char *ciphers[8];
+	char *token;
+
+	while ((token = strsep(&cipher_chain, ",")) != NULL)
+		ciphers[nciphers++] = token;
+
+	for (i = 0; valid_cipher_chains[i][0] != NULL; i++) {
+		mismatch = 0;
+
+		for (k = 0; (valid_cipher_chains[i][k] != NULL); k++) {
+			/*
+			 * If there are more ciphers in the chain than in the
+			 * ciphers[] variable this is not the right chain.
+			 */
+			if (k == nciphers) {
+				mismatch = 1;
+				break;
+			}
+
+			if (strcmp(ciphers[k], valid_cipher_chains[i][k]) != 0)
+				mismatch = 1;
+		}
+
+		/*
+		 * If all ciphers matched and there are exactly nciphers,
+		 * then we found the right cipher chain.
+		 */
+		if ((k == nciphers) && !mismatch) {
+			found = 1;
+			break;
+		}
+	}
+
+	if (!found) {
+		fprintf(stderr, "Valid cipher chains are:\n");
+		for (i = 0; valid_cipher_chains[i][0] != NULL; i++) {
+			for (k = 0; valid_cipher_chains[i][k] != NULL; k++) {
+				fprintf(stderr, "%s%c",
+				    valid_cipher_chains[i][k],
+				    (valid_cipher_chains[i][k+1] != NULL) ?
+				    ',' : '\0');
+			}
+			fprintf(stderr, "\n");
+		}
+
+		return NULL;
+	}
+
+	return tc_cipher_chains[i];
 }
 
 static
@@ -609,9 +759,10 @@ main(int argc, char *argv[])
 	int ch, error, error2, r = 0;
 	int sflag = 0, iflag = 0, mflag = 0, hflag = 0, cflag = 0, hidflag = 0;
 	struct pbkdf_prf_algo *prf = NULL;
-	struct tc_crypto_algo *cipher = NULL;
+	struct tc_cipher_chain *cipher_chain = NULL;
 	size_t sz;
 
+	tc_build_cipher_chains();
 	tc_crypto_init();
 	atexit(check_and_purge_safe_mem);
 
@@ -632,9 +783,9 @@ main(int argc, char *argv[])
 			}
 			break;
 		case 'b':
-			if (cipher != NULL)
+			if (cipher_chain != NULL)
 				usage();
-			if ((cipher = check_cipher(optarg)) == NULL) {
+			if ((cipher_chain = check_cipher_chain(optarg)) == NULL) {
 				if (strcmp(optarg, "help") == 0)
 					exit(0);
 				else
@@ -700,7 +851,7 @@ main(int argc, char *argv[])
 
 	if (cflag) {
 		error = create_volume(dev, hidflag, keyfiles, nkeyfiles,
-		    h_keyfiles, n_hkeyfiles, prf, cipher);
+		    h_keyfiles, n_hkeyfiles, prf, cipher_chain);
 		if (error) {
 			err(1, "could not create new volume on %s\n", dev);
 		}

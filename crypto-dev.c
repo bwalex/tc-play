@@ -159,36 +159,154 @@ tc_crypto_init(void)
 	return 0;
 }
 
+static
 int
-tc_encrypt(struct tc_crypto_algo *cipher, unsigned char *key,
-    unsigned char *iv,
-    unsigned char *in, int in_len, unsigned char *out)
+tc_cipher_chain_populate_keys(struct tc_cipher_chain *cipher_chain,
+    unsigned char *key)
 {
-	int cipher_id;
+	int total_key_bytes, used_key_bytes;
+	struct tc_cipher_chain *dummy_chain;
 
-	cipher_id = get_cryptodev_cipher_id(cipher);
-	if (cipher_id < 0) {
-		fprintf(stderr, "Cipher %s not found\n", cipher->name);
-		return ENOENT;
+	/*
+	 * We need to determine the total key bytes as the key locations
+	 * depend on it.
+	 */
+	total_key_bytes = 0;
+	for (dummy_chain = cipher_chain;
+	    dummy_chain != NULL;
+	    dummy_chain = dummy_chain->next) {
+		total_key_bytes += dummy_chain->cipher->klen;
 	}
 
-	return syscrypt(cipher_id, key, cipher->klen, iv, in, out, in_len, 1);
+	/*
+	 * Now we need to get prepare the keys, as the keys are in
+	 * forward order with respect to the cipher cascade, but
+	 * the actual decryption is in reverse cipher cascade order.
+	 */
+	used_key_bytes = 0;
+	for (dummy_chain = cipher_chain;
+	    dummy_chain != NULL;
+	    dummy_chain = dummy_chain->next) {
+		dummy_chain->key = alloc_safe_mem(dummy_chain->cipher->klen);
+		if (dummy_chain->key == NULL) {
+			fprintf(stderr, "tc_decrypt: Could not allocate key "
+			    "memory\n");
+			return ENOMEM;
+		}
+
+		/* XXX: here we assume XTS operation! */
+		memcpy(dummy_chain->key,
+		    key + used_key_bytes/2,
+		    dummy_chain->cipher->klen/2);
+		memcpy(dummy_chain->key + dummy_chain->cipher->klen/2,
+		    key + (total_key_bytes/2) + used_key_bytes/2,
+		    dummy_chain->cipher->klen/2);
+
+		/* Remember how many key bytes we've seen */
+		used_key_bytes += dummy_chain->cipher->klen;
+	}
+
+	return 0;
 }
 
 int
-tc_decrypt(struct tc_crypto_algo *cipher, unsigned char *key,
+tc_encrypt(struct tc_cipher_chain *cipher_chain, unsigned char *key,
     unsigned char *iv,
     unsigned char *in, int in_len, unsigned char *out)
 {
 	int cipher_id;
+	int err;
 
-	cipher_id = get_cryptodev_cipher_id(cipher);
-	if (cipher_id < 0) {
-		fprintf(stderr, "Cipher %s not found\n", cipher->name);
-		return ENOENT;
+	if ((err = tc_cipher_chain_populate_keys(cipher_chain, key)))
+		return err;
+
+#ifdef DEBUG
+	printf("tc_encrypt: starting chain\n");
+#endif
+
+	/*
+	 * Now process the actual decryption, in forward cascade order.
+	 */
+	for (;
+	    cipher_chain != NULL;
+	    cipher_chain = cipher_chain->next) {
+		cipher_id = get_cryptodev_cipher_id(cipher_chain->cipher);
+		if (cipher_id < 0) {
+			fprintf(stderr, "Cipher %s not found\n",
+			    cipher_chain->cipher->name);
+			return ENOENT;
+		}
+
+#ifdef DEBUG
+		printf("tc_encrypt: Currently using cipher %s\n",
+		    cipher_chain->cipher->name);
+#endif
+
+		err = syscrypt(cipher_id, cipher_chain->key,
+		    cipher_chain->cipher->klen, iv, in, out, in_len, 1);
+
+		/* Deallocate this key, since we won't need it anymore */
+		free_safe_mem(cipher_chain->key);
+
+		if (err != 0)
+			return err;
+
+		/* Set next input buffer as current output buffer */
+		in = out;
 	}
 
-	return syscrypt(cipher_id, key, cipher->klen, iv, in, out, in_len, 0);
+	return 0;
+}
+
+int
+tc_decrypt(struct tc_cipher_chain *cipher_chain, unsigned char *key,
+    unsigned char *iv,
+    unsigned char *in, int in_len, unsigned char *out)
+{
+	int cipher_id;
+	int err;
+
+	if ((err = tc_cipher_chain_populate_keys(cipher_chain, key)))
+		return err;
+
+#ifdef DEBUG
+	printf("tc_decrypt: starting chain!\n");
+#endif
+
+	/*
+	 * Now process the actual decryption, in reverse cascade order.
+	 */
+	for (; cipher_chain->next != NULL; cipher_chain = cipher_chain->next)
+		;
+	for (;
+	    cipher_chain != NULL;
+	    cipher_chain = cipher_chain->prev) {
+		cipher_id = get_cryptodev_cipher_id(cipher_chain->cipher);
+		if (cipher_id < 0) {
+			fprintf(stderr, "Cipher %s not found\n",
+			    cipher_chain->cipher->name);
+			return ENOENT;
+		}
+
+#ifdef DEBUG
+		printf("tc_decrypt: Currently using cipher %s\n",
+		    cipher_chain->cipher->name);
+#endif
+
+		err = syscrypt(cipher_id, cipher_chain->key,
+		    cipher_chain->cipher->klen, iv, in, out, in_len, 0);
+
+		/* Deallocate this key, since we won't need it anymore */
+		free_safe_mem(cipher_chain->key);
+
+		if (err != 0)
+			return err;
+
+		/* Set next input buffer as current output buffer */
+		in = out;
+	}
+
+	return 0;
 }
 
 int
