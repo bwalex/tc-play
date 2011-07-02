@@ -110,9 +110,11 @@ int write_mem(const char *dev, off_t offset, size_t blksz, void *mem, size_t byt
 int read_passphrase(char *prompt, char *pass, size_t passlen);
 
 int tc_crypto_init(void);
-int tc_encrypt(const char *cipher_name, unsigned char *key, unsigned char *iv,
+int tc_encrypt(struct tc_crypto_algo *cipher, unsigned char *key,
+    unsigned char *iv,
     unsigned char *in, int in_len, unsigned char *out);
-int tc_decrypt(const char *cipher_name, unsigned char *key, unsigned char *iv,
+int tc_decrypt(struct tc_crypto_algo *cipher, unsigned char *key,
+    unsigned char *iv,
     unsigned char *in, int in_len, unsigned char *out);
 int pbkdf2(const char *pass, int passlen, const unsigned char *salt, int saltlen,
     int iter, const char *hash_name, int keylen, unsigned char *out);
@@ -123,7 +125,7 @@ struct tchdr_enc *create_hdr(unsigned char *pass, int passlen,
     struct pbkdf_prf_algo *prf_algo, struct tc_crypto_algo *cipher,
     size_t sec_sz, size_t total_blocks,
     off_t offset, size_t blocks, int hidden);
-struct tchdr_dec *decrypt_hdr(struct tchdr_enc *ehdr, char *algo,
+struct tchdr_dec *decrypt_hdr(struct tchdr_enc *ehdr, struct tc_crypto_algo *cipher,
     unsigned char *key);
 int verify_hdr(struct tchdr_dec *hdr);
 

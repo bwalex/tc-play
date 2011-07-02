@@ -193,7 +193,7 @@ process_hdr(const char *dev, unsigned char *pass, int passlen,
 			printf("\nTrying cipher %s\n", tc_crypto_algos[j].name);
 #endif
 
-			dhdr = decrypt_hdr(ehdr, tc_crypto_algos[j].name, key);
+			dhdr = decrypt_hdr(ehdr, &tc_crypto_algos[j], key);
 			if (dhdr == NULL) {
 				continue;
 			}
@@ -410,7 +410,6 @@ dm_setup(const char *mapname, struct tcplay_info *info)
 	if ((params = alloc_safe_mem(512)) == NULL) {
 		fprintf(stderr, "could not allocate safe parameters memory");
 		return ENOMEM;
-		
 	}
 
 	/* aes-cbc-essiv:sha256 7997f8af... 0 /dev/ad0s0a 8 */

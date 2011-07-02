@@ -43,7 +43,8 @@
 #define HOST_TO_LE(n, v) v = htole ## n (v)
 
 struct tchdr_dec *
-decrypt_hdr(struct tchdr_enc *ehdr, char *algo, unsigned char *key)
+decrypt_hdr(struct tchdr_enc *ehdr, struct tc_crypto_algo *cipher,
+    unsigned char *key)
 {
 	struct tchdr_dec *dhdr;
 	unsigned char iv[128];
@@ -56,8 +57,8 @@ decrypt_hdr(struct tchdr_enc *ehdr, char *algo, unsigned char *key)
 
 	memset(iv, 0, sizeof(iv));
 
-	error = tc_decrypt(algo, key, iv, ehdr->enc, sizeof(struct tchdr_dec),
-	    (unsigned char *)dhdr);
+	error = tc_decrypt(cipher, key, iv, ehdr->enc,
+	    sizeof(struct tchdr_dec), (unsigned char *)dhdr);
 	if (error) {
 		fprintf(stderr, "Header decryption failed\n");
 		free_safe_mem(dhdr);
@@ -189,7 +190,7 @@ create_hdr(unsigned char *pass, int passlen, struct pbkdf_prf_algo *prf_algo,
 	HOST_TO_BE(32, dhdr->crc_dhdr);
 
 	memset(iv, 0, sizeof(iv));
-	error = tc_encrypt(cipher->name, key, iv, (unsigned char *)dhdr,
+	error = tc_encrypt(cipher, key, iv, (unsigned char *)dhdr,
 	    sizeof(struct tchdr_dec), ehdr->enc);
 	if (error) {
 		fprintf(stderr, "Header encryption failed\n");

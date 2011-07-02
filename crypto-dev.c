@@ -26,6 +26,14 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
+#include <sys/types.h>
+#include <sys/param.h>
+#include <sys/ioctl.h>
+#include <sys/sysctl.h>
+#include <crypto/cryptodev.h>
+
+#include <fcntl.h>
+#include <unistd.h>
 #include <errno.h>
 #include <string.h>
 #include <openssl/evp.h>
@@ -33,10 +41,112 @@
 #include "crc32.h"
 #include "tc-play.h"
 
+static
+int
+getallowsoft(void)
+{
+	int old;
+	size_t olen;
+
+	olen = sizeof(old);
+
+	if (sysctlbyname("kern.cryptodevallowsoft", &old, &olen, NULL, 0) < 0) {
+		perror("accessing sysctl kern.cryptodevallowsoft failed");
+	}
+
+	return old;
+}
+
+static
+void
+setallowsoft(int new)
+{
+	int old;
+	size_t olen, nlen;
+
+	olen = nlen = sizeof(new);
+
+	if (sysctlbyname("kern.cryptodevallowsoft", &old, &olen, &new, nlen) < 0) {
+		perror("accessing sysctl kern.cryptodevallowsoft failed");
+	}
+}
+
+static
+int
+syscrypt(int cipher, unsigned char *key, size_t klen, unsigned char *iv,
+    unsigned char *in, unsigned char *out, size_t len, int do_encrypt)
+{
+	struct session_op session;
+	struct crypt_op cryp;
+	int cryptodev_fd = -1, fd = -1;
+
+	if ((cryptodev_fd = open("/dev/crypto", O_RDWR, 0)) < 0) {
+		perror("Could not open /dev/crypto");
+		goto err;
+	}
+	if (ioctl(cryptodev_fd, CRIOGET, &fd) == -1) {
+		perror("CRIOGET failed");
+		goto err;
+	}
+	memset(&session, 0, sizeof(session));
+	session.cipher = cipher;
+	session.key = (caddr_t) key;
+	session.keylen = klen;
+	if (ioctl(fd, CIOCGSESSION, &session) == -1) {
+		perror("CIOCGSESSION failed");
+		goto err;
+	}
+	memset(&cryp, 0, sizeof(cryp));
+	cryp.ses = session.ses;
+	cryp.op = do_encrypt ? COP_ENCRYPT : COP_DECRYPT;
+	cryp.flags = 0;
+	cryp.len = len;
+	cryp.src = (caddr_t) in;
+	cryp.dst = (caddr_t) out;
+	cryp.iv = (caddr_t) iv;
+	cryp.mac = 0;
+	if (ioctl(fd, CIOCCRYPT, &cryp) == -1) {
+		perror("CIOCCRYPT failed");
+		goto err;
+	}
+	if (ioctl(fd, CIOCFSESSION, &session.ses) == -1) {
+		perror("CIOCFSESSION failed");
+		goto err;
+	}
+	close(fd);
+	close(cryptodev_fd);
+	return (0);
+
+err:
+	if (fd != -1)
+		close(fd);
+	if (cryptodev_fd != -1)
+		close(cryptodev_fd);
+	return (-1);
+}
+
+static
+int
+get_cryptodev_cipher_id(struct tc_crypto_algo *cipher)
+{
+	if (strcmp(cipher->name, "AES-128-XTS") == 0)
+		return CRYPTO_AES_XTS;
+	else if (strcmp(cipher->name, "AES-256-XTS") == 0)
+		return CRYPTO_AES_XTS;
+	else
+		return -1;
+}
+
 int
 tc_crypto_init(void)
 {
+	int allowed;
+
 	OpenSSL_add_all_algorithms();
+
+	allowed = getallowsoft();
+	if (allowed == 0)
+		setallowsoft(1);
 
 	return 0;
 }
@@ -46,22 +156,15 @@ tc_encrypt(struct tc_crypto_algo *cipher, unsigned char *key,
     unsigned char *iv,
     unsigned char *in, int in_len, unsigned char *out)
 {
-	const EVP_CIPHER *evp;
-	EVP_CIPHER_CTX ctx;
-	int outl, tmplen;
+	int cipher_id;
 
-	evp = EVP_get_cipherbyname(cipher->name);
-	if (evp == NULL) {
+	cipher_id = get_cryptodev_cipher_id(cipher);
+	if (cipher_id < 0) {
 		fprintf(stderr, "Cipher %s not found\n", cipher->name);
 		return ENOENT;
 	}
 
-	EVP_CIPHER_CTX_init(&ctx);
-	EVP_EncryptInit(&ctx, evp, key, iv);
-	EVP_EncryptUpdate(&ctx, out, &outl, in, in_len);
-	EVP_EncryptFinal(&ctx, out + outl, &tmplen);
-
-	return 0;
+	return syscrypt(cipher_id, key, cipher->klen, iv, in, out, in_len, 1);
 }
 
 int
@@ -69,22 +172,15 @@ tc_decrypt(struct tc_crypto_algo *cipher, unsigned char *key,
     unsigned char *iv,
     unsigned char *in, int in_len, unsigned char *out)
 {
-	const EVP_CIPHER *evp;
-	EVP_CIPHER_CTX ctx;
-	int outl, tmplen;
+	int cipher_id;
 
-	evp = EVP_get_cipherbyname(cipher->name);
-	if (evp == NULL) {
+	cipher_id = get_cryptodev_cipher_id(cipher);
+	if (cipher_id < 0) {
 		fprintf(stderr, "Cipher %s not found\n", cipher->name);
 		return ENOENT;
 	}
 
-	EVP_CIPHER_CTX_init(&ctx);
-	EVP_DecryptInit(&ctx, evp, key, iv);
-	EVP_DecryptUpdate(&ctx, out, &outl, in, in_len);
-	EVP_DecryptFinal(&ctx, out + outl, &tmplen);
-
-	return 0;
+	return syscrypt(cipher_id, key, cipher->klen, iv, in, out, in_len, 0);
 }
 
 int
@@ -96,7 +192,7 @@ pbkdf2(const char *pass, int passlen, const unsigned char *salt, int saltlen,
 
 	md = EVP_get_digestbyname(hash_name);
 	if (md == NULL) {
-		fprintf(stderr, "Hash %s not found\n", hash_name);
+		printf("Hash %s not found\n", hash_name);
 		return ENOENT;
 	}
 	r = PKCS5_PBKDF2_HMAC(pass, passlen, salt, saltlen, iter, md,
