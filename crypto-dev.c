@@ -129,10 +129,18 @@ static
 int
 get_cryptodev_cipher_id(struct tc_crypto_algo *cipher)
 {
-	if (strcmp(cipher->name, "AES-128-XTS") == 0)
+	if	(strcmp(cipher->name, "AES-128-XTS") == 0)
 		return CRYPTO_AES_XTS;
 	else if (strcmp(cipher->name, "AES-256-XTS") == 0)
 		return CRYPTO_AES_XTS;
+	else if (strcmp(cipher->name, "TWOFISH-128-XTS") == 0)
+		return CRYPTO_TWOFISH_XTS;
+	else if (strcmp(cipher->name, "TWOFISH-256-XTS") == 0)
+		return CRYPTO_TWOFISH_XTS;
+	else if (strcmp(cipher->name, "SERPENT-128-XTS") == 0)
+		return CRYPTO_SERPENT_XTS;
+	else if (strcmp(cipher->name, "SERPENT-256-XTS") == 0)
+		return CRYPTO_SERPENT_XTS;
 	else
 		return -1;
 }

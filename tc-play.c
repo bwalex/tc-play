@@ -66,8 +66,12 @@ struct tc_crypto_algo tc_crypto_algos[] = {
 #if 0
 	/* XXX: turns out TC doesn't support AES-128-XTS */
 	{ "AES-128-XTS",	"aes-xts-plain",	32,	8 },
+	{ "TWOFISH-128-XTS",	"twofish-xts-plain",	32,	8 },
+	{ "SERPENT-128-XTS",	"serpent-xts-plain",	32,	8 },
 #endif
 	{ "AES-256-XTS",	"aes-xts-plain",	64,	8 },
+	{ "TWOFISH-256-XTS",	"twofish-xts-plain",	64,	8 },
+	{ "SERPENT-256-XTS",	"serpent-xts-plain",	64,	8 },
 	{ NULL,			NULL,			0,	0 }
 };
 
