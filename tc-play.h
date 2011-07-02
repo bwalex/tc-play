@@ -44,6 +44,9 @@
 #define TC_VOLFLAG_SYSTEM	0x01	/* system encryption */
 #define TC_VOLFLAG_INPLACE	0x02	/* non-system in-place-encrypted volume */
 
+#if 1
+#define DEBUG 1
+#endif
 
 #include <uuid.h>
 
@@ -62,6 +65,7 @@ struct tc_crypto_algo {
 struct tc_cipher_chain {
 	struct tc_crypto_algo *cipher;
 	unsigned char *key;
+	char dm_key[MAX_KEYSZ*2 + 1];
 
 	struct tc_cipher_chain *prev;
 	struct tc_cipher_chain *next;
@@ -101,7 +105,7 @@ struct tcplay_info {
 	struct tchdr_dec *hdr;
 	struct tc_cipher_chain *cipher_chain;
 	struct pbkdf_prf_algo *pbkdf_prf;
-	char key[MAX_KEYSZ*2];
+	char key[MAX_KEYSZ*2 + 1];
 	off_t start;	/* Logical volume offset in table */
 	size_t size;	/* Volume size */
 
@@ -120,6 +124,8 @@ int write_mem(const char *dev, off_t offset, size_t blksz, void *mem, size_t byt
 int read_passphrase(char *prompt, char *pass, size_t passlen);
 
 int tc_crypto_init(void);
+int tc_cipher_chain_populate_keys(struct tc_cipher_chain *cipher_chain,
+    unsigned char *key);
 int tc_encrypt(struct tc_cipher_chain *cipher_chain, unsigned char *key,
     unsigned char *iv,
     unsigned char *in, int in_len, unsigned char *out);

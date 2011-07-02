@@ -159,7 +159,6 @@ tc_crypto_init(void)
 	return 0;
 }
 
-static
 int
 tc_cipher_chain_populate_keys(struct tc_cipher_chain *cipher_chain,
     unsigned char *key)

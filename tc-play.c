@@ -212,9 +212,10 @@ new_info(const char *dev, struct tc_cipher_chain *cipher_chain,
 {
 	struct tcplay_info *info;
 	size_t i;
+	int err;
 
 	if ((info = (struct tcplay_info *)alloc_safe_mem(sizeof(*info))) == NULL) {
-		fprintf(stderr, "could not allocate safe info memory");
+		fprintf(stderr, "could not allocate safe info memory\n");
 		return NULL;
 	}
 
@@ -227,12 +228,17 @@ new_info(const char *dev, struct tc_cipher_chain *cipher_chain,
 	info->skip = hdr->off_mk_scope / hdr->sec_sz;	/* iv skip */
 	info->offset = hdr->off_mk_scope / hdr->sec_sz;	/* block offset */
 
-#if 0
-	/* XXX: broken */
-	for (i = 0; i < cipher->klen; i++) {
-		sprintf(&info->key[i*2], "%02x", hdr->keys[i]);
+	err = tc_cipher_chain_populate_keys(cipher_chain, hdr->keys);
+	if (err) {
+		fprintf(stderr, "could not populate keys in cipher chain\n");
+		return NULL;
 	}
-#endif
+
+	for (; cipher_chain != NULL; cipher_chain = cipher_chain->next) {
+		for (i = 0; i < cipher_chain->cipher->klen; i++)
+			sprintf(&cipher_chain->dm_key[i*2], "%02x",
+			    cipher_chain->key[i]);
+	}
 
 	return info;
 }
@@ -497,78 +503,111 @@ create_volume(const char *dev, int hidden, const char *keyfiles[], int nkeyfiles
 int
 dm_setup(const char *mapname, struct tcplay_info *info)
 {
+	struct tc_cipher_chain *cipher_chain;
 	struct dm_task *dmt = NULL;
 	struct dm_info dmi;
 	char *params = NULL;
 	char *uu;
 	uint32_t status;
 	int ret = 0;
+	int j;
+	off_t start, skip, offset;
+	char dev[PATH_MAX];
+	char map[PATH_MAX];
 
 	if ((params = alloc_safe_mem(512)) == NULL) {
 		fprintf(stderr, "could not allocate safe parameters memory");
 		return ENOMEM;
 	}
 
-	/* aes-cbc-essiv:sha256 7997f8af... 0 /dev/ad0s0a 8 */
-	/*			   iv off---^  block off--^ */
-	snprintf(params, 512, "%s %s %"PRIu64 " %s %"PRIu64,
-	    /* XXX: broken */
-	    info->cipher_chain->cipher->dm_crypt_str, info->key,
-	    info->skip, info->dev, info->offset);
+	strcpy(dev, info->dev);
+	skip = info->skip;
+	start = info->start;
+	offset = info->offset;
+
+	/* Get to the end of the chain */
+	for (cipher_chain = info->cipher_chain; cipher_chain->next != NULL;
+	    cipher_chain = cipher_chain->next)
+		;
+
+	for (j= 0; cipher_chain != NULL;
+	    cipher_chain = cipher_chain->prev, j++) {
+		/* aes-cbc-essiv:sha256 7997f8af... 0 /dev/ad0s0a 8 */
+		/*			   iv off---^  block off--^ */
+		snprintf(params, 512, "%s %s %"PRIu64 " %s %"PRIu64,
+		    cipher_chain->cipher->dm_crypt_str, cipher_chain->dm_key,
+		    skip, dev, offset);
 #ifdef DEBUG
-	printf("Params: %s\n", params);
+		printf("Params: %s\n", params);
 #endif
-	if ((dmt = dm_task_create(DM_DEVICE_CREATE)) == NULL) {
-		fprintf(stderr, "dm_task_create failed\n");
-		ret = -1;
-		goto out;
-	}
 
-	if ((dm_task_set_name(dmt, mapname)) == 0) {
-		fprintf(stderr, "dm_task_set_name failed\n");
-		ret = -1;
-		goto out;
-	}
+		if ((dmt = dm_task_create(DM_DEVICE_CREATE)) == NULL) {
+			fprintf(stderr, "dm_task_create failed\n");
+			ret = -1;
+			goto out;
+		}
 
-	uuid_create(&info->uuid, &status);
-	if (status != uuid_s_ok) {
-		fprintf(stderr, "uuid_create failed\n");
-		ret = -1;
-		goto out;
-	}
+		/*
+		 * If this is the last element in the cipher chain, use the
+		 * final map name. Otherwise pick a secondary name...
+		 */
+		if (cipher_chain->prev == NULL)
+			strcpy(map, mapname);
+		else
+			sprintf(map, "%s.%d", mapname, j);
 
-	uuid_to_string(&info->uuid, &uu, &status);
-	if (uu == NULL) {
-		fprintf(stderr, "uuid_to_string failed\n");
-		ret = -1;
-		goto out;
-	}
+		if ((dm_task_set_name(dmt, map)) == 0) {
+			fprintf(stderr, "dm_task_set_name failed\n");
+			ret = -1;
+			goto out;
+		}
 
-	if ((dm_task_set_uuid(dmt, uu)) == 0) {
+		uuid_create(&info->uuid, &status);
+		if (status != uuid_s_ok) {
+			fprintf(stderr, "uuid_create failed\n");
+			ret = -1;
+			goto out;
+		}
+
+		uuid_to_string(&info->uuid, &uu, &status);
+		if (uu == NULL) {
+			fprintf(stderr, "uuid_to_string failed\n");
+			ret = -1;
+			goto out;
+		}
+
+		if ((dm_task_set_uuid(dmt, uu)) == 0) {
+			free(uu);
+			fprintf(stderr, "dm_task_set_uuid failed\n");
+			ret = -1;
+			goto out;
+		}
 		free(uu);
-		fprintf(stderr, "dm_task_set_uuid failed\n");
-		ret = -1;
-		goto out;
-	}
-	free(uu);
 
-	if ((dm_task_add_target(dmt, info->start, info->size, "crypt", params)) == 0) {
-		fprintf(stderr, "dm_task_add_target failed\n");
-		ret = -1;
-		goto out;
-	}
+		if ((dm_task_add_target(dmt, start, info->size, "crypt", params)) == 0) {
+			fprintf(stderr, "dm_task_add_target failed\n");
+			ret = -1;
+			goto out;
+		}
 
-	if ((dm_task_run(dmt)) == 0) {
-		fprintf(stderr, "dm_task_task_run failed\n");
-		ret = -1;
-		goto out;
-	}
+		if ((dm_task_run(dmt)) == 0) {
+			fprintf(stderr, "dm_task_task_run failed\n");
+			ret = -1;
+			goto out;
+		}
 
-	if ((dm_task_get_info(dmt, &dmi)) == 0) {
-		fprintf(stderr, "dm_task_get info failed\n");
-		/* XXX: probably do more than just erroring out... */
-		ret = -1;
-		goto out;
+		if ((dm_task_get_info(dmt, &dmi)) == 0) {
+			fprintf(stderr, "dm_task_get info failed\n");
+			/* XXX: probably do more than just erroring out... */
+			ret = -1;
+			goto out;
+		}
+
+		skip = 0;
+		offset = 0;
+		start = 0;
+		sprintf(dev, "/dev/mapper/%s.%d", mapname, j);
+
 	}
 
 out:
