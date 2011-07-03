@@ -47,6 +47,7 @@
  *  - mlockall? (at least MCL_FUTURE, which is the only one we support)
  */
 
+summary_fn_t summary_fn = NULL;
 int tc_internal_verbose = 1;
 char tc_internal_log_buffer[LOG_BUFFER_SZ];
 
@@ -63,10 +64,10 @@ tc_log(int err, char *fmt, ...)
 
         __va_start(ap, fmt);
 
-        if (tc_internal_verbose)
+	vsnprintf(tc_internal_log_buffer, LOG_BUFFER_SZ, fmt, ap);
+
+	if (tc_internal_verbose)
                 vfprintf(fp, fmt, ap);
-	else
-		vsnprintf(tc_internal_log_buffer, LOG_BUFFER_SZ, fmt, ap);
 
 	__va_end(ap);
 }

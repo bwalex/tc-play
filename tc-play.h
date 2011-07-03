@@ -46,6 +46,7 @@
 #define MIN_VOL_BLOCKS		256
 #define MAX_CIPHER_CHAINS	64
 #define DEFAULT_RETRIES		3
+#define ERASE_BUFFER_SIZE	4*1024*1024 /* 4 MB */
 
 /* TrueCrypt Volume flags */
 #define TC_VOLFLAG_SYSTEM	0x01	/* system encryption */
@@ -182,8 +183,11 @@ int map_volume(const char *map_name, const char *device, int sflag,
     char *passphrase, char *passphrase_hidden, int interactive, int retries);
 int dm_setup(const char *mapname, struct tcplay_info *info);
 
+typedef void(*summary_fn_t)(void);
+
 extern int tc_internal_verbose;
 extern char tc_internal_log_buffer[];
+extern summary_fn_t summary_fn;
 
 #define alloc_safe_mem(x) \
 	_alloc_safe_mem(x, __FILE__, __LINE__)

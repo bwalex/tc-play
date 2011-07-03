@@ -56,6 +56,15 @@ tc_api_get_error_msg(void)
 	return (tc_internal_verbose) ? "" : tc_internal_log_buffer;
 }
 
+char *
+tc_api_get_summary(void)
+{
+	if (summary_fn != NULL)
+		summary_fn();
+
+	return tc_internal_log_buffer;
+}
+
 int
 tc_api_create_volume(tc_api_op *api_opts)
 {

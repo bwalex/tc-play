@@ -106,14 +106,28 @@ get_random(unsigned char *buf, size_t len)
 	return 0;
 }
 
-/* XXX: improve secure_erase performance! */
+static size_t secure_erase_total_bytes = 0;
+static size_t secure_erase_erased_bytes = 0;
+
+static
+void
+secure_erase_summary(void)
+{
+	float pct_done;
+
+	pct_done = (1.0 * secure_erase_erased_bytes) /
+	    (1.0 * secure_erase_total_bytes) * 100.0;
+	tc_log(0, "Securely erasing, %.0f%% done.\n", pct_done);
+}
+
 int
 secure_erase(const char *dev, size_t bytes, size_t blksz)
 {
 	size_t erased = 0;
 	int fd_rand, fd;
-	char buf[MAX_BLKSZ];
+	char buf[ERASE_BUFFER_SIZE];
 	ssize_t r, w;
+	size_t sz;
 
 	if (blksz > MAX_BLKSZ) {
 		tc_log(1, "blksz > MAX_BLKSZ\n");
@@ -131,21 +145,32 @@ secure_erase(const char *dev, size_t bytes, size_t blksz)
 		return -1;
 	}
 
+	summary_fn = secure_erase_summary;
+	secure_erase_total_bytes = bytes;
+
+	sz = ERASE_BUFFER_SIZE;
 	while (erased < bytes) {
-		if ((r = read(fd_rand, buf, blksz)) < 0) {
+		secure_erase_erased_bytes = erased;
+		/* Switch to block size when not much is remaining */
+		if ((bytes - erased) <= ERASE_BUFFER_SIZE)
+			sz = blksz;
+
+		if ((r = read(fd_rand, buf, sz)) < 0) {
 			tc_log(1, "Error reading from /dev/urandom\n");
 			close(fd);
 			close(fd_rand);
+			summary_fn = NULL;
 			return -1;
 		}
 
 		if (r < blksz)
 			continue;
 
-		if ((w = write(fd, buf, blksz)) < 0) {
+		if ((w = write(fd, buf, r)) < 0) {
 			tc_log(1, "Error writing to %s\n", dev);
 			close(fd);
 			close(fd_rand);
+			summary_fn = NULL;
 			return -1;
 		}
 
@@ -154,6 +179,8 @@ secure_erase(const char *dev, size_t bytes, size_t blksz)
 
 	close(fd);
 	close(fd_rand);
+
+	summary_fn = NULL;
 
 	return 0;
 }

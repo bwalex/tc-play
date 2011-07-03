@@ -33,11 +33,20 @@
 #include <unistd.h>
 #include <errno.h>
 #include <string.h>
+#include <signal.h>
 #include <err.h>
 #include <time.h>
 #include <libutil.h>
 
 #include "tc-play.h"
+
+static
+void
+sig_handler(int sig)
+{
+	if ((sig == SIGUSR1 || sig == SIGINFO) && (summary_fn != NULL))
+		summary_fn();
+}
 
 static
 void
@@ -115,6 +124,8 @@ main(int argc, char *argv[])
 	struct tc_cipher_chain *cipher_chain = NULL;
 
 	tc_play_init();
+	signal(SIGUSR1, sig_handler);
+	signal(SIGINFO, sig_handler);
 
 	nkeyfiles = 0;
 	n_hkeyfiles = 0;

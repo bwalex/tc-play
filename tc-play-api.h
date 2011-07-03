@@ -56,4 +56,5 @@ int tc_api_map_volume(tc_api_op *api_opts);
 int tc_api_check_cipher(tc_api_op *api_opts);
 int tc_api_check_prf_hash(tc_api_op *api_opts);
 char *tc_api_get_error_msg(void);
+char *tc_api_get_summary(void);
 
