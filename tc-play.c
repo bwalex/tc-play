@@ -774,7 +774,6 @@ map_volume(const char *map_name, const char *device, int sflag,
 	return 0;
 }
 
-/* XXX: unroll changes that dm_setup does on error */
 int
 dm_setup(const char *mapname, struct tcplay_info *info)
 {
@@ -783,6 +782,8 @@ dm_setup(const char *mapname, struct tcplay_info *info)
 	struct dm_info dmi;
 	char *params = NULL;
 	char *uu;
+	char *uu_stack[64];
+	int uu_stack_idx;
 	uint32_t status;
 	int ret = 0;
 	int j;
@@ -798,6 +799,7 @@ dm_setup(const char *mapname, struct tcplay_info *info)
 	strcpy(dev, info->dev);
 	start = info->start;
 	offset = info->offset;
+	uu_stack_idx = 0;
 
 	/* Get to the end of the chain */
 	for (cipher_chain = info->cipher_chain; cipher_chain->next != NULL;
@@ -856,6 +858,7 @@ dm_setup(const char *mapname, struct tcplay_info *info)
 			ret = -1;
 			goto out;
 		}
+
 		free(uu);
 
 		if ((dm_task_add_target(dmt, start, info->size, "crypt", params)) == 0) {
@@ -877,16 +880,53 @@ dm_setup(const char *mapname, struct tcplay_info *info)
 			goto out;
 		}
 
+		asprintf(&uu_stack[uu_stack_idx++], "%s", map);
+
 		offset = 0;
 		start = 0;
 		sprintf(dev, "/dev/mapper/%s.%d", mapname, j);
 
+		dm_task_destroy(dmt);
 	}
 
 out:
+	/*
+	 * If an error occured, try to unroll changes made before it
+	 * happened.
+	 */
+	if (ret) {
+		j = uu_stack_idx;
+		while (j > 0) {
+#ifdef DEBUG
+			printf("Unrolling dm changes! j = %d (%s)\n", j-1,
+			    uu_stack[j-1]);
+#endif
+			if ((dmt = dm_task_create(DM_DEVICE_REMOVE)) == NULL) {
+				tc_log(1, "Tried to unroll dm changes, "
+				    "giving up.\n");
+				break;
+			}
+
+			if ((dm_task_set_name(dmt, uu_stack[--j])) == 0) {
+				tc_log(1, "Tried to unroll dm changes, "
+				    "giving up.\n");
+				break;
+			}
+
+			if ((dm_task_run(dmt)) == 0) {
+				tc_log(1, "Tried to unroll dm changes, "
+				    "giving up.\n");
+				break;
+			}
+
+			dm_task_destroy(dmt);
+		}
+	}
+
+	while (uu_stack_idx > 0)
+		free(uu_stack[--uu_stack_idx]);
+
 	free_safe_mem(params);
-	if (dmt)
-		dm_task_destroy(dmt);
 
 	return ret;
 }
