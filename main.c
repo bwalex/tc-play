@@ -106,18 +106,13 @@ main(int argc, char *argv[])
 	const char *dev = NULL, *sys_dev = NULL, *map_name = NULL;
 	const char *keyfiles[MAX_KEYFILES];
 	const char *h_keyfiles[MAX_KEYFILES];
-	char *pass;
-	char *h_pass = NULL;
-	struct tchdr_enc *ehdr, *hehdr = NULL;
-	struct tcplay_info *info, *hinfo = NULL;
 	int nkeyfiles;
 	int n_hkeyfiles;
-	int ch, error, error2, r = 0;
+	int ch, error;
 	int sflag = 0, info_vol = 0, map_vol = 0, protect_hidden = 0,
 	    create_vol = 0, contain_hidden = 0;
 	struct pbkdf_prf_algo *prf = NULL;
 	struct tc_cipher_chain *cipher_chain = NULL;
-	size_t sz;
 
 	tc_play_init();
 
@@ -208,101 +203,20 @@ main(int argc, char *argv[])
 	if (create_vol) {
 		error = create_volume(dev, contain_hidden, keyfiles, nkeyfiles,
 		    h_keyfiles, n_hkeyfiles, prf, cipher_chain, NULL, NULL,
-		    0, 1 /* Interactive */);
+		    0, 1 /* interactive */);
 		if (error) {
-			err(1, "could not create new volume on %s\n", dev);
+			tc_log(1, "could not create new volume on %s\n", dev);
 		}
-		exit(0);
-		/* NOT REACHED */
-	}
-
-	/* This is only for info_vol and map_vol: */
-	if ((pass = alloc_safe_mem(MAX_PASSSZ)) == NULL) {
-		err(1, "could not allocate safe passphrase memory");
-	}
-
-	if ((error = read_passphrase("Passphrase: ", pass, MAX_PASSSZ))) {
-		err(1, "could not read passphrase");
-	}
-
-	if (nkeyfiles > 0) {
-		/* Apply keyfiles to 'pass' */
-		if ((error = apply_keyfiles(pass, MAX_PASSSZ, keyfiles,
-		    nkeyfiles))) {
-			err(1, "could not apply keyfiles");
-		}
-	}
-
-	if (protect_hidden) {
-		if ((h_pass = alloc_safe_mem(MAX_PASSSZ)) == NULL) {
-			err(1, "could not allocate safe passphrase memory");
-		}
-
-		if ((error = read_passphrase("Passphrase for hidden volume: ",
-		    h_pass, MAX_PASSSZ))) {
-			err(1, "could not read passphrase");
-		}
-
-		if (n_hkeyfiles > 0) {
-			/* Apply keyfiles to 'h_pass' */
-			if ((error = apply_keyfiles(h_pass, MAX_PASSSZ, h_keyfiles,
-			n_hkeyfiles))) {
-				err(1, "could not apply keyfiles");
-			}
-		}
-	}
-
-	sz = HDRSZ;
-	ehdr = (struct tchdr_enc *)read_to_safe_mem((sflag) ? sys_dev : dev,
-	    (sflag) ? HDR_OFFSET_SYS : 0, &sz);
-	if (ehdr == NULL) {
-		err(1, "read hdr_enc: %s", dev);
-	}
-
-	if (!sflag) {
-		sz = HDRSZ;
-		hehdr = (struct tchdr_enc *)read_to_safe_mem(dev, HDR_OFFSET_HIDDEN, &sz);
-		if (hehdr == NULL) {
-			err(1, "read hdr_enc: %s", dev);
-		}
-	} else {
-		hehdr = NULL;
-	}
-
-	error = process_hdr(dev, pass, (nkeyfiles > 0)?MAX_PASSSZ:strlen(pass),
-	    ehdr, &info);
-
-	if (hehdr && (error || protect_hidden)) {
-		if (error) {
-			error2 = process_hdr(dev, pass,
-			    (nkeyfiles > 0)?MAX_PASSSZ:strlen(pass), hehdr,
-			    &info);
-		} else if (protect_hidden) {
-			error2 = process_hdr(dev, h_pass,
-			    (n_hkeyfiles > 0)?MAX_PASSSZ:strlen(h_pass), hehdr,
-			    &hinfo);
-		}
-	}
-
-	if ((protect_hidden && (error || error2)) || /* We need both to protect a h. vol */
-	    (error && error2)) {
-		errx(1, "Incorrect password or not a TrueCrypt volume\n");
-	}
-
-	if (protect_hidden) {
-		if (adjust_info(info, hinfo) != 0) {
-			errx(1, "Could not protected hidden volume\n");
-		}
-	}
-
-	if (info_vol) {
-		print_info(info);
+	} else if (info_vol) {
+		error = info_volume(dev, sflag, sys_dev, protect_hidden,
+		    keyfiles, nkeyfiles, h_keyfiles, n_hkeyfiles, NULL, NULL,
+		    1 /* interactive */, DEFAULT_RETRIES);
 	} else if (map_vol) {
-		if ((error = dm_setup(map_name, info)) != 0) {
-			err(1, "could not set up dm-crypt mapping");
-		}
-		printf("All ok!");
+		error = map_volume(map_name,
+		    dev, sflag, sys_dev, protect_hidden,
+		    keyfiles, nkeyfiles, h_keyfiles, n_hkeyfiles, NULL, NULL,
+		    1 /* interactive */, DEFAULT_RETRIES);
 	}
 
-	return r;
+	return error;
 }

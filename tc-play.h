@@ -45,6 +45,7 @@
 #define SALT_LEN		64
 #define MIN_VOL_BLOCKS		256
 #define MAX_CIPHER_CHAINS	64
+#define DEFAULT_RETRIES		3
 
 /* TrueCrypt Volume flags */
 #define TC_VOLFLAG_SYSTEM	0x01	/* system encryption */
@@ -171,6 +172,14 @@ int create_volume(const char *dev, int hidden, const char *keyfiles[],
     struct pbkdf_prf_algo *prf_algo, struct tc_cipher_chain *cipher_chain,
     char *passphrase, char *h_passphrase, size_t hidden_blocks_in,
     int interactive);
+int info_volume(const char *device, int sflag, const char *sys_dev,
+    int protect_hidden, const char *keyfiles[], int nkeyfiles,
+    const char *h_keyfiles[], int n_hkeyfiles,
+    char *passphrase, char *passphrase_hidden, int interactive, int retries);
+int map_volume(const char *map_name, const char *device, int sflag,
+    const char *sys_dev, int protect_hidden, const char *keyfiles[],
+    int nkeyfiles, const char *h_keyfiles[], int n_hkeyfiles,
+    char *passphrase, char *passphrase_hidden, int interactive, int retries);
 int dm_setup(const char *mapname, struct tcplay_info *info);
 
 extern int tc_internal_verbose;

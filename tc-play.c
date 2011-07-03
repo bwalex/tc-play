@@ -389,7 +389,7 @@ create_volume(const char *dev, int hidden, const char *keyfiles[], int nkeyfiles
 		}
 
 		if ((error = read_passphrase("Passphrase: ", pass, MAX_PASSSZ) ||
-		   (error = read_passphrase("Repeat passphrase", pass_again,
+		   (read_passphrase("Repeat passphrase", pass_again,
 		   MAX_PASSSZ)))) {
 			tc_log(1, "could not read passphrase\n");
 			return -1;
@@ -432,7 +432,7 @@ create_volume(const char *dev, int hidden, const char *keyfiles[], int nkeyfiles
 
 			if ((error = read_passphrase("Passphrase for hidden volume: ",
 			   h_pass, MAX_PASSSZ) ||
-			   (error = read_passphrase("Repeat passphrase", pass_again,
+			   (read_passphrase("Repeat passphrase", pass_again,
 			   MAX_PASSSZ)))) {
 				tc_log(1, "could not read passphrase\n");
 				return -1;
@@ -575,6 +575,201 @@ create_volume(const char *dev, int hidden, const char *keyfiles[], int nkeyfiles
 			return -1;
 		}
 	}
+
+	return 0;
+}
+
+static
+struct tcplay_info *
+info_map_common(const char *dev, int sflag, const char *sys_dev,
+    int protect_hidden, const char *keyfiles[], int nkeyfiles,
+    const char *h_keyfiles[], int n_hkeyfiles, char *passphrase,
+    char *passphrase_hidden, int interactive, int retries)
+{
+	struct tchdr_enc *ehdr, *hehdr = NULL;
+	struct tcplay_info *info, *hinfo = NULL;
+	char *pass;
+	char *h_pass;
+	int error, error2;
+	size_t sz;
+
+	info = NULL;
+	if (retries < 1)
+		retries = 1;
+
+	while ((info == NULL) && retries-- > 0)
+	{
+		h_pass = NULL;
+		ehdr = NULL;
+		hehdr = NULL;
+
+		if ((pass = alloc_safe_mem(MAX_PASSSZ)) == NULL) {
+			tc_log(1, "could not allocate safe passphrase memory\n");
+			return NULL;
+		}
+
+		if (interactive) {
+		        if ((error = read_passphrase("Passphrase: ", pass, MAX_PASSSZ))) {
+				tc_log(1, "could not read passphrase\n");
+				return NULL;
+			}
+		} else {
+			/* In batch mode, use provided passphrase */
+			if (passphrase != NULL)
+				strcpy(pass, passphrase);
+		}
+
+		if (nkeyfiles > 0) {
+			/* Apply keyfiles to 'pass' */
+			if ((error = apply_keyfiles(pass, MAX_PASSSZ, keyfiles,
+			    nkeyfiles))) {
+				tc_log(1, "could not apply keyfiles");
+				return NULL;
+			}
+		}
+
+		if (protect_hidden) {
+			if ((h_pass = alloc_safe_mem(MAX_PASSSZ)) == NULL) {
+				tc_log(1, "could not allocate safe passphrase memory\n");
+				return NULL;
+			}
+
+			if (interactive) {
+			        if ((error = read_passphrase(
+				    "Passphrase for hidden volume: ", h_pass,
+				    MAX_PASSSZ))) {
+					tc_log(1, "could not read passphrase\n");
+					return NULL;
+				}
+			} else {
+				/* In batch mode, use provided passphrase */
+				if (passphrase_hidden != NULL)
+					strcpy(h_pass, passphrase_hidden);
+			}
+
+			if (n_hkeyfiles > 0) {
+				/* Apply keyfiles to 'pass' */
+				if ((error = apply_keyfiles(h_pass, MAX_PASSSZ, h_keyfiles,
+				    n_hkeyfiles))) {
+					tc_log(1, "could not apply keyfiles");
+					return NULL;
+				}
+			}
+		}
+
+		sz = HDRSZ;
+		ehdr = (struct tchdr_enc *)read_to_safe_mem((sflag) ? sys_dev : dev,
+		    (sflag) ? HDR_OFFSET_SYS : 0, &sz);
+		if (ehdr == NULL) {
+			tc_log(1, "error read hdr_enc: %s", dev);
+			return NULL;
+		}
+
+		if (!sflag) {
+			sz = HDRSZ;
+			hehdr = (struct tchdr_enc *)read_to_safe_mem(dev,
+			    HDR_OFFSET_HIDDEN, &sz);
+			if (hehdr == NULL) {
+				tc_log(1, "error read hdr_enc: %s", dev);
+				return NULL;
+			}
+		} else {
+			hehdr = NULL;
+		}
+
+		error = process_hdr(dev, pass, (nkeyfiles > 0)?MAX_PASSSZ:strlen(pass),
+		    ehdr, &info);
+
+		/*
+		 * Try to process hidden header if we have to protect the hidden
+		 * volume, or the decryption/verification of the main header
+		 * failed.
+		 */
+		if (hehdr && (error || protect_hidden)) {
+			if (error) {
+				error2 = process_hdr(dev, pass,
+				    (nkeyfiles > 0)?MAX_PASSSZ:strlen(pass), hehdr,
+				    &info);
+			} else if (protect_hidden) {
+				error2 = process_hdr(dev, h_pass,
+				    (n_hkeyfiles > 0)?MAX_PASSSZ:strlen(h_pass), hehdr,
+				    &hinfo);
+			}
+		}
+
+		/* We need both to protect a hidden volume */
+		if ((protect_hidden && (error || error2)) ||
+		    (error && error2)) {
+			tc_log(1, "Incorrect password or not a TrueCrypt volume\n");
+			info = NULL;
+			hinfo = NULL;
+
+			/* Try again (or finish) */
+			free_safe_mem(pass);
+			if (h_pass)
+				free_safe_mem(h_pass);
+			if (ehdr)
+				free_safe_mem(ehdr);
+			if (hehdr)
+				free_safe_mem(hehdr);
+			continue;
+		}
+
+		if (protect_hidden) {
+			if (adjust_info(info, hinfo) != 0) {
+				tc_log(1, "Could not protect hidden volume\n");
+				return NULL;
+			}
+		}
+        }
+
+	return info;
+}
+
+int
+info_volume(const char *device, int sflag, const char *sys_dev,
+    int protect_hidden, const char *keyfiles[], int nkeyfiles,
+    const char *h_keyfiles[], int n_hkeyfiles,
+    char *passphrase, char *passphrase_hidden, int interactive, int retries)
+{
+	struct tcplay_info *info;
+
+	info = info_map_common(device, sflag, sys_dev, protect_hidden,
+	    keyfiles, nkeyfiles, h_keyfiles, n_hkeyfiles,
+	    passphrase, passphrase_hidden, interactive, retries);
+
+	if (info != NULL) {
+		if (interactive)
+			print_info(info);
+	}
+
+	return (info != NULL) ? 0 : -1;
+}
+
+int
+map_volume(const char *map_name, const char *device, int sflag,
+    const char *sys_dev, int protect_hidden, const char *keyfiles[],
+    int nkeyfiles, const char *h_keyfiles[], int n_hkeyfiles,
+    char *passphrase, char *passphrase_hidden, int interactive, int retries)
+
+{
+	struct tcplay_info *info;
+	int error;
+
+	info = info_map_common(device, sflag, sys_dev, protect_hidden,
+	    keyfiles, nkeyfiles, h_keyfiles, n_hkeyfiles,
+	    passphrase, passphrase_hidden, interactive, retries);
+
+	if (info == NULL)
+		return -1;
+
+	if ((error = dm_setup(map_name, info)) != 0) {
+		tc_log(1, "Could not set up mapping %s\n", map_name);
+		return -1;
+	}
+
+	if (interactive)
+		printf("All ok!");
 
 	return 0;
 }
