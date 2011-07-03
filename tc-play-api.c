@@ -72,7 +72,7 @@ tc_api_create_volume(tc_api_op *api_opts)
 {
 	int nkeyfiles, n_hkeyfiles;
 	int create_hidden;
-	int err, i;
+	int err;
 
 	if ((api_opts == NULL) ||
 	    (api_opts->tc_device == NULL)) {

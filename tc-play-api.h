@@ -32,21 +32,21 @@
 
 typedef struct tc_api_op {
 	/* Common fields */
-	char	*tc_device;
-	char	*tc_cipher;
-	char	*tc_prf_hash;
-	char	*tc_passphrase;
-	char	**tc_keyfiles;
+	char		*tc_device;
+	char		*tc_cipher;
+	char		*tc_prf_hash;
+	char		*tc_passphrase;
+	const char	**tc_keyfiles;
 
 	/* Fields for mapping */
-	char	*tc_map_name;
-	int	tc_password_retries;
-	int	tc_interactive_prompt;
+	char		*tc_map_name;
+	int		tc_password_retries;
+	int		tc_interactive_prompt;
 
 	/* Fields for creation */
-	size_t	tc_size_hidden_in_blocks;
-	char	*tc_passphrase_hidden;
-	char	**tc_keyfiles_hidden;
+	size_t		tc_size_hidden_in_blocks;
+	char		*tc_passphrase_hidden;
+	const char	**tc_keyfiles_hidden;
 } tc_api_op;
 
 int tc_api_init(int verbose);
