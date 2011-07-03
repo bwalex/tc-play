@@ -27,6 +27,8 @@
  * SUCH DAMAGE.
  */
 
+#include <stdlib.h>
+#include <unistd.h>
 #include <errno.h>
 
 #include "tc-play.h"
@@ -79,7 +81,7 @@ tc_api_create_volume(tc_api_op *api_opts)
 
 	create_hidden = 0;
 
-	if (tc_size_hidden_in_blocks > 0) {
+	if (api_opts->tc_size_hidden_in_blocks > 0) {
 		create_hidden = 1;
 		for (n_hkeyfiles = 0; (n_hkeyfiles < MAX_KEYFILES) &&
 		    (api_opts->tc_keyfiles_hidden[n_hkeyfiles] != NULL);
@@ -93,7 +95,7 @@ tc_api_create_volume(tc_api_op *api_opts)
 	    check_prf_algo(api_opts->tc_prf_hash, 1),
 	    check_cipher_chain(api_opts->tc_cipher, 1),
 	    api_opts->tc_passphrase, api_opts->tc_passphrase_hidden,
-	    tc_size_hidden_in_blocks, 0 /* non-interactive */);
+	    api_opts->tc_size_hidden_in_blocks, 0 /* non-interactive */);
 
 	return (err) ? TC_ERR : TC_OK;
 }
@@ -114,11 +116,11 @@ tc_api_map_volume(tc_api_op *api_opts)
 	    (api_opts->tc_keyfiles[nkeyfiles] != NULL); nkeyfiles++)
 		;
 
-	err = map_volume(api_opts->tc_map_name, api_opts->device,
+	err = map_volume(api_opts->tc_map_name, api_opts->tc_device,
 	    /* sflag */ 0, /* sys_dev */ NULL,
 	    /* protect_hidden */ 0, api_opts->tc_keyfiles, nkeyfiles,
 	    /* h_keyfiles[] */ NULL, /* n_hkeyfiles */ 0,
-	    api_opts->passphrase, /* passphrase_hidden */ NULL,
+	    api_opts->tc_passphrase, /* passphrase_hidden */ NULL,
 	    api_opts->tc_interactive_prompt, api_opts->tc_password_retries);
 
 	return (err) ? TC_ERR : TC_OK;
@@ -129,7 +131,7 @@ tc_api_check_cipher(tc_api_op *api_opts)
 {
 	struct tc_cipher_chain *chain;
 
-	if (api_opts == NULL || api_opts->tc_cipher == NULL)
+	if (api_opts == NULL || api_opts->tc_cipher == NULL) {
 		errno = EFAULT;
 		return TC_ERR;
 	}
@@ -146,7 +148,7 @@ tc_api_check_prf_hash(tc_api_op *api_opts)
 {
 	struct pbkdf_prf_algo *prf_hash;
 
-	if (api_opts == NULL || api_opts->tc_prf_hash == NULL)
+	if (api_opts == NULL || api_opts->tc_prf_hash == NULL) {
 		errno = EFAULT;
 		return TC_ERR;
 	}

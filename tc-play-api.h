@@ -36,7 +36,7 @@ typedef struct tc_api_op {
 	char	*tc_cipher;
 	char	*tc_prf_hash;
 	char	*tc_passphrase;
-	char	*tc_keyfiles[];
+	char	**tc_keyfiles;
 
 	/* Fields for mapping */
 	char	*tc_map_name;
@@ -46,10 +46,10 @@ typedef struct tc_api_op {
 	/* Fields for creation */
 	size_t	tc_size_hidden_in_blocks;
 	char	*tc_passphrase_hidden;
-	char	*tc_keyfiles_hidden[];
+	char	**tc_keyfiles_hidden;
 } tc_api_op;
 
-int tc_api_init(void);
+int tc_api_init(int verbose);
 int tc_api_uninit(void);
 int tc_api_create_volume(tc_api_op *api_opts);
 int tc_api_map_volume(tc_api_op *api_opts);
