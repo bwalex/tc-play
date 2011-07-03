@@ -383,13 +383,13 @@ create_volume(const char *dev, int hidden, const char *keyfiles[], int nkeyfiles
 
 	if (interactive) {
 		if (((pass = alloc_safe_mem(MAX_PASSSZ)) == NULL) ||
-		   ((pass_again = alloc_safe_mem(MAX_PASSSZ)) != NULL)) {
+		   ((pass_again = alloc_safe_mem(MAX_PASSSZ)) == NULL)) {
 			tc_log(1, "could not allocate safe passphrase memory\n");
 			return -1;
 		}
 
 		if ((error = read_passphrase("Passphrase: ", pass, MAX_PASSSZ) ||
-		   (read_passphrase("Repeat passphrase", pass_again,
+		   (read_passphrase("Repeat passphrase: ", pass_again,
 		   MAX_PASSSZ)))) {
 			tc_log(1, "could not read passphrase\n");
 			return -1;
@@ -424,7 +424,7 @@ create_volume(const char *dev, int hidden, const char *keyfiles[], int nkeyfiles
 	if (hidden) {
 		if (interactive) {
 			if (((h_pass = alloc_safe_mem(MAX_PASSSZ)) == NULL) ||
-			   ((pass_again = alloc_safe_mem(MAX_PASSSZ)) != NULL)) {
+			   ((pass_again = alloc_safe_mem(MAX_PASSSZ)) == NULL)) {
 				tc_log(1, "could not allocate safe "
 				    "passphrase memory\n");
 				return -1;
@@ -432,7 +432,7 @@ create_volume(const char *dev, int hidden, const char *keyfiles[], int nkeyfiles
 
 			if ((error = read_passphrase("Passphrase for hidden volume: ",
 			   h_pass, MAX_PASSSZ) ||
-			   (read_passphrase("Repeat passphrase", pass_again,
+			   (read_passphrase("Repeat passphrase: ", pass_again,
 			   MAX_PASSSZ)))) {
 				tc_log(1, "could not read passphrase\n");
 				return -1;
