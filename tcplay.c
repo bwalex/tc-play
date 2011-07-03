@@ -38,7 +38,7 @@
 #include <libutil.h>
 
 #include "crc32.h"
-#include "tc-play.h"
+#include "tcplay.h"
 
 
 /* XXX TODO:

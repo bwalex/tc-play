@@ -37,7 +37,7 @@
 #include <termios.h>
 #include <unistd.h>
 
-#include "tc-play.h"
+#include "tcplay.h"
 
 void *
 read_to_safe_mem(const char *file, off_t offset, size_t *sz)

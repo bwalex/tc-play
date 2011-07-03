@@ -34,7 +34,7 @@
 #include <string.h>
 
 #include "crc32.h"
-#include "tc-play.h"
+#include "tcplay.h"
 
 /* Endianess macros */
 #define BE_TO_HOST(n, v) v = be ## n ## toh(v)

@@ -31,7 +31,7 @@
 #include <openssl/evp.h>
 
 #include "crc32.h"
-#include "tc-play.h"
+#include "tcplay.h"
 
 int
 tc_crypto_init(void)

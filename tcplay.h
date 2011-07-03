@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  */
 
-/* Version of tc-play */
+/* Version of tcplay */
 #define MAJ_VER			0
 #define MIN_VER			8
 

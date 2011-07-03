@@ -31,8 +31,8 @@
 #include <unistd.h>
 #include <errno.h>
 
-#include "tc-play.h"
-#include "tc-play-api.h"
+#include "tcplay.h"
+#include "tcplay_api.h"
 
 int
 tc_api_init(int verbose)

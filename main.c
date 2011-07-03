@@ -38,7 +38,7 @@
 #include <time.h>
 #include <libutil.h>
 
-#include "tc-play.h"
+#include "tcplay.h"
 
 static
 void
@@ -53,7 +53,7 @@ void
 usage(void)
 {
 	fprintf(stderr,
-	    "Usage: tc-play <command> [options]\n"
+	    "Usage: tcplay <command> [options]\n"
 	    "Valid commands and its arguments are:\n"
 	    " -c, --create\n"
 	    "\t Creates a new TC volume on the device specified by -d or --device\n"
@@ -183,7 +183,7 @@ main(int argc, char *argv[])
 			sys_dev = optarg;
 			break;
 		case 'v':
-			printf("tc-play v%d.%d\n", MAJ_VER, MIN_VER);
+			printf("tcplay v%d.%d\n", MAJ_VER, MIN_VER);
 			exit(0);
 			/* NOT REACHED */
 		case 'h':

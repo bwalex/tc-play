@@ -39,7 +39,7 @@
 #include <openssl/evp.h>
 
 #include "crc32.h"
-#include "tc-play.h"
+#include "tcplay.h"
 
 static
 int
