@@ -59,10 +59,12 @@ tc_api_get_error_msg(void)
 char *
 tc_api_get_summary(void)
 {
-	if (summary_fn != NULL)
+	if (summary_fn != NULL) {
 		summary_fn();
+		return tc_internal_log_buffer;
+	}
 
-	return tc_internal_log_buffer;
+	return NULL;
 }
 
 int
