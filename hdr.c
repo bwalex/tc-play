@@ -119,7 +119,8 @@ verify_hdr(struct tchdr_dec *hdr)
 
 struct tchdr_enc *
 create_hdr(unsigned char *pass, int passlen, struct pbkdf_prf_algo *prf_algo,
-    struct tc_cipher_chain *cipher_chain, size_t sec_sz, size_t total_blocks,
+    struct tc_cipher_chain *cipher_chain, size_t sec_sz,
+    size_t total_blocks __unused,
     off_t offset, size_t blocks, int hidden)
 {
 	struct tchdr_enc *ehdr;

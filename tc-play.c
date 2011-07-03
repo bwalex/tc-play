@@ -52,12 +52,12 @@ int tc_internal_verbose = 1;
 char tc_internal_log_buffer[LOG_BUFFER_SZ];
 
 void
-tc_log(int err, char *fmt, ...)
+tc_log(int is_err, const char *fmt, ...)
 {
 	__va_list ap;
 	FILE *fp;
 
-	if (err)
+	if (is_err)
 		fp = stderr;
 	else
 		fp = stdout;
@@ -94,7 +94,7 @@ struct tc_crypto_algo tc_crypto_algos[] = {
 	{ NULL,			NULL,			0,	0 }
 };
 
-char *valid_cipher_chains[][MAX_CIPHER_CHAINS] = {
+const char *valid_cipher_chains[][MAX_CIPHER_CHAINS] = {
 	{ "AES-256-XTS", NULL },
 	{ "TWOFISH-256-XTS", NULL },
 	{ "SERPENT-256-XTS", NULL },
@@ -172,25 +172,8 @@ tc_build_cipher_chains(void)
 	}
 }
 
-int
-hex2key(char *hex, size_t key_len, unsigned char *key)
-{
-	char hex_buf[3];
-	size_t key_idx;
-	hex_buf[2] = 0;
-	for (key_idx = 0; key_idx < key_len; ++key_idx) {
-		hex_buf[0] = *hex++;
-		hex_buf[1] = *hex++;
-		key[key_idx] = (unsigned char)strtoul(hex_buf, NULL, 16);
-	}
-	hex_buf[0] = 0;
-	hex_buf[1] = 0;
-
-	return 0;
-}
-
 #ifdef DEBUG
-void
+static void
 print_hex(unsigned char *buf, off_t start, size_t len)
 {
 	size_t i;
@@ -226,13 +209,14 @@ print_info(struct tcplay_info *info)
 	printf("Volume size:\t\t%d sectors\n", info->size);
 }
 
+static
 struct tcplay_info *
 new_info(const char *dev, struct tc_cipher_chain *cipher_chain,
     struct pbkdf_prf_algo *prf, struct tchdr_dec *hdr, off_t start)
 {
 	struct tcplay_info *info;
-	size_t i;
-	int err;
+	int i;
+	int error;
 
 	if ((info = (struct tcplay_info *)alloc_safe_mem(sizeof(*info))) == NULL) {
 		tc_log(1, "could not allocate safe info memory\n");
@@ -249,8 +233,8 @@ new_info(const char *dev, struct tc_cipher_chain *cipher_chain,
 	info->offset = hdr->off_mk_scope / hdr->sec_sz;	/* block offset */
 
 	/* Associate a key out of the key pool with each cipher in the chain */
-	err = tc_cipher_chain_populate_keys(cipher_chain, hdr->keys);
-	if (err) {
+	error = tc_cipher_chain_populate_keys(cipher_chain, hdr->keys);
+	if (error) {
 		tc_log(1, "could not populate keys in cipher chain\n");
 		return NULL;
 	}
@@ -933,7 +917,7 @@ out:
 }
 
 struct tc_crypto_algo *
-check_cipher(char *cipher, int quiet)
+check_cipher(const char *cipher, int quiet)
 {
 	int i, found = 0;
 

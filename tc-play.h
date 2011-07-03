@@ -60,13 +60,13 @@
 #include <uuid.h>
 
 struct pbkdf_prf_algo {
-	char *name;
+	const char *name;
 	int iteration_count;
 };
 
 struct tc_crypto_algo {
-	char *name;
-	char *dm_crypt_str;
+	const char *name;
+	const char *dm_crypt_str;
 	int klen;
 	int ivlen;
 };
@@ -130,7 +130,7 @@ int get_random(unsigned char *buf, size_t len);
 int secure_erase(const char *dev, size_t bytes, size_t blksz);
 int get_disk_info(const char *dev, size_t *blocks, size_t *bsize);
 int write_mem(const char *dev, off_t offset, size_t blksz, void *mem, size_t bytes);
-int read_passphrase(char *prompt, char *pass, size_t passlen);
+int read_passphrase(const char *prompt, char *pass, size_t passlen);
 
 int tc_crypto_init(void);
 int tc_cipher_chain_populate_keys(struct tc_cipher_chain *cipher_chain,
@@ -158,12 +158,12 @@ void *_alloc_safe_mem(size_t req_sz, const char *file, int line);
 void _free_safe_mem(void *mem, const char *file, int line);
 void check_and_purge_safe_mem(void);
 
-struct tc_crypto_algo *check_cipher(char *cipher, int quiet);
+struct tc_crypto_algo *check_cipher(const char *cipher, int quiet);
 struct tc_cipher_chain *check_cipher_chain(char *cipher_chain, int quiet);
 struct pbkdf_prf_algo *check_prf_algo(char *algo, int quiet);
 
 void tc_play_init(void);
-void tc_log(int err, char *fmt, ...);
+void tc_log(int err, const char *fmt, ...);
 void print_info(struct tcplay_info *info);
 int adjust_info(struct tcplay_info *info, struct tcplay_info *hinfo);
 int process_hdr(const char *dev, unsigned char *pass, int passlen,

@@ -163,7 +163,7 @@ secure_erase(const char *dev, size_t bytes, size_t blksz)
 			return -1;
 		}
 
-		if (r < blksz)
+		if (r < (ssize_t)blksz)
 			continue;
 
 		if ((w = write(fd, buf, r)) < 0) {
@@ -211,7 +211,8 @@ get_disk_info(const char *dev, size_t *blocks, size_t *bsize)
 }
 
 int
-write_mem(const char *dev, off_t offset, size_t blksz, void *mem, size_t bytes)
+write_mem(const char *dev, off_t offset, size_t blksz __unused, void *mem,
+    size_t bytes)
 {
 	ssize_t w;
 	int fd;
@@ -238,7 +239,7 @@ write_mem(const char *dev, off_t offset, size_t blksz, void *mem, size_t bytes)
 }
 
 int
-read_passphrase(char *prompt, char *pass, size_t passlen)
+read_passphrase(const char *prompt, char *pass, size_t passlen)
 {
 	struct termios termios_old, termios_new;
 	ssize_t n;

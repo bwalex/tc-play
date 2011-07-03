@@ -53,7 +53,8 @@ tc_api_uninit(void)
 char *
 tc_api_get_error_msg(void)
 {
-	return (tc_internal_verbose) ? "" : tc_internal_log_buffer;
+	return (tc_internal_verbose) ? __DECONST(char *, "") :
+	    tc_internal_log_buffer;
 }
 
 char *
