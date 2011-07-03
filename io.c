@@ -47,22 +47,22 @@ read_to_safe_mem(const char *file, off_t offset, size_t *sz)
 	int fd;
 
 	if ((fd = open(file, O_RDONLY)) < 0) {
-		fprintf(stderr, "Error opening file %s\n", file);
+		tc_log(1, "Error opening file %s\n", file);
 		return NULL;
 	}
 
 	if ((mem = alloc_safe_mem(*sz)) == NULL) {
-		fprintf(stderr, "Error allocating memory\n");
+		tc_log(1, "Error allocating memory\n");
 		goto out;
 	}
 
 	if ((lseek(fd, offset, SEEK_SET) < 0)) {
-		fprintf(stderr, "Error seeking on file %s\n", file);
+		tc_log(1, "Error seeking on file %s\n", file);
 		goto m_err;
 	}
 
 	if ((r = read(fd, mem, *sz)) <= 0) {
-		fprintf(stderr, "Error reading from file %s\n", file);
+		tc_log(1, "Error reading from file %s\n", file);
 		goto m_err;
 	}
 
@@ -88,13 +88,13 @@ get_random(unsigned char *buf, size_t len)
 
 
 	if ((fd = open("/dev/random", O_RDONLY)) < 0) {
-		fprintf(stderr, "Error opening /dev/random\n");
+		tc_log(1, "Error opening /dev/random\n");
 		return -1;
 	}
 
 	while (rd < len) {
 		if ((r = read(fd, buf+rd, len-rd)) < 0) {
-			fprintf(stderr, "Error reading from /dev/random\n");
+			tc_log(1, "Error reading from /dev/random\n");
 			close(fd);
 			return -1;
 		}
@@ -106,6 +106,7 @@ get_random(unsigned char *buf, size_t len)
 	return 0;
 }
 
+/* XXX: improve secure_erase performance! */
 int
 secure_erase(const char *dev, size_t bytes, size_t blksz)
 {
@@ -115,24 +116,24 @@ secure_erase(const char *dev, size_t bytes, size_t blksz)
 	ssize_t r, w;
 
 	if (blksz > MAX_BLKSZ) {
-		fprintf(stderr, "blksz > MAX_BLKSZ\n");
+		tc_log(1, "blksz > MAX_BLKSZ\n");
 		return -1;
 	}
 
 	if ((fd_rand = open("/dev/urandom", O_RDONLY)) < 0) {
-		fprintf(stderr, "Error opening /dev/urandom\n");
+		tc_log(1, "Error opening /dev/urandom\n");
 		return -1;
 	}
 
 	if ((fd = open(dev, O_WRONLY)) < 0) {
 		close(fd_rand);
-		fprintf(stderr, "Error opening %s\n", dev);
+		tc_log(1, "Error opening %s\n", dev);
 		return -1;
 	}
 
 	while (erased < bytes) {
 		if ((r = read(fd_rand, buf, blksz)) < 0) {
-			fprintf(stderr, "Error reading from /dev/urandom\n");
+			tc_log(1, "Error reading from /dev/urandom\n");
 			close(fd);
 			close(fd_rand);
 			return -1;
@@ -142,7 +143,7 @@ secure_erase(const char *dev, size_t bytes, size_t blksz)
 			continue;
 
 		if ((w = write(fd, buf, blksz)) < 0) {
-			fprintf(stderr, "Error writing to %s\n", dev);
+			tc_log(1, "Error writing to %s\n", dev);
 			close(fd);
 			close(fd_rand);
 			return -1;
@@ -164,7 +165,7 @@ get_disk_info(const char *dev, size_t *blocks, size_t *bsize)
 	int fd;
 
 	if ((fd = open(dev, O_RDONLY)) < 0) {
-		fprintf(stderr, "Error opening %s\n", dev);
+		tc_log(1, "Error opening %s\n", dev);
 		return -1;
 	}
 
@@ -189,18 +190,18 @@ write_mem(const char *dev, off_t offset, size_t blksz, void *mem, size_t bytes)
 	int fd;
 
 	if ((fd = open(dev, O_WRONLY)) < 0) {
-		fprintf(stderr, "Error opening device %s\n", dev);
+		tc_log(1, "Error opening device %s\n", dev);
 		return -1;
 	}
 
 	if ((lseek(fd, offset, SEEK_SET) < 0)) {
-		fprintf(stderr, "Error seeking on device %s\n", dev);
+		tc_log(1, "Error seeking on device %s\n", dev);
 		close(fd);
 		return -1;
 	}
 
 	if ((w = write(fd, mem, bytes)) <= 0) {
-		fprintf(stderr, "Error writing to device %s\n", dev);
+		tc_log(1, "Error writing to device %s\n", dev);
 		close(fd);
 		return -1;
 	}

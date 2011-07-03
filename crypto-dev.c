@@ -188,7 +188,7 @@ tc_cipher_chain_populate_keys(struct tc_cipher_chain *cipher_chain,
 	    dummy_chain = dummy_chain->next) {
 		dummy_chain->key = alloc_safe_mem(dummy_chain->cipher->klen);
 		if (dummy_chain->key == NULL) {
-			fprintf(stderr, "tc_decrypt: Could not allocate key "
+			tc_log(1, "tc_decrypt: Could not allocate key "
 			    "memory\n");
 			return ENOMEM;
 		}
@@ -231,7 +231,7 @@ tc_encrypt(struct tc_cipher_chain *cipher_chain, unsigned char *key,
 	    cipher_chain = cipher_chain->next) {
 		cipher_id = get_cryptodev_cipher_id(cipher_chain->cipher);
 		if (cipher_id < 0) {
-			fprintf(stderr, "Cipher %s not found\n",
+			tc_log(1, "Cipher %s not found\n",
 			    cipher_chain->cipher->name);
 			return ENOENT;
 		}
@@ -283,7 +283,7 @@ tc_decrypt(struct tc_cipher_chain *cipher_chain, unsigned char *key,
 	    cipher_chain = cipher_chain->prev) {
 		cipher_id = get_cryptodev_cipher_id(cipher_chain->cipher);
 		if (cipher_id < 0) {
-			fprintf(stderr, "Cipher %s not found\n",
+			tc_log(1, "Cipher %s not found\n",
 			    cipher_chain->cipher->name);
 			return ENOENT;
 		}
@@ -344,7 +344,7 @@ apply_keyfiles(unsigned char *pass, size_t pass_memsz, const char *keyfiles[],
 	uint32_t crc;
 
 	if (pass_memsz < MAX_PASSSZ) {
-		fprintf(stderr, "Not enough memory for password manipluation\n");
+		tc_log(1, "Not enough memory for password manipluation\n");
 		return ENOMEM;
 	}
 
@@ -352,7 +352,7 @@ apply_keyfiles(unsigned char *pass, size_t pass_memsz, const char *keyfiles[],
 	memset(pass+pl, 0, MAX_PASSSZ-pl);
 
 	if ((kpool = alloc_safe_mem(KPOOL_SZ)) == NULL) {
-		fprintf(stderr, "Error allocating memory for keyfile pool\n");
+		tc_log(1, "Error allocating memory for keyfile pool\n");
 		return ENOMEM;
 	}
 
@@ -367,7 +367,7 @@ apply_keyfiles(unsigned char *pass, size_t pass_memsz, const char *keyfiles[],
 		kdata_sz = MAX_KFILE_SZ;
 
 		if ((kdata = read_to_safe_mem(keyfiles[k], 0, &kdata_sz)) == NULL) {
-			fprintf(stderr, "Error reading keyfile %s content\n",
+			tc_log(1, "Error reading keyfile %s content\n",
 			    keyfiles[k]);
 			free_safe_mem(kpool);
 			return EIO;

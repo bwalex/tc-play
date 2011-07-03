@@ -113,7 +113,8 @@ main(int argc, char *argv[])
 	int nkeyfiles;
 	int n_hkeyfiles;
 	int ch, error, error2, r = 0;
-	int sflag = 0, iflag = 0, mflag = 0, hflag = 0, cflag = 0, hidflag = 0;
+	int sflag = 0, info_vol = 0, map_vol = 0, protect_hidden = 0,
+	    create_vol = 0, contain_hidden = 0;
 	struct pbkdf_prf_algo *prf = NULL;
 	struct tc_cipher_chain *cipher_chain = NULL;
 	size_t sz;
@@ -129,7 +130,7 @@ main(int argc, char *argv[])
 		case 'a':
 			if (prf != NULL)
 				usage();
-			if ((prf = check_prf_algo(optarg)) == NULL) {
+			if ((prf = check_prf_algo(optarg, 0)) == NULL) {
 				if (strcmp(optarg, "help") == 0)
 					exit(0);
 				else
@@ -139,7 +140,7 @@ main(int argc, char *argv[])
 		case 'b':
 			if (cipher_chain != NULL)
 				usage();
-			if ((cipher_chain = check_cipher_chain(optarg)) == NULL) {
+			if ((cipher_chain = check_cipher_chain(optarg, 0)) == NULL) {
 				if (strcmp(optarg, "help") == 0)
 					exit(0);
 				else
@@ -147,28 +148,28 @@ main(int argc, char *argv[])
 			}
 			break;
 		case 'c':
-			cflag = 1;
+			create_vol = 1;
 			break;
 		case 'd':
 			dev = optarg;
 			break;
 		case 'e':
-			hflag = 1;
+			protect_hidden = 1;
 			break;
 		case 'f':
 			h_keyfiles[n_hkeyfiles++] = optarg;
 			break;
 		case 'g':
-			hidflag = 1;
+			contain_hidden = 1;
 			break;
 		case 'i':
-			iflag = 1;
+			info_vol = 1;
 			break;
 		case 'k':
 			keyfiles[nkeyfiles++] = optarg;
 			break;
 		case 'm':
-			mflag = 1;
+			map_vol = 1;
 			map_name = optarg;
 			break;
 		case 's':
@@ -191,21 +192,23 @@ main(int argc, char *argv[])
 	argv += optind;
 
 	/* Check arguments */
-	if (!((mflag || iflag || cflag) && dev != NULL) ||
-	    (mflag && iflag) ||
-	    (mflag && cflag) ||
-	    (cflag && iflag) ||
-	    (hidflag && !cflag) ||
+	if (!((map_vol || info_vol || create_vol) && dev != NULL) ||
+	    (map_vol && info_vol) ||
+	    (map_vol && create_vol) ||
+	    (create_vol && info_vol) ||
+	    (contain_hidden && !create_vol) ||
 	    (sflag && (sys_dev == NULL)) ||
-	    (mflag && (map_name == NULL)) ||
-	    (!hflag && n_hkeyfiles > 0)) {
+	    (map_vol && (map_name == NULL)) ||
+	    (!(protect_hidden || create_vol) && n_hkeyfiles > 0)) {
 		usage();
 		/* NOT REACHED */
 	}
 
-	if (cflag) {
-		error = create_volume(dev, hidflag, keyfiles, nkeyfiles,
-		    h_keyfiles, n_hkeyfiles, prf, cipher_chain);
+	/* Create a new volume */
+	if (create_vol) {
+		error = create_volume(dev, contain_hidden, keyfiles, nkeyfiles,
+		    h_keyfiles, n_hkeyfiles, prf, cipher_chain, NULL, NULL,
+		    0, 1 /* Interactive */);
 		if (error) {
 			err(1, "could not create new volume on %s\n", dev);
 		}
@@ -213,7 +216,7 @@ main(int argc, char *argv[])
 		/* NOT REACHED */
 	}
 
-	/* This is only for iflag and mflag: */
+	/* This is only for info_vol and map_vol: */
 	if ((pass = alloc_safe_mem(MAX_PASSSZ)) == NULL) {
 		err(1, "could not allocate safe passphrase memory");
 	}
@@ -230,7 +233,7 @@ main(int argc, char *argv[])
 		}
 	}
 
-	if (hflag) {
+	if (protect_hidden) {
 		if ((h_pass = alloc_safe_mem(MAX_PASSSZ)) == NULL) {
 			err(1, "could not allocate safe passphrase memory");
 		}
@@ -269,32 +272,32 @@ main(int argc, char *argv[])
 	error = process_hdr(dev, pass, (nkeyfiles > 0)?MAX_PASSSZ:strlen(pass),
 	    ehdr, &info);
 
-	if (hehdr && (error || hflag)) {
+	if (hehdr && (error || protect_hidden)) {
 		if (error) {
 			error2 = process_hdr(dev, pass,
 			    (nkeyfiles > 0)?MAX_PASSSZ:strlen(pass), hehdr,
 			    &info);
-		} else if (hflag) {
+		} else if (protect_hidden) {
 			error2 = process_hdr(dev, h_pass,
 			    (n_hkeyfiles > 0)?MAX_PASSSZ:strlen(h_pass), hehdr,
 			    &hinfo);
 		}
 	}
 
-	if ((hflag && (error || error2)) || /* We need both to protect a h. vol */
+	if ((protect_hidden && (error || error2)) || /* We need both to protect a h. vol */
 	    (error && error2)) {
 		errx(1, "Incorrect password or not a TrueCrypt volume\n");
 	}
 
-	if (hflag) {
+	if (protect_hidden) {
 		if (adjust_info(info, hinfo) != 0) {
 			errx(1, "Could not protected hidden volume\n");
 		}
 	}
 
-	if (iflag) {
+	if (info_vol) {
 		print_info(info);
-	} else if (mflag) {
+	} else if (map_vol) {
 		if ((error = dm_setup(map_name, info)) != 0) {
 			err(1, "could not set up dm-crypt mapping");
 		}

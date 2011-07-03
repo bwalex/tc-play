@@ -47,6 +47,30 @@
  *  - mlockall? (at least MCL_FUTURE, which is the only one we support)
  */
 
+int tc_internal_verbose = 1;
+char tc_internal_log_buffer[LOG_BUFFER_SZ];
+
+void
+tc_log(int err, char *fmt, ...)
+{
+	__va_list ap;
+	FILE *fp;
+
+	if (err)
+		fp = stderr;
+	else
+		fp = stdout;
+
+        __va_start(ap, fmt);
+
+        if (tc_internal_verbose)
+                vfprintf(fp, fmt, ap);
+	else
+		vsnprintf(tc_internal_log_buffer, LOG_BUFFER_SZ, fmt, ap);
+
+	__va_end(ap);
+}
+
 /* Supported algorithms */
 struct pbkdf_prf_algo pbkdf_prf_algos[] = {
 	{ "RIPEMD160",	2000 }, /* needs to come before the other RIPEMD160 */
@@ -102,7 +126,7 @@ tc_build_cipher_chains(void)
 
 		while (valid_cipher_chains[i][k] != NULL) {
 			if ((elem = alloc_safe_mem(sizeof(*elem))) == NULL) {
-				fprintf(stderr, "Error allocating memory for "
+				tc_log(1, "Error allocating memory for "
 				   "cipher chain\n");
 				exit(1);
 			}
@@ -123,7 +147,7 @@ tc_build_cipher_chains(void)
 			elem->next = NULL;
 
 			/* Initialize other fields */
-			elem->cipher = check_cipher(valid_cipher_chains[i][k]);
+			elem->cipher = check_cipher(valid_cipher_chains[i][k], 0);
 			if (elem->cipher == NULL)
 				exit(1);
 
@@ -138,7 +162,7 @@ tc_build_cipher_chains(void)
 
 		/* Integrity check */
 		if (i >= MAX_CIPHER_CHAINS) {
-			fprintf(stderr, "FATAL: tc_cipher_chains is full!!\n");
+			tc_log(1, "FATAL: tc_cipher_chains is full!!\n");
 			exit(1);
 		}
 
@@ -210,7 +234,7 @@ new_info(const char *dev, struct tc_cipher_chain *cipher_chain,
 	int err;
 
 	if ((info = (struct tcplay_info *)alloc_safe_mem(sizeof(*info))) == NULL) {
-		fprintf(stderr, "could not allocate safe info memory\n");
+		tc_log(1, "could not allocate safe info memory\n");
 		return NULL;
 	}
 
@@ -226,7 +250,7 @@ new_info(const char *dev, struct tc_cipher_chain *cipher_chain,
 	/* Associate a key out of the key pool with each cipher in the chain */
 	err = tc_cipher_chain_populate_keys(cipher_chain, hdr->keys);
 	if (err) {
-		fprintf(stderr, "could not populate keys in cipher chain\n");
+		tc_log(1, "could not populate keys in cipher chain\n");
 		return NULL;
 	}
 
@@ -331,9 +355,10 @@ process_hdr(const char *dev, unsigned char *pass, int passlen,
 int
 create_volume(const char *dev, int hidden, const char *keyfiles[], int nkeyfiles,
     const char *h_keyfiles[], int n_hkeyfiles, struct pbkdf_prf_algo *prf_algo,
-    struct tc_cipher_chain *cipher_chain)
+    struct tc_cipher_chain *cipher_chain, char *passphrase, char *h_passphrase,
+    size_t hidden_blocks_in, int interactive)
 {
-	char *pass;
+	char *pass, *pass_again;
 	char *h_pass = NULL;
 	char buf[1024];
 	size_t blocks, blksz, hidden_blocks;
@@ -346,58 +371,114 @@ create_volume(const char *dev, int hidden, const char *keyfiles[], int nkeyfiles
 		prf_algo = &pbkdf_prf_algos[0];
 
 	if ((error = get_disk_info(dev, &blocks, &blksz)) != 0) {
-		fprintf(stderr, "could not get disk info\n");
+		tc_log(1, "could not get disk info\n");
 		return -1;
 	}
 
 	if (blocks <= MIN_VOL_BLOCKS) {
-		fprintf(stderr, "Cannot create volumes on devices with less "
+		tc_log(1, "Cannot create volumes on devices with less "
 		    "than %d blocks/sectors\n", MIN_VOL_BLOCKS);
 		return -1;
 	}
 
-	if ((pass = alloc_safe_mem(MAX_PASSSZ)) == NULL) {
-		fprintf(stderr, "could not allocate safe passphrase memory\n");
-		return -1;
-	}
+	if (interactive) {
+		if (((pass = alloc_safe_mem(MAX_PASSSZ)) == NULL) ||
+		   ((pass_again = alloc_safe_mem(MAX_PASSSZ)) != NULL)) {
+			tc_log(1, "could not allocate safe passphrase memory\n");
+			return -1;
+		}
 
-	if ((error = read_passphrase("Passphrase: ", pass, MAX_PASSSZ))) {
-		fprintf(stderr, "could not read passphrase\n");
-		return -1;
+		if ((error = read_passphrase("Passphrase: ", pass, MAX_PASSSZ) ||
+		   (error = read_passphrase("Repeat passphrase", pass_again,
+		   MAX_PASSSZ)))) {
+			tc_log(1, "could not read passphrase\n");
+			return -1;
+		}
+
+		if (strcmp(pass, pass_again) != 0) {
+			tc_log(1, "Passphrases don't match\n");
+			return -1;
+		}
+
+		free_safe_mem(pass_again);
+	} else {
+		/* In batch mode, use provided passphrase */
+		if ((pass = alloc_safe_mem(MAX_PASSSZ)) == NULL) {
+			tc_log(1, "could not allocate safe "
+			    "passphrase memory");
+			return -1;
+		}
+
+		if (passphrase != NULL)
+			strcpy(pass, passphrase);
 	}
 
 	if (nkeyfiles > 0) {
 		/* Apply keyfiles to 'pass' */
 		if ((error = apply_keyfiles(pass, MAX_PASSSZ, keyfiles,
 		    nkeyfiles))) {
-			fprintf(stderr, "could not apply keyfiles\n");
+			tc_log(1, "could not apply keyfiles\n");
 		}
 	}
 
 	if (hidden) {
-		if ((h_pass = alloc_safe_mem(MAX_PASSSZ)) == NULL) {
-			fprintf(stderr, "could not allocate safe passphrase memory\n");
-			return -1;
-		}
+		if (interactive) {
+			if (((h_pass = alloc_safe_mem(MAX_PASSSZ)) == NULL) ||
+			   ((pass_again = alloc_safe_mem(MAX_PASSSZ)) != NULL)) {
+				tc_log(1, "could not allocate safe "
+				    "passphrase memory\n");
+				return -1;
+			}
 
-		if ((error = read_passphrase("Passphrase for hidden volume: ",
-		    h_pass, MAX_PASSSZ))) {
-			fprintf(stderr, "could not read passphrase\n");
-			return -1;
+			if ((error = read_passphrase("Passphrase for hidden volume: ",
+			   h_pass, MAX_PASSSZ) ||
+			   (error = read_passphrase("Repeat passphrase", pass_again,
+			   MAX_PASSSZ)))) {
+				tc_log(1, "could not read passphrase\n");
+				return -1;
+			}
+
+			if (strcmp(h_pass, pass_again) != 0) {
+				tc_log(1, "Passphrases for hidden volume don't "
+				    "match\n");
+				return -1;
+			}
+
+			free_safe_mem(pass_again);
+		} else {
+			/* In batch mode, use provided passphrase */
+			if ((h_pass = alloc_safe_mem(MAX_PASSSZ)) == NULL) {
+				tc_log(1, "could not allocate safe "
+				    "passphrase memory");
+				return -1;
+			}
+
+			if (h_passphrase != NULL)
+				strcpy(h_pass, h_passphrase);
 		}
 
 		if (n_hkeyfiles > 0) {
 			/* Apply keyfiles to 'h_pass' */
 			if ((error = apply_keyfiles(h_pass, MAX_PASSSZ, h_keyfiles,
 			n_hkeyfiles))) {
-				fprintf(stderr, "could not apply keyfiles\n");
+				tc_log(1, "could not apply keyfiles\n");
 				return -1;
 			}
 		}
 
-		hidden_blocks = 0;
+		if (interactive) {
+			hidden_blocks = 0;
+		} else {
+			hidden_blocks = hidden_blocks_in;
+			if (hidden_blocks == 0) {
+				tc_log(1, "hidden_blocks to create volume "
+				    "cannot be zero!\n");
+				return -1;
+			}
+		}
 
-		while(hidden_blocks == 0) {
+		/* This only happens in interactive mode */
+		while (hidden_blocks == 0) {
 			if ((r = humanize_number(buf, strlen("XXX MB"),
 			    (int64_t)(blocks * blksz), "B", 0, 0)) < 0) {
 				sprintf(buf, "%zu bytes", (blocks * blksz));
@@ -409,7 +490,7 @@ create_volume(const char *dev, int hidden, const char *keyfiles[], int nkeyfiles
 			fflush(stdout);
 
 			if ((fgets(buf, sizeof(buf), stdin)) == NULL) {
-				fprintf(stderr, "Could not read from stdin\n");
+				tc_log(1, "Could not read from stdin\n");
 				return -1;
 			}
 
@@ -417,13 +498,13 @@ create_volume(const char *dev, int hidden, const char *keyfiles[], int nkeyfiles
 			buf[strlen(buf)-1] = '\0';
 			if ((error = dehumanize_number(buf,
 			    (int64_t *)&hidden_blocks)) != 0) {
-				fprintf(stderr, "Could not interpret input: %s\n", buf);
+				tc_log(1, "Could not interpret input: %s\n", buf);
 				return -1;
 			}
 
 			hidden_blocks /= blksz;
 			if (hidden_blocks >= blocks - MIN_VOL_BLOCKS) {
-				fprintf(stderr, "Hidden volume needs to be "
+				tc_log(1, "Hidden volume needs to be "
 				    "smaller than the outer volume\n");
 				hidden_blocks = 0;
 				continue;
@@ -431,31 +512,33 @@ create_volume(const char *dev, int hidden, const char *keyfiles[], int nkeyfiles
 		}
 	}
 
-	/* Show summary and ask for confirmation */
-	printf("Summary of actions:\n");
-	printf(" - Completely erase *EVERYTHING* on %s\n", dev);
-	printf(" - Create %svolume on %s\n", hidden?("outer "):"", dev);
-	if (hidden) {
-		printf(" - Create hidden volume of %zu bytes at end of outer "
-		    "volume\n",
-		    hidden_blocks * blksz);
-	}
+	if (interactive) {
+		/* Show summary and ask for confirmation */
+		printf("Summary of actions:\n");
+		printf(" - Completely erase *EVERYTHING* on %s\n", dev);
+		printf(" - Create %svolume on %s\n", hidden?("outer "):"", dev);
+		if (hidden) {
+			printf(" - Create hidden volume of %zu bytes at end of "
+			    "outer volume\n",
+			    hidden_blocks * blksz);
+		}
 
-	printf("\n Are you sure you want to proceed? (y/n) ");
-	fflush(stdout);
-	if ((fgets(buf, sizeof(buf), stdin)) == NULL) {
-		fprintf(stderr, "Could not read from stdin\n");
-		return -1;
-	}
+		printf("\n Are you sure you want to proceed? (y/n) ");
+		fflush(stdout);
+		if ((fgets(buf, sizeof(buf), stdin)) == NULL) {
+			tc_log(1, "Could not read from stdin\n");
+			return -1;
+		}
 
-	if ((buf[0] != 'y') && (buf[0] != 'Y')) {
-		fprintf(stderr, "User cancelled action(s)\n");
-		return -1;
+		if ((buf[0] != 'y') && (buf[0] != 'Y')) {
+			tc_log(1, "User cancelled action(s)\n");
+			return -1;
+		}
 	}
 
 	/* erase volume */
 	if ((error = secure_erase(dev, blocks * blksz, blksz)) != 0) {
-		fprintf(stderr, "could not securely erase device %s\n", dev);
+		tc_log(1, "could not securely erase device %s\n", dev);
 		return -1;
 	}
 
@@ -464,7 +547,7 @@ create_volume(const char *dev, int hidden, const char *keyfiles[], int nkeyfiles
 	    prf_algo, cipher_chain, blksz, blocks, MIN_VOL_BLOCKS,
 	    blocks-MIN_VOL_BLOCKS, 0);
 	if (ehdr == NULL) {
-		fprintf(stderr, "Could not create header\n");
+		tc_log(1, "Could not create header\n");
 		return -1;
 	}
 
@@ -474,20 +557,20 @@ create_volume(const char *dev, int hidden, const char *keyfiles[], int nkeyfiles
 		    cipher_chain,
 		    blksz, blocks, blocks - hidden_blocks, hidden_blocks, 1);
 		if (hehdr == NULL) {
-			fprintf(stderr, "Could not create hidden volume header\n");
+			tc_log(1, "Could not create hidden volume header\n");
 			return -1;
 		}
 	}
 
 	if ((error = write_mem(dev, 0, blksz, ehdr, sizeof(*ehdr))) != 0) {
-		fprintf(stderr, "Could not write volume header to device\n");
+		tc_log(1, "Could not write volume header to device\n");
 		return -1;
 	}
 
 	if (hidden) {
 		if ((error = write_mem(dev, HDR_OFFSET_HIDDEN, blksz, hehdr,
 		    sizeof(*hehdr))) != 0) {
-			fprintf(stderr, "Could not write hidden volume header to "
+			tc_log(1, "Could not write hidden volume header to "
 			    "device\n");
 			return -1;
 		}
@@ -496,6 +579,7 @@ create_volume(const char *dev, int hidden, const char *keyfiles[], int nkeyfiles
 	return 0;
 }
 
+/* XXX: unroll changes that dm_setup does on error */
 int
 dm_setup(const char *mapname, struct tcplay_info *info)
 {
@@ -512,7 +596,7 @@ dm_setup(const char *mapname, struct tcplay_info *info)
 	char map[PATH_MAX];
 
 	if ((params = alloc_safe_mem(512)) == NULL) {
-		fprintf(stderr, "could not allocate safe parameters memory");
+		tc_log(1, "could not allocate safe parameters memory");
 		return ENOMEM;
 	}
 
@@ -537,7 +621,7 @@ dm_setup(const char *mapname, struct tcplay_info *info)
 #endif
 
 		if ((dmt = dm_task_create(DM_DEVICE_CREATE)) == NULL) {
-			fprintf(stderr, "dm_task_create failed\n");
+			tc_log(1, "dm_task_create failed\n");
 			ret = -1;
 			goto out;
 		}
@@ -552,47 +636,47 @@ dm_setup(const char *mapname, struct tcplay_info *info)
 			sprintf(map, "%s.%d", mapname, j);
 
 		if ((dm_task_set_name(dmt, map)) == 0) {
-			fprintf(stderr, "dm_task_set_name failed\n");
+			tc_log(1, "dm_task_set_name failed\n");
 			ret = -1;
 			goto out;
 		}
 
 		uuid_create(&info->uuid, &status);
 		if (status != uuid_s_ok) {
-			fprintf(stderr, "uuid_create failed\n");
+			tc_log(1, "uuid_create failed\n");
 			ret = -1;
 			goto out;
 		}
 
 		uuid_to_string(&info->uuid, &uu, &status);
 		if (uu == NULL) {
-			fprintf(stderr, "uuid_to_string failed\n");
+			tc_log(1, "uuid_to_string failed\n");
 			ret = -1;
 			goto out;
 		}
 
 		if ((dm_task_set_uuid(dmt, uu)) == 0) {
 			free(uu);
-			fprintf(stderr, "dm_task_set_uuid failed\n");
+			tc_log(1, "dm_task_set_uuid failed\n");
 			ret = -1;
 			goto out;
 		}
 		free(uu);
 
 		if ((dm_task_add_target(dmt, start, info->size, "crypt", params)) == 0) {
-			fprintf(stderr, "dm_task_add_target failed\n");
+			tc_log(1, "dm_task_add_target failed\n");
 			ret = -1;
 			goto out;
 		}
 
 		if ((dm_task_run(dmt)) == 0) {
-			fprintf(stderr, "dm_task_task_run failed\n");
+			tc_log(1, "dm_task_task_run failed\n");
 			ret = -1;
 			goto out;
 		}
 
 		if ((dm_task_get_info(dmt, &dmi)) == 0) {
-			fprintf(stderr, "dm_task_get info failed\n");
+			tc_log(1, "dm_task_get info failed\n");
 			/* XXX: probably do more than just erroring out... */
 			ret = -1;
 			goto out;
@@ -613,7 +697,7 @@ out:
 }
 
 struct tc_crypto_algo *
-check_cipher(char *cipher)
+check_cipher(char *cipher, int quiet)
 {
 	int i, found = 0;
 
@@ -624,7 +708,7 @@ check_cipher(char *cipher)
 		}
 	}
 
-	if (!found) {
+	if (!found && !quiet) {
 		fprintf(stderr, "Valid ciphers are: ");
 		for (i = 0; tc_crypto_algos[i].name != NULL; i++)
 			fprintf(stderr, "%s ", tc_crypto_algos[i].name);
@@ -636,7 +720,7 @@ check_cipher(char *cipher)
 }
 
 struct tc_cipher_chain *
-check_cipher_chain(char *cipher_chain)
+check_cipher_chain(char *cipher_chain, int quiet)
 {
 	int i,k, found = 0, nciphers = 0, mismatch = 0;
 	char *ciphers[8];
@@ -672,7 +756,7 @@ check_cipher_chain(char *cipher_chain)
 		}
 	}
 
-	if (!found) {
+	if (!found && !quiet) {
 		fprintf(stderr, "Valid cipher chains are:\n");
 		for (i = 0; valid_cipher_chains[i][0] != NULL; i++) {
 			for (k = 0; valid_cipher_chains[i][k] != NULL; k++) {
@@ -691,7 +775,7 @@ check_cipher_chain(char *cipher_chain)
 }
 
 struct pbkdf_prf_algo *
-check_prf_algo(char *algo)
+check_prf_algo(char *algo, int quiet)
 {
 	int i, found = 0;
 
@@ -702,7 +786,7 @@ check_prf_algo(char *algo)
 		}
 	}
 
-	if (!found) {
+	if (!found && !quiet) {
 		fprintf(stderr, "Valid PBKDF PRF algorithms are: ");
 		for (i = 0; pbkdf_prf_algos[i].name != NULL; i++)
 			fprintf(stderr, "%s ", pbkdf_prf_algos[i].name);

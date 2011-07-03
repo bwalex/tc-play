@@ -51,7 +51,7 @@ decrypt_hdr(struct tchdr_enc *ehdr, struct tc_cipher_chain *cipher_chain,
 	int error;
 
 	if ((dhdr = alloc_safe_mem(sizeof(struct tchdr_dec))) == NULL) {
-		fprintf(stderr, "Error allocating safe tchdr_dec memory\n");
+		tc_log(1, "Error allocating safe tchdr_dec memory\n");
 		return NULL;
 	}
 
@@ -60,7 +60,7 @@ decrypt_hdr(struct tchdr_enc *ehdr, struct tc_cipher_chain *cipher_chain,
 	error = tc_decrypt(cipher_chain, key, iv, ehdr->enc,
 	    sizeof(struct tchdr_dec), (unsigned char *)dhdr);
 	if (error) {
-		fprintf(stderr, "Header decryption failed\n");
+		tc_log(1, "Header decryption failed\n");
 		free_safe_mem(dhdr);
 		return NULL;
 	}
@@ -105,7 +105,7 @@ verify_hdr(struct tchdr_dec *hdr)
 	case 1:
 	case 2:
 		/* Unsupported header version */
-		fprintf(stderr, "Header version %d unsupported\n", hdr->tc_ver);
+		tc_log(1, "Header version %d unsupported\n", hdr->tc_ver);
 		return 0;
 
 	case 3:
@@ -129,22 +129,22 @@ create_hdr(unsigned char *pass, int passlen, struct pbkdf_prf_algo *prf_algo,
 	int error;
 
 	if ((dhdr = (struct tchdr_dec *)alloc_safe_mem(sizeof(*dhdr))) == NULL) {
-		fprintf(stderr, "could not allocate safe dhdr memory\n");
+		tc_log(1, "could not allocate safe dhdr memory\n");
 		return NULL;
 	}
 
 	if ((ehdr = (struct tchdr_enc *)alloc_safe_mem(sizeof(*ehdr))) == NULL) {
-		fprintf(stderr, "could not allocate safe ehdr memory\n");
+		tc_log(1, "could not allocate safe ehdr memory\n");
 		return NULL;
 	}
 
 	if ((key = alloc_safe_mem(MAX_KEYSZ)) == NULL) {
-		fprintf(stderr, "could not allocate safe key memory\n");
+		tc_log(1, "could not allocate safe key memory\n");
 		return NULL;
 	}
 
 	if ((error = get_random(ehdr->salt, sizeof(ehdr->salt))) != 0) {
-		fprintf(stderr, "could not get salt\n");
+		tc_log(1, "could not get salt\n");
 		return NULL;
 	}
 
@@ -153,14 +153,14 @@ create_hdr(unsigned char *pass, int passlen, struct pbkdf_prf_algo *prf_algo,
 	    prf_algo->iteration_count,
 	    prf_algo->name, MAX_KEYSZ, key);
 	if (error) {
-		fprintf(stderr, "could not derive key\n");
+		tc_log(1, "could not derive key\n");
 		return NULL;
 	}
 
 	memset(dhdr, 0, sizeof(*dhdr));
 
 	if ((error = get_random(dhdr->keys, sizeof(dhdr->keys))) != 0) {
-		fprintf(stderr, "could not get key random bits\n");
+		tc_log(1, "could not get key random bits\n");
 		return NULL;
 	}
 
@@ -193,7 +193,7 @@ create_hdr(unsigned char *pass, int passlen, struct pbkdf_prf_algo *prf_algo,
 	error = tc_encrypt(cipher_chain, key, iv, (unsigned char *)dhdr,
 	    sizeof(struct tchdr_dec), ehdr->enc);
 	if (error) {
-		fprintf(stderr, "Header encryption failed\n");
+		tc_log(1, "Header encryption failed\n");
 		free_safe_mem(dhdr);
 		return NULL;
 	}

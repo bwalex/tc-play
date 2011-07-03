@@ -50,6 +50,7 @@
 #define TC_VOLFLAG_SYSTEM	0x01	/* system encryption */
 #define TC_VOLFLAG_INPLACE	0x02	/* non-system in-place-encrypted volume */
 
+#define LOG_BUFFER_SZ		1024
 #if 0
 #define DEBUG 1
 #endif
@@ -155,19 +156,25 @@ void *_alloc_safe_mem(size_t req_sz, const char *file, int line);
 void _free_safe_mem(void *mem, const char *file, int line);
 void check_and_purge_safe_mem(void);
 
-struct tc_crypto_algo *check_cipher(char *cipher);
-struct tc_cipher_chain *check_cipher_chain(char *cipher_chain);
-struct pbkdf_prf_algo *check_prf_algo(char *algo);
+struct tc_crypto_algo *check_cipher(char *cipher, int quiet);
+struct tc_cipher_chain *check_cipher_chain(char *cipher_chain, int quiet);
+struct pbkdf_prf_algo *check_prf_algo(char *algo, int quiet);
 
 void tc_play_init(void);
+void tc_log(int err, char *fmt, ...);
 void print_info(struct tcplay_info *info);
 int adjust_info(struct tcplay_info *info, struct tcplay_info *hinfo);
 int process_hdr(const char *dev, unsigned char *pass, int passlen,
     struct tchdr_enc *ehdr, struct tcplay_info **pinfo);
 int create_volume(const char *dev, int hidden, const char *keyfiles[],
     int nkeyfiles, const char *h_keyfiles[], int n_hkeyfiles,
-    struct pbkdf_prf_algo *prf_algo, struct tc_cipher_chain *cipher_chain);
+    struct pbkdf_prf_algo *prf_algo, struct tc_cipher_chain *cipher_chain,
+    char *passphrase, char *h_passphrase, size_t hidden_blocks_in,
+    int interactive);
 int dm_setup(const char *mapname, struct tcplay_info *info);
+
+extern int tc_internal_verbose;
+extern char tc_internal_log_buffer[];
 
 #define alloc_safe_mem(x) \
 	_alloc_safe_mem(x, __FILE__, __LINE__)
