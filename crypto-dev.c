@@ -273,7 +273,8 @@ tc_decrypt(struct tc_cipher_chain *cipher_chain, unsigned char *key,
 #endif
 
 	/*
-	 * Now process the actual decryption, in reverse cascade order.
+	 * Now process the actual decryption, in reverse cascade order; so
+	 * first find the last element in the chain.
 	 */
 	for (; cipher_chain->next != NULL; cipher_chain = cipher_chain->next)
 		;

@@ -3,8 +3,8 @@
 This is a free (BSD-licensed) TrueCrypt implementation. It is based solely on
 the documentation available on the TrueCrypt website, many hours of
 trial and error and the output of the Linux' TrueCrypt client. As it turns out,
-every single technical document on TrueCrypt contains mistakes, hence the
-trial and error approach :)
+most technical documents on TrueCrypt contains mistakes, hence the trial and
+error approach :)
 
 Some notable differences between actual implementation and documentation:
  - PBKDF using RIPEMD160 only uses 2000 iterations if the volume isn't a system
@@ -21,6 +21,12 @@ on libprop, since the DragonFly libdevmapper uses libprop. One of the main
 bits that would need porting is the crypto.c or crypto-dev.c implementation;
 for Linux a reasonable approach would be to create a crypto-gcrypt.c that uses
 libgcrypt instead of a mix of OpenSSL and cryptodev(9).
+
+Another thing requiring porting are bits and pieces in io.c; mainly the
+get_disk_info function needs to be adapted to the system. Depending on whether
+your system has urandom, random and tty in /dev or not, other changes may be
+required, too. Some of the endianess macros in hdr.c might need to be changed
+if you don't have be32toh, htobe32, etc.
 
 The implementation in crypto.c is not very useful right now; it's just a proof
 of concept of how to use OpenSSL to do the crypto and hashing, but since the

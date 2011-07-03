@@ -26,6 +26,12 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
+
+/* Version of tc-play */
+#define MAJ_VER			0
+#define MIN_VER			8
+
+
 #define MAX_BLKSZ		4096
 #define MAX_KEYSZ		192
 #define HDRSZ			512
@@ -148,6 +154,20 @@ int verify_hdr(struct tchdr_dec *hdr);
 void *_alloc_safe_mem(size_t req_sz, const char *file, int line);
 void _free_safe_mem(void *mem, const char *file, int line);
 void check_and_purge_safe_mem(void);
+
+struct tc_crypto_algo *check_cipher(char *cipher);
+struct tc_cipher_chain *check_cipher_chain(char *cipher_chain);
+struct pbkdf_prf_algo *check_prf_algo(char *algo);
+
+void tc_play_init(void);
+void print_info(struct tcplay_info *info);
+int adjust_info(struct tcplay_info *info, struct tcplay_info *hinfo);
+int process_hdr(const char *dev, unsigned char *pass, int passlen,
+    struct tchdr_enc *ehdr, struct tcplay_info **pinfo);
+int create_volume(const char *dev, int hidden, const char *keyfiles[],
+    int nkeyfiles, const char *h_keyfiles[], int n_hkeyfiles,
+    struct pbkdf_prf_algo *prf_algo, struct tc_cipher_chain *cipher_chain);
+int dm_setup(const char *mapname, struct tcplay_info *info);
 
 #define alloc_safe_mem(x) \
 	_alloc_safe_mem(x, __FILE__, __LINE__)
