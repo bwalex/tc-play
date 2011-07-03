@@ -101,7 +101,27 @@ tc_api_create_volume(tc_api_op *api_opts)
 int
 tc_api_map_volume(tc_api_op *api_opts)
 {
-	return TC_OK;
+	int nkeyfiles;
+	int err;
+
+	if ((api_opts == NULL) ||
+	    (api_opts->tc_device == NULL)) {
+		errno = EFAULT;
+		return TC_ERR;
+	}
+
+	for (nkeyfiles = 0; (nkeyfiles < MAX_KEYFILES) &&
+	    (api_opts->tc_keyfiles[nkeyfiles] != NULL); nkeyfiles++)
+		;
+
+	err = map_volume(api_opts->tc_map_name, api_opts->device,
+	    /* sflag */ 0, /* sys_dev */ NULL,
+	    /* protect_hidden */ 0, api_opts->tc_keyfiles, nkeyfiles,
+	    /* h_keyfiles[] */ NULL, /* n_hkeyfiles */ 0,
+	    api_opts->passphrase, /* passphrase_hidden */ NULL,
+	    api_opts->tc_interactive_prompt, api_opts->tc_password_retries);
+
+	return (err) ? TC_ERR : TC_OK;
 }
 
 int

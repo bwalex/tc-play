@@ -27,17 +27,10 @@
  * SUCH DAMAGE.
  */
 
-#define TC_API_OP_MAP		0x01
-#define TC_API_OP_CREATE	0x02
-#define TC_API_CHECK_CIPHER	0x03
-#define TC_API_CHECK_PRF_HASH	0x04
-
 #define TC_OK	0
 #define TC_ERR	-1
 
 typedef struct tc_api_op {
-	int	tc_op;
-
 	/* Common fields */
 	char	*tc_device;
 	char	*tc_cipher;
@@ -47,6 +40,8 @@ typedef struct tc_api_op {
 
 	/* Fields for mapping */
 	char	*tc_map_name;
+	int	tc_password_retries;
+	int	tc_interactive_prompt;
 
 	/* Fields for creation */
 	size_t	tc_size_hidden_in_blocks;
