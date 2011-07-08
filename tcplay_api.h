@@ -30,7 +30,7 @@
 #define TC_OK	0
 #define TC_ERR	-1
 
-typedef struct tc_api_op {
+typedef struct tc_api_opts {
 	/* Common fields */
 	char		*tc_device;
 	char		*tc_cipher;
@@ -47,14 +47,14 @@ typedef struct tc_api_op {
 	size_t		tc_size_hidden_in_blocks;
 	char		*tc_passphrase_hidden;
 	const char	**tc_keyfiles_hidden;
-} tc_api_op;
+} tc_api_opts;
 
 int tc_api_init(int verbose);
 int tc_api_uninit(void);
-int tc_api_create_volume(tc_api_op *api_opts);
-int tc_api_map_volume(tc_api_op *api_opts);
-int tc_api_check_cipher(tc_api_op *api_opts);
-int tc_api_check_prf_hash(tc_api_op *api_opts);
+int tc_api_create_volume(tc_api_opts *api_opts);
+int tc_api_map_volume(tc_api_opts *api_opts);
+int tc_api_check_cipher(tc_api_opts *api_opts);
+int tc_api_check_prf_hash(tc_api_opts *api_opts);
 const char *tc_api_get_error_msg(void);
 const char *tc_api_get_summary(void);
 

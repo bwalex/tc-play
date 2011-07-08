@@ -113,7 +113,7 @@ const char *valid_cipher_chains[][MAX_CIPHER_CHAINS] = {
 struct tc_cipher_chain *tc_cipher_chains[MAX_CIPHER_CHAINS];
 
 static
-void
+int
 tc_build_cipher_chains(void)
 {
 	struct tc_cipher_chain *chain, *elem, *prev;
@@ -129,7 +129,7 @@ tc_build_cipher_chains(void)
 			if ((elem = alloc_safe_mem(sizeof(*elem))) == NULL) {
 				tc_log(1, "Error allocating memory for "
 				   "cipher chain\n");
-				exit(1);
+				return -1;
 			}
 
 			/* Initialize first element of chain */
@@ -150,7 +150,7 @@ tc_build_cipher_chains(void)
 			/* Initialize other fields */
 			elem->cipher = check_cipher(valid_cipher_chains[i][k], 0);
 			if (elem->cipher == NULL)
-				exit(1);
+				return -1;
 
 			elem->key = NULL;
 
@@ -164,12 +164,14 @@ tc_build_cipher_chains(void)
 		/* Integrity check */
 		if (i >= MAX_CIPHER_CHAINS) {
 			tc_log(1, "FATAL: tc_cipher_chains is full!!\n");
-			exit(1);
+			return -1;
 		}
 
 		/* Make sure array is NULL terminated */
 		tc_cipher_chains[i] = NULL;
 	}
+
+	return 0;
 }
 
 #ifdef DEBUG
@@ -206,7 +208,7 @@ print_info(struct tcplay_info *info)
 	printf("Key Length:\t\t%d bits\n", klen*8);
 	printf("CRC Key Data:\t\t%#x\n", info->hdr->crc_keys);
 	printf("Sector size:\t\t%d\n", info->hdr->sec_sz);
-	printf("Volume size:\t\t%d sectors\n", info->size);
+	printf("Volume size:\t\t%zu sectors\n", info->size);
 }
 
 static
@@ -270,7 +272,8 @@ process_hdr(const char *dev, unsigned char *pass, int passlen,
 	*pinfo = NULL;
 
 	if ((key = alloc_safe_mem(MAX_KEYSZ)) == NULL) {
-		err(1, "could not allocate safe key memory");
+		tc_log(1, "could not allocate safe key memory\n");
+		return ENOMEM;
 	}
 
 	/* Start search for correct algorithm combination */
@@ -287,8 +290,11 @@ process_hdr(const char *dev, unsigned char *pass, int passlen,
 		    pbkdf_prf_algos[i].iteration_count,
 		    pbkdf_prf_algos[i].name, MAX_KEYSZ, key);
 
-		if (error)
-			continue;
+		if (error) {
+			tc_log(1, "pbkdf failed for algorithm %s\n",
+			    pbkdf_prf_algos[i].name);
+			return EINVAL;
+		}
 
 #if 0
 		printf("Derived Key: ");
@@ -302,7 +308,9 @@ process_hdr(const char *dev, unsigned char *pass, int passlen,
 
 			dhdr = decrypt_hdr(ehdr, tc_cipher_chains[j], key);
 			if (dhdr == NULL) {
-				continue;
+				tc_log(1, "hdr decryption failed for cipher "
+				    "chain %d\n", j);
+				return EINVAL;
 			}
 
 			if (verify_hdr(dhdr)) {
@@ -1017,10 +1025,16 @@ check_prf_algo(char *algo, int quiet)
 	return &pbkdf_prf_algos[i];
 }
 
-void
+int
 tc_play_init(void)
 {
-	tc_build_cipher_chains();
-	tc_crypto_init();
-	atexit(check_and_purge_safe_mem);
+	int error;
+
+	if ((error = tc_build_cipher_chains()) != 0)
+		return error;
+
+	if ((error = tc_crypto_init()) != 0)
+		return error;
+
+	return 0;
 }

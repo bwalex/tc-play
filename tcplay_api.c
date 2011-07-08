@@ -37,10 +37,14 @@
 int
 tc_api_init(int verbose)
 {
+	int error;
+
 	tc_internal_verbose = verbose;
 
-	tc_play_init();
-	return TC_OK;
+	if ((error = tc_play_init()) != 0)
+		return TC_ERR;
+	else
+		return TC_OK;
 }
 
 int
@@ -68,7 +72,7 @@ tc_api_get_summary(void)
 }
 
 int
-tc_api_create_volume(tc_api_op *api_opts)
+tc_api_create_volume(tc_api_opts *api_opts)
 {
 	int nkeyfiles, n_hkeyfiles;
 	int create_hidden;
@@ -112,7 +116,7 @@ tc_api_create_volume(tc_api_op *api_opts)
 }
 
 int
-tc_api_map_volume(tc_api_op *api_opts)
+tc_api_map_volume(tc_api_opts *api_opts)
 {
 	int nkeyfiles;
 	int err;
@@ -138,7 +142,7 @@ tc_api_map_volume(tc_api_op *api_opts)
 }
 
 int
-tc_api_check_cipher(tc_api_op *api_opts)
+tc_api_check_cipher(tc_api_opts *api_opts)
 {
 	struct tc_cipher_chain *chain;
 
@@ -155,7 +159,7 @@ tc_api_check_cipher(tc_api_op *api_opts)
 }
 
 int
-tc_api_check_prf_hash(tc_api_op *api_opts)
+tc_api_check_prf_hash(tc_api_opts *api_opts)
 {
 	struct pbkdf_prf_algo *prf_hash;
 

@@ -123,7 +123,12 @@ main(int argc, char *argv[])
 	struct pbkdf_prf_algo *prf = NULL;
 	struct tc_cipher_chain *cipher_chain = NULL;
 
-	tc_play_init();
+	if ((error = tc_play_init()) != 0) {
+		fprintf(stderr, "Initialization failed, exiting.");
+		exit(1);
+	}
+
+	atexit(check_and_purge_safe_mem);
 	signal(SIGUSR1, sig_handler);
 	signal(SIGINFO, sig_handler);
 

@@ -162,7 +162,7 @@ struct tc_crypto_algo *check_cipher(const char *cipher, int quiet);
 struct tc_cipher_chain *check_cipher_chain(char *cipher_chain, int quiet);
 struct pbkdf_prf_algo *check_prf_algo(char *algo, int quiet);
 
-void tc_play_init(void);
+int tc_play_init(void);
 void tc_log(int err, const char *fmt, ...);
 void print_info(struct tcplay_info *info);
 int adjust_info(struct tcplay_info *info, struct tcplay_info *hinfo);
