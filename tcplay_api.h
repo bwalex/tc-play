@@ -33,8 +33,6 @@
 typedef struct tc_api_opts {
 	/* Common fields */
 	char		*tc_device;
-	char		*tc_cipher;
-	char		*tc_prf_hash;
 	char		*tc_passphrase;
 	const char	**tc_keyfiles;
 
@@ -44,6 +42,8 @@ typedef struct tc_api_opts {
 	int		tc_interactive_prompt;
 
 	/* Fields for creation */
+	char		*tc_cipher;
+	char		*tc_prf_hash;
 	size_t		tc_size_hidden_in_blocks;
 	char		*tc_passphrase_hidden;
 	const char	**tc_keyfiles_hidden;
