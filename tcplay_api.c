@@ -57,7 +57,7 @@ tc_api_uninit(void)
 const char *
 tc_api_get_error_msg(void)
 {
-	return (tc_internal_verbose) ? "" : tc_internal_log_buffer;
+	return tc_internal_log_buffer;
 }
 
 const char *
@@ -91,6 +91,7 @@ tc_api_create_volume(tc_api_opts *api_opts)
 		return TC_ERR;
 
 	for (nkeyfiles = 0; (nkeyfiles < MAX_KEYFILES) &&
+	    (api_opts->tc_keyfiles != NULL) &&
 	    (api_opts->tc_keyfiles[nkeyfiles] != NULL); nkeyfiles++)
 		;
 
@@ -99,6 +100,7 @@ tc_api_create_volume(tc_api_opts *api_opts)
 	if (api_opts->tc_size_hidden_in_blocks > 0) {
 		create_hidden = 1;
 		for (n_hkeyfiles = 0; (n_hkeyfiles < MAX_KEYFILES) &&
+		    (api_opts->tc_keyfiles_hidden != NULL) &&
 		    (api_opts->tc_keyfiles_hidden[n_hkeyfiles] != NULL);
 		    n_hkeyfiles++)
 			;

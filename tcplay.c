@@ -950,12 +950,23 @@ check_cipher(const char *cipher, int quiet)
 struct tc_cipher_chain *
 check_cipher_chain(char *cipher_chain, int quiet)
 {
-	int i,k, found = 0, nciphers = 0, mismatch = 0;
+	struct tc_cipher_chain *cipher = NULL;
+	int i,k, nciphers = 0, mismatch = 0;
 	char *ciphers[8];
+	char *tmp_chain, *tmp_chain_free;
 	char *token;
 
-	while ((token = strsep(&cipher_chain, ",")) != NULL)
+	if ((tmp_chain = strdup(cipher_chain)) == NULL) {
+		tc_log(1, "Could not allocate strdup memory\n");
+		return NULL;
+	}
+
+	tmp_chain_free = tmp_chain;
+
+	while ((token = strsep(&tmp_chain, ",")) != NULL)
 		ciphers[nciphers++] = token;
+
+	cipher = NULL;
 
 	for (i = 0; valid_cipher_chains[i][0] != NULL; i++) {
 		mismatch = 0;
@@ -979,27 +990,30 @@ check_cipher_chain(char *cipher_chain, int quiet)
 		 * then we found the right cipher chain.
 		 */
 		if ((k == nciphers) && !mismatch) {
-			found = 1;
+			cipher = tc_cipher_chains[i];
 			break;
 		}
 	}
 
-	if (!found && !quiet) {
-		fprintf(stderr, "Valid cipher chains are:\n");
-		for (i = 0; valid_cipher_chains[i][0] != NULL; i++) {
-			for (k = 0; valid_cipher_chains[i][k] != NULL; k++) {
-				fprintf(stderr, "%s%c",
-				    valid_cipher_chains[i][k],
-				    (valid_cipher_chains[i][k+1] != NULL) ?
-				    ',' : '\0');
+	if (cipher == NULL) {
+		tc_log(1, "Invalid cipher: %s\n", cipher_chain);
+		if (!quiet) {
+			fprintf(stderr, "Valid cipher chains are:\n");
+			for (i = 0; valid_cipher_chains[i][0] != NULL; i++) {
+				for (k = 0; valid_cipher_chains[i][k] != NULL;
+				    k++) {
+					fprintf(stderr, "%s%c",
+					    valid_cipher_chains[i][k],
+					    (valid_cipher_chains[i][k+1] != NULL) ?
+					    ',' : '\0');
+				}
+				fprintf(stderr, "\n");
 			}
-			fprintf(stderr, "\n");
 		}
-
-		return NULL;
 	}
 
-	return tc_cipher_chains[i];
+	free(tmp_chain_free);
+	return cipher;
 }
 
 struct pbkdf_prf_algo *
