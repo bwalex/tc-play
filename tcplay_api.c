@@ -130,6 +130,7 @@ tc_api_map_volume(tc_api_opts *api_opts)
 	}
 
 	for (nkeyfiles = 0; (nkeyfiles < MAX_KEYFILES) &&
+	    (api_opts->tc_keyfiles != NULL) &&
 	    (api_opts->tc_keyfiles[nkeyfiles] != NULL); nkeyfiles++)
 		;
 
