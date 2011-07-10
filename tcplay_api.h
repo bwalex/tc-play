@@ -44,6 +44,8 @@ typedef struct tc_api_opts {
 	/* Fields for creation */
 	char		*tc_cipher;
 	char		*tc_prf_hash;
+	char		*tc_cipher_hidden;
+	char		*tc_prf_hash_hidden;
 	size_t		tc_size_hidden_in_blocks;
 	char		*tc_passphrase_hidden;
 	const char	**tc_keyfiles_hidden;

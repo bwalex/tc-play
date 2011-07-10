@@ -348,20 +348,26 @@ process_hdr(const char *dev, unsigned char *pass, int passlen,
 int
 create_volume(const char *dev, int hidden, const char *keyfiles[], int nkeyfiles,
     const char *h_keyfiles[], int n_hkeyfiles, struct pbkdf_prf_algo *prf_algo,
-    struct tc_cipher_chain *cipher_chain, char *passphrase, char *h_passphrase,
-    size_t hidden_blocks_in, int interactive)
+    struct tc_cipher_chain *cipher_chain, struct pbkdf_prf_algo *h_prf_algo,
+    struct tc_cipher_chain *h_cipher_chain, char *passphrase,
+    char *h_passphrase, size_t hidden_blocks_in, int interactive)
 {
 	char *pass, *pass_again;
 	char *h_pass = NULL;
 	char buf[1024];
 	size_t blocks, blksz, hidden_blocks;
 	struct tchdr_enc *ehdr, *hehdr;
+	int64_t tmp;
 	int error, r;
 
 	if (cipher_chain == NULL)
 		cipher_chain = tc_cipher_chains[0];
 	if (prf_algo == NULL)
 		prf_algo = &pbkdf_prf_algos[0];
+	if (h_cipher_chain == NULL)
+		h_cipher_chain = cipher_chain;
+	if (h_prf_algo == NULL)
+		h_prf_algo = prf_algo;
 
 	if ((error = get_disk_info(dev, &blocks, &blksz)) != 0) {
 		tc_log(1, "could not get disk info\n");
@@ -490,11 +496,12 @@ create_volume(const char *dev, int hidden, const char *keyfiles[], int nkeyfiles
 			/* get rid of trailing newline */
 			buf[strlen(buf)-1] = '\0';
 			if ((error = dehumanize_number(buf,
-			    (int64_t *)&hidden_blocks)) != 0) {
+			    &tmp)) != 0) {
 				tc_log(1, "Could not interpret input: %s\n", buf);
 				return -1;
 			}
 
+			hidden_blocks = (size_t)tmp;
 			hidden_blocks /= blksz;
 			if (hidden_blocks >= blocks - MIN_VOL_BLOCKS) {
 				tc_log(1, "Hidden volume needs to be "
@@ -546,8 +553,8 @@ create_volume(const char *dev, int hidden, const char *keyfiles[], int nkeyfiles
 
 	if (hidden) {
 		hehdr = create_hdr(h_pass,
-		    (n_hkeyfiles > 0)?MAX_PASSSZ:strlen(h_pass), prf_algo,
-		    cipher_chain,
+		    (n_hkeyfiles > 0)?MAX_PASSSZ:strlen(h_pass), h_prf_algo,
+		    h_cipher_chain,
 		    blksz, blocks, blocks - hidden_blocks, hidden_blocks, 1);
 		if (hehdr == NULL) {
 			tc_log(1, "Could not create hidden volume header\n");

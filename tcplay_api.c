@@ -111,6 +111,8 @@ tc_api_create_volume(tc_api_opts *api_opts)
 	    api_opts->tc_keyfiles_hidden, n_hkeyfiles,
 	    check_prf_algo(api_opts->tc_prf_hash, 1),
 	    check_cipher_chain(api_opts->tc_cipher, 1),
+	    check_prf_algo(api_opts->tc_prf_hash_hidden, 1),
+	    check_cipher_chain(api_opts->tc_cipher_hidden, 1),
 	    api_opts->tc_passphrase, api_opts->tc_passphrase_hidden,
 	    api_opts->tc_size_hidden_in_blocks, 0 /* non-interactive */);
 

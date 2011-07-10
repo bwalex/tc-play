@@ -20,14 +20,11 @@
 .\" ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 .\" LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
 .\" FOR A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE
-.\" COPYRIGHT HOLDERS OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, 
-INDIRECT,
+.\" COPYRIGHT HOLDERS OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
 .\" INCIDENTAL, SPECIAL, EXEMPLARY OR CONSEQUENTIAL DAMAGES (INCLUDING,
 .\" BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-.\" LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER 
-CAUSED
-.\" AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT 
-LIABILITY,
+.\" LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
+.\" AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 .\" OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 .\" OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
@@ -121,6 +118,24 @@ Specifies with cipher algorithm or cascade of ciphers to use
 to encrypt the new volume.
 To see which algorithms are supported, specify
 .Fl -cipher Ns = Ns Ar help .
+.It Fl x Ar pbkdf_hash , Fl -pbkdf-prf-hidden Ns = Ns Ar pbkdf_hash
+Specifies with hash algorithm to use for the PBKDF2 password
+derivation for the hidden volume.
+Only valid in conjunction with
+.Fl -hidden .
+If no algorithm is specified, the same as for the outer volume
+will be used.
+To see which algorithms are supported, specify
+.Fl -pbkdf-prf-hidden Ns = Ns Ar help .
+.It Fl y Ar cipher , Fl -cipher-hidden Ns = Ns Ar cipher
+Specifies with cipher algorithm or cascade of ciphers to use
+to encrypt the hidden volume on the new TrueCrypt volume.
+Only valid in conjunction with
+.Fl -hidden .
+If no cipher is specified, the same as for the outer volume
+will be used.
+To see which algorithms are supported, specify
+.Fl -cipher-hidden Ns = Ns Ar help .
 .It Fl g, Fl -hidden
 Specifies that the newly created volume will contain a hidden
 volume.

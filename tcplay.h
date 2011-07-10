@@ -171,6 +171,7 @@ int process_hdr(const char *dev, unsigned char *pass, int passlen,
 int create_volume(const char *dev, int hidden, const char *keyfiles[],
     int nkeyfiles, const char *h_keyfiles[], int n_hkeyfiles,
     struct pbkdf_prf_algo *prf_algo, struct tc_cipher_chain *cipher_chain,
+    struct pbkdf_prf_algo *h_prf_algo, struct tc_cipher_chain *h_cipher_chain,
     char *passphrase, char *h_passphrase, size_t hidden_blocks_in,
     int interactive);
 int info_volume(const char *device, int sflag, const char *sys_dev,

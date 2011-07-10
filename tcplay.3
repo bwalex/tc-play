@@ -92,6 +92,8 @@ typedef struct tc_api_opts {
 	/* Fields for creation */
 	char		*tc_cipher;
 	char		*tc_prf_hash;
+	char		*tc_cipher_hidden;
+	char		*tc_prf_hash_hidden;
 	size_t		tc_size_hidden_in_blocks;
 	char		*tc_passphrase_hidden;
 	const char	**tc_keyfiles_hidden;
@@ -140,7 +142,18 @@ respectively.
 If
 .Fa tc_size_hidden_in_blocks
 is not zero, a hidden volume of the given size will be created, using
-the passphrase and keyfiles specified by
+the cipher specified by
+.Fa tc_cipher_hidden
+and the pbkdf2 prf hash algorithm specified by
+.Fa tc_prf_hash_hidden .
+If
+.Fa tc_cipher_hidden
+or
+.Fa tc_prf_hash_hidden
+are
+.Dv NULL ,
+the same algorithm as for the outer volume will be used.
+The passphrase and keyfiles used are specified by
 .Fa tc_passphrase_hidden
 and
 .Fa tc_keyfiles_hidden

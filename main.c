@@ -62,7 +62,8 @@ usage(void)
 	    " -m <mapping name>, --map=<mapping name>\n"
 	    "\t Creates a dm-crypt mapping with the given name for the device\n"
 	    "\t specified by -d or --device\n"
-	    "\nValid options and its arguments for 'create' are:\n"
+	    "\n"
+	    "Valid options and its arguments for 'create' are:\n"
 	    " -a <pbkdf prf algorithm>, --pbkdf-prf=<pbkdf prf algorithm>\n"
 	    "\t specifies which hashing function to use for the PBKDF password\n"
 	    "\t derivation when creating a new volume\n"
@@ -70,14 +71,25 @@ usage(void)
 	    " -b <cipher>, --cipher=<cipher>\n"
 	    "\t specifies which cipher to use when creating a new TC volume\n"
 	    "\t To see valid options, specify -b help\n"
+	    " -x <pbkdf prf algorithm>, --pbkdf-prf=<pbkdf prf algorithm>\n"
+	    "\t specifies which hashing function to use for the PBKDF password\n"
+	    "\t derivation when creating a new hidden volume. By default, the\n"
+	    "\t same as for the outer volume will be used\n"
+	    "\t To see valid options, specify -a help\n"
+	    " -y <cipher>, --cipher=<cipher>\n"
+	    "\t specifies which cipher to use when creating a new hidden volume.\n"
+	    "\t By default, the same as for the outer volume will be used\n"
+	    "\t To see valid options, specify -b help\n"
 	    " -g, --hidden\n"
 	    "\t specifies that the newly created volume will contain a hidden volume\n"
-	    "\nValid options and its arguments for 'info' and 'map' are:\n"
+	    "\n"
+	    "Valid options and its arguments for 'info' and 'map' are:\n"
 	    " -e, --protect-hidden\n"
 	    "\t protect a hidden volume when mounting the outer volume\n"
 	    " -s <disk path>, --system-encryption=<disk path>\n"
 	    "\t specifies that the disk (e.g. /dev/da0) is using system encryption\n"
-	    "\nValid options and its arguments common to all commands are:\n"
+	    "\n"
+	    "Valid options and its arguments common to all commands are:\n"
 	    " -d <device path>, --device=<device path>\n"
 	    "\t specifies the path to the volume to operate on (e.g. /dev/da0s1)\n"
 	    " -k <key file>, --keyfile=<key file>\n"
@@ -95,8 +107,10 @@ usage(void)
 static struct option longopts[] = {
 	{ "create",		no_argument,		NULL, 'c' },
 	{ "cipher",		required_argument,	NULL, 'b' },
+	{ "cipher-hidden",	required_argument,	NULL, 'y' },
 	{ "hidden",		no_argument,		NULL, 'g' },
 	{ "pbkdf-prf",		required_argument,	NULL, 'a' },
+	{ "pbkdf-prf-hidden",	required_argument,	NULL, 'x' },
 	{ "info",		no_argument,		NULL, 'i' },
 	{ "map",		required_argument,	NULL, 'm' },
 	{ "keyfile",		required_argument,	NULL, 'k' },
@@ -122,6 +136,8 @@ main(int argc, char *argv[])
 	    create_vol = 0, contain_hidden = 0;
 	struct pbkdf_prf_algo *prf = NULL;
 	struct tc_cipher_chain *cipher_chain = NULL;
+	struct pbkdf_prf_algo *h_prf = NULL;
+	struct tc_cipher_chain *h_cipher_chain = NULL;
 
 	if ((error = tc_play_init()) != 0) {
 		fprintf(stderr, "Initialization failed, exiting.");
@@ -135,8 +151,8 @@ main(int argc, char *argv[])
 	nkeyfiles = 0;
 	n_hkeyfiles = 0;
 
-	while ((ch = getopt_long(argc, argv, "a:b:cd:efgh:ik:m:s:v", longopts,
-	    NULL)) != -1) {
+	while ((ch = getopt_long(argc, argv, "a:b:cd:efgh:ik:m:s:vx:y:",
+	    longopts, NULL)) != -1) {
 		switch(ch) {
 		case 'a':
 			if (prf != NULL)
@@ -146,6 +162,7 @@ main(int argc, char *argv[])
 					exit(0);
 				else
 					usage();
+				/* NOT REACHED */
 			}
 			break;
 		case 'b':
@@ -156,6 +173,7 @@ main(int argc, char *argv[])
 					exit(0);
 				else
 					usage();
+				/* NOT REACHED */
 			}
 			break;
 		case 'c':
@@ -191,6 +209,28 @@ main(int argc, char *argv[])
 			printf("tcplay v%d.%d\n", MAJ_VER, MIN_VER);
 			exit(0);
 			/* NOT REACHED */
+		case 'x':
+			if (h_prf != NULL)
+				usage();
+			if ((h_prf = check_prf_algo(optarg, 0)) == NULL) {
+				if (strcmp(optarg, "help") == 0)
+					exit(0);
+				else
+					usage();
+				/* NOT REACHED */
+			}
+			break;
+		case 'y':
+			if (h_cipher_chain != NULL)
+				usage();
+			if ((h_cipher_chain = check_cipher_chain(optarg, 0)) == NULL) {
+				if (strcmp(optarg, "help") == 0)
+					exit(0);
+				else
+					usage();
+				/* NOT REACHED */
+			}
+			break;
 		case 'h':
 		case '?':
 		default:
@@ -218,7 +258,8 @@ main(int argc, char *argv[])
 	/* Create a new volume */
 	if (create_vol) {
 		error = create_volume(dev, contain_hidden, keyfiles, nkeyfiles,
-		    h_keyfiles, n_hkeyfiles, prf, cipher_chain, NULL, NULL,
+		    h_keyfiles, n_hkeyfiles, prf, cipher_chain, h_prf,
+		    h_cipher_chain, NULL, NULL,
 		    0, 1 /* interactive */);
 		if (error) {
 			tc_log(1, "could not create new volume on %s\n", dev);
