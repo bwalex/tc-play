@@ -98,14 +98,17 @@ const char *valid_cipher_chains[][MAX_CIPHER_CHAINS] = {
 	{ "AES-256-XTS", NULL },
 	{ "TWOFISH-256-XTS", NULL },
 	{ "SERPENT-256-XTS", NULL },
-	{ "AES-256-XTS", "TWOFISH-256-XTS", NULL },
 	{ "AES-256-XTS", "TWOFISH-256-XTS", "SERPENT-256-XTS", NULL },
-	{ "SERPENT-256-XTS", "AES-256-XTS", NULL },
 	{ "SERPENT-256-XTS", "TWOFISH-256-XTS", "AES-256-XTS", NULL },
 #if 0
-	/* The Twofish-Serpent chain is actually the other way round?? */
+	/* It seems that all the two-way cascades are the other way round... */
+	{ "AES-256-XTS", "TWOFISH-256-XTS", NULL },
+	{ "SERPENT-256-XTS", "AES-256-XTS", NULL },
 	{ "TWOFISH-256-XTS", "SERPENT-256-XTS", NULL },
+
 #endif
+	{ "TWOFISH-256-XTS", "AES-256-XTS", NULL },
+	{ "AES-256-XTS", "SERPENT-256-XTS", NULL },
 	{ "SERPENT-256-XTS", "TWOFISH-256-XTS", NULL },
 	{ NULL }
 };

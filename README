@@ -14,6 +14,8 @@ Some notable differences between actual implementation and documentation:
    big endian.
  - Some volume header fields (creation time of volume and header) are missing
    in the documentation.
+ - All two-way cipher cascades are the wrong way round in the documentation,
+   but all three-way cipher cascades are correct.
 
 It is designed for DragonFly BSD, but would work, with minor changes, on any
 OS with device mapper and dm-crypt. This is also the reason for the dependency
@@ -42,5 +44,3 @@ protecting a hidden volume.
 
 Support for creating volume was only recently added and has not been tested yet.
 It is highly experimental.
-
-Cascaded encryption algorithms are not supported (yet), but are coming soon :)
