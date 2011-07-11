@@ -267,12 +267,12 @@ main(int argc, char *argv[])
 	} else if (info_vol) {
 		error = info_volume(dev, sflag, sys_dev, protect_hidden,
 		    keyfiles, nkeyfiles, h_keyfiles, n_hkeyfiles, NULL, NULL,
-		    1 /* interactive */, DEFAULT_RETRIES);
+		    1 /* interactive */, DEFAULT_RETRIES, 0);
 	} else if (map_vol) {
 		error = map_volume(map_name,
 		    dev, sflag, sys_dev, protect_hidden,
 		    keyfiles, nkeyfiles, h_keyfiles, n_hkeyfiles, NULL, NULL,
-		    1 /* interactive */, DEFAULT_RETRIES);
+		    1 /* interactive */, DEFAULT_RETRIES, 0);
 	}
 
 	return error;

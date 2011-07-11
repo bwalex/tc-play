@@ -141,7 +141,8 @@ tc_api_map_volume(tc_api_opts *api_opts)
 	    /* protect_hidden */ 0, api_opts->tc_keyfiles, nkeyfiles,
 	    /* h_keyfiles[] */ NULL, /* n_hkeyfiles */ 0,
 	    api_opts->tc_passphrase, /* passphrase_hidden */ NULL,
-	    api_opts->tc_interactive_prompt, api_opts->tc_password_retries);
+	    api_opts->tc_interactive_prompt, api_opts->tc_password_retries,
+	    (time_t)api_opts->tc_prompt_timeout);
 
 	return (err) ? TC_ERR : TC_OK;
 }

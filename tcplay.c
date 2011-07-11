@@ -390,9 +390,9 @@ create_volume(const char *dev, int hidden, const char *keyfiles[], int nkeyfiles
 			return -1;
 		}
 
-		if ((error = read_passphrase("Passphrase: ", pass, MAX_PASSSZ) ||
+		if ((error = read_passphrase("Passphrase: ", pass, MAX_PASSSZ, 0) ||
 		   (read_passphrase("Repeat passphrase: ", pass_again,
-		   MAX_PASSSZ)))) {
+		   MAX_PASSSZ, 0)))) {
 			tc_log(1, "could not read passphrase\n");
 			return -1;
 		}
@@ -433,9 +433,9 @@ create_volume(const char *dev, int hidden, const char *keyfiles[], int nkeyfiles
 			}
 
 			if ((error = read_passphrase("Passphrase for hidden volume: ",
-			   h_pass, MAX_PASSSZ) ||
+			   h_pass, MAX_PASSSZ, 0) ||
 			   (read_passphrase("Repeat passphrase: ", pass_again,
-			   MAX_PASSSZ)))) {
+			   MAX_PASSSZ, 0)))) {
 				tc_log(1, "could not read passphrase\n");
 				return -1;
 			}
@@ -587,7 +587,7 @@ struct tcplay_info *
 info_map_common(const char *dev, int sflag, const char *sys_dev,
     int protect_hidden, const char *keyfiles[], int nkeyfiles,
     const char *h_keyfiles[], int n_hkeyfiles, char *passphrase,
-    char *passphrase_hidden, int interactive, int retries)
+    char *passphrase_hidden, int interactive, int retries, time_t timeout)
 {
 	struct tchdr_enc *ehdr, *hehdr = NULL;
 	struct tcplay_info *info, *hinfo = NULL;
@@ -612,7 +612,8 @@ info_map_common(const char *dev, int sflag, const char *sys_dev,
 		}
 
 		if (interactive) {
-		        if ((error = read_passphrase("Passphrase: ", pass, MAX_PASSSZ))) {
+		        if ((error = read_passphrase("Passphrase: ", pass,
+			    MAX_PASSSZ, timeout))) {
 				tc_log(1, "could not read passphrase\n");
 				return NULL;
 			}
@@ -640,7 +641,7 @@ info_map_common(const char *dev, int sflag, const char *sys_dev,
 			if (interactive) {
 			        if ((error = read_passphrase(
 				    "Passphrase for hidden volume: ", h_pass,
-				    MAX_PASSSZ))) {
+				    MAX_PASSSZ, timeout))) {
 					tc_log(1, "could not read passphrase\n");
 					return NULL;
 				}
@@ -733,13 +734,14 @@ int
 info_volume(const char *device, int sflag, const char *sys_dev,
     int protect_hidden, const char *keyfiles[], int nkeyfiles,
     const char *h_keyfiles[], int n_hkeyfiles,
-    char *passphrase, char *passphrase_hidden, int interactive, int retries)
+    char *passphrase, char *passphrase_hidden, int interactive, int retries,
+    time_t timeout)
 {
 	struct tcplay_info *info;
 
 	info = info_map_common(device, sflag, sys_dev, protect_hidden,
 	    keyfiles, nkeyfiles, h_keyfiles, n_hkeyfiles,
-	    passphrase, passphrase_hidden, interactive, retries);
+	    passphrase, passphrase_hidden, interactive, retries, timeout);
 
 	if (info != NULL) {
 		if (interactive)
@@ -753,7 +755,8 @@ int
 map_volume(const char *map_name, const char *device, int sflag,
     const char *sys_dev, int protect_hidden, const char *keyfiles[],
     int nkeyfiles, const char *h_keyfiles[], int n_hkeyfiles,
-    char *passphrase, char *passphrase_hidden, int interactive, int retries)
+    char *passphrase, char *passphrase_hidden, int interactive, int retries,
+    time_t timeout)
 
 {
 	struct tcplay_info *info;
@@ -761,7 +764,7 @@ map_volume(const char *map_name, const char *device, int sflag,
 
 	info = info_map_common(device, sflag, sys_dev, protect_hidden,
 	    keyfiles, nkeyfiles, h_keyfiles, n_hkeyfiles,
-	    passphrase, passphrase_hidden, interactive, retries);
+	    passphrase, passphrase_hidden, interactive, retries, timeout);
 
 	if (info == NULL)
 		return -1;

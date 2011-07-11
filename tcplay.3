@@ -88,6 +88,7 @@ typedef struct tc_api_opts {
 	char		*tc_map_name;
 	int		tc_password_retries;
 	int		tc_interactive_prompt;
+	unsigned long	tc_prompt_timeout;
 
 	/* Fields for creation */
 	char		*tc_cipher;
@@ -174,6 +175,10 @@ field determines whether the user will be prompted to enter a passphrase
 interactively or whether the passphrase in
 .Fa tc_passphrase
 will be used.
+If an interactive prompt is used, the prompt will time out after
+.Fa tc_prompt_timeout
+seconds.
+A value of 0 indicates that no timeout will occur.
 The number of passphrase entry retries is defined by
 .Fa tc_password_retries .
 Note that the

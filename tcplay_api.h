@@ -40,6 +40,7 @@ typedef struct tc_api_opts {
 	char		*tc_map_name;
 	int		tc_password_retries;
 	int		tc_interactive_prompt;
+	unsigned long	tc_prompt_timeout;
 
 	/* Fields for creation */
 	char		*tc_cipher;

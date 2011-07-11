@@ -29,6 +29,7 @@
 #include <sys/types.h>
 #include <sys/diskslice.h>
 #include <sys/uio.h>
+#include <sys/select.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -239,11 +240,13 @@ write_mem(const char *dev, off_t offset, size_t blksz __unused, void *mem,
 }
 
 int
-read_passphrase(const char *prompt, char *pass, size_t passlen)
+read_passphrase(const char *prompt, char *pass, size_t passlen, time_t timeout)
 {
 	struct termios termios_old, termios_new;
+	struct timeval to;
+	fd_set fds;
 	ssize_t n;
-	int fd, r = 0, cfd = 0;
+	int fd, r = 0, cfd = 0, nready;
 
 	if ((fd = open("/dev/tty", O_RDONLY)) == -1) {
 		fd = STDIN_FILENO;
@@ -260,6 +263,19 @@ read_passphrase(const char *prompt, char *pass, size_t passlen)
 	termios_new.c_lflag &= ~ECHO;
 	tcsetattr(fd, TCSAFLUSH, &termios_new);
 
+	if (timeout > 0) {
+		memset(&to, 0, sizeof(to));
+		to.tv_sec = timeout;
+
+		FD_ZERO(&fds);
+		FD_SET(fd, &fds);
+		nready = select(fd + 1, &fds, NULL, NULL, &to);
+		if (nready <= 0) {
+			r = EINTR;
+			goto out;
+		}
+	}
+
 	n = read(fd, pass, passlen-1);
 	if (n > 0) {
 		pass[n-1] = '\0'; /* Strip trailing \n */
@@ -267,6 +283,7 @@ read_passphrase(const char *prompt, char *pass, size_t passlen)
 		r = EIO;
 	}
 
+out:
 	if (cfd)
 		close(fd);
 

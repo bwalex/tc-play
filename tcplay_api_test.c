@@ -41,6 +41,7 @@ main(void)
 	api_opts.tc_map_name = "dragonfly-test";
 	api_opts.tc_password_retries = 5;
 	api_opts.tc_interactive_prompt = 1;
+	api_opts.tc_prompt_timeout = 5;
 	error = tc_api_map_volume(&api_opts);
 	if (error)
 		printf("API MAP ERROR: %s\n", tc_api_get_error_msg());

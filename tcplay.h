@@ -130,7 +130,8 @@ int get_random(unsigned char *buf, size_t len);
 int secure_erase(const char *dev, size_t bytes, size_t blksz);
 int get_disk_info(const char *dev, size_t *blocks, size_t *bsize);
 int write_mem(const char *dev, off_t offset, size_t blksz, void *mem, size_t bytes);
-int read_passphrase(const char *prompt, char *pass, size_t passlen);
+int read_passphrase(const char *prompt, char *pass, size_t passlen,
+    time_t timeout);
 
 int tc_crypto_init(void);
 int tc_cipher_chain_populate_keys(struct tc_cipher_chain *cipher_chain,
@@ -177,11 +178,13 @@ int create_volume(const char *dev, int hidden, const char *keyfiles[],
 int info_volume(const char *device, int sflag, const char *sys_dev,
     int protect_hidden, const char *keyfiles[], int nkeyfiles,
     const char *h_keyfiles[], int n_hkeyfiles,
-    char *passphrase, char *passphrase_hidden, int interactive, int retries);
+    char *passphrase, char *passphrase_hidden, int interactive, int retries,
+    time_t timeout);
 int map_volume(const char *map_name, const char *device, int sflag,
     const char *sys_dev, int protect_hidden, const char *keyfiles[],
     int nkeyfiles, const char *h_keyfiles[], int n_hkeyfiles,
-    char *passphrase, char *passphrase_hidden, int interactive, int retries);
+    char *passphrase, char *passphrase_hidden, int interactive, int retries,
+    time_t timeout);
 int dm_setup(const char *mapname, struct tcplay_info *info);
 
 typedef void(*summary_fn_t)(void);
