@@ -358,8 +358,8 @@ create_volume(const char *dev, int hidden, const char *keyfiles[], int nkeyfiles
 	char *pass, *pass_again;
 	char *h_pass = NULL;
 	char buf[1024];
-	size_t blocks, blksz, hidden_blocks;
-	struct tchdr_enc *ehdr, *hehdr;
+	size_t blocks, blksz, hidden_blocks = 0;
+	struct tchdr_enc *ehdr, *hehdr = NULL;
 	int64_t tmp;
 	int error, r;
 
@@ -593,7 +593,7 @@ info_map_common(const char *dev, int sflag, const char *sys_dev,
 	struct tcplay_info *info, *hinfo = NULL;
 	char *pass;
 	char *h_pass;
-	int error, error2;
+	int error, error2 = 0;
 	size_t sz;
 
 	info = NULL;

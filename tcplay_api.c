@@ -74,7 +74,7 @@ tc_api_get_summary(void)
 int
 tc_api_create_volume(tc_api_opts *api_opts)
 {
-	int nkeyfiles, n_hkeyfiles;
+	int nkeyfiles, n_hkeyfiles = 0;
 	int create_hidden;
 	int err;
 

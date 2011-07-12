@@ -44,7 +44,7 @@ void *
 read_to_safe_mem(const char *file, off_t offset, size_t *sz)
 {
 	void *mem = NULL;
-	ssize_t r;
+	ssize_t r = 0;
 	int fd;
 
 	if ((fd = open(file, O_RDONLY)) < 0) {
