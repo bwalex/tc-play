@@ -907,25 +907,11 @@ out:
 			printf("Unrolling dm changes! j = %d (%s)\n", j-1,
 			    uu_stack[j-1]);
 #endif
-			if ((dmt = dm_task_create(DM_DEVICE_REMOVE)) == NULL) {
+			if ((ret = dm_remove_device(uu_stack[--j])) != 0) {
 				tc_log(1, "Tried to unroll dm changes, "
 				    "giving up.\n");
 				break;
 			}
-
-			if ((dm_task_set_name(dmt, uu_stack[--j])) == 0) {
-				tc_log(1, "Tried to unroll dm changes, "
-				    "giving up.\n");
-				break;
-			}
-
-			if ((dm_task_run(dmt)) == 0) {
-				tc_log(1, "Tried to unroll dm changes, "
-				    "giving up.\n");
-				break;
-			}
-
-			dm_task_destroy(dmt);
 		}
 	}
 
@@ -935,6 +921,55 @@ out:
 	free_safe_mem(params);
 
 	return ret;
+}
+
+/* XXX: move up */
+static
+int
+dm_remove_device(const char *name)
+{
+	struct dm_task *dmt = NULL;
+	int ret = EINVAL;
+
+	if ((dmt = dm_task_create(DM_DEVICE_REMOVE)) == NULL)
+		goto out;
+
+	if ((dm_task_set_name(dmt, name)) == 0)
+		goto out;
+
+	if ((dm_task_run(dmt)) == 0)
+		goto out;
+
+	ret = 0;
+out:
+	if (dmt)
+		dm_task_destroy(dmt);
+
+	return ret;
+}
+
+int
+dm_teardown(const char *mapname, const char *device __unused)
+{
+	struct dm_task *dmt = NULL;
+#if 0
+	struct dm_info dmi;	
+#endif
+	char map[PATH_MAX];	
+	int i, error;
+
+	if ((error = dm_remove_device(mapname)) != 0) {
+		tc_log(1, "Could not remove mapping %s\n", mapname);
+		return error;
+	}
+
+	/* Try to remove other cascade devices */
+	for (i = 2; i >= 0; i--) {
+		sprintf(map, "%s.%d", mapname, i);
+		dm_remove_device(map);
+	}
+
+	return 0;
 }
 
 struct tc_crypto_algo *
