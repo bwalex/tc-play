@@ -56,6 +56,7 @@ int tc_api_init(int verbose);
 int tc_api_uninit(void);
 int tc_api_create_volume(tc_api_opts *api_opts);
 int tc_api_map_volume(tc_api_opts *api_opts);
+int tc_api_unmap_volume(tc_api_opts *api_opts);
 int tc_api_check_cipher(tc_api_opts *api_opts);
 int tc_api_check_prf_hash(tc_api_opts *api_opts);
 const char *tc_api_get_error_msg(void);

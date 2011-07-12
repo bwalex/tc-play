@@ -36,6 +36,7 @@
 .Nm tc_api_uninit ,
 .Nm tc_api_create_volume ,
 .Nm tc_api_map_volume ,
+.Nm tc_api_unmap_volume ,
 .Nm tc_api_check_cipher ,
 .Nm tc_api_check_prf_hash ,
 .Nm tc_api_get_error_msg ,
@@ -54,6 +55,8 @@
 .Ft int
 .Fn tc_api_map_volume "tc_api_opts *api_opts"
 .Ft int
+.Fn tc_api_unmap_volume "tc_api_opts *api_opts"
+.Ft int
 .Fn tc_api_check_cipher "tc_api_opts *api_opts"
 .Ft int
 .Fn tc_api_check_prf_hash "tc_api_opts *api_opts"
@@ -71,6 +74,7 @@ volumes.
 The
 .Fn tc_api_create_volume ,
 .Fn tc_api_map_volume ,
+.Fn tc_api_unmap_volume ,
 .Fn tc_api_check_cipher
 and
 .Fn tc_api_check_prf_hash
@@ -187,6 +191,11 @@ function does not support accessing an outer volume while
 protecting the hidden volume.
 Depending on the passphrase/keyfiles used
 either the outer or the hidden volume will be mapped.
+.Pp
+The
+.Fn tc_api_unmap_volume
+unmaps / closes the volume specified in
+.Fa tc_map_name .
 .Pp
 The
 .Fn tc_api_check_cipher

@@ -186,6 +186,7 @@ int map_volume(const char *map_name, const char *device, int sflag,
     char *passphrase, char *passphrase_hidden, int interactive, int retries,
     time_t timeout);
 int dm_setup(const char *mapname, struct tcplay_info *info);
+int dm_teardown(const char *mapname, const char *device);
 
 typedef void(*summary_fn_t)(void);
 

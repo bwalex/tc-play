@@ -780,6 +780,30 @@ map_volume(const char *map_name, const char *device, int sflag,
 	return 0;
 }
 
+static
+int
+dm_remove_device(const char *name)
+{
+	struct dm_task *dmt = NULL;
+	int ret = EINVAL;
+
+	if ((dmt = dm_task_create(DM_DEVICE_REMOVE)) == NULL)
+		goto out;
+
+	if ((dm_task_set_name(dmt, name)) == 0)
+		goto out;
+
+	if ((dm_task_run(dmt)) == 0)
+		goto out;
+
+	ret = 0;
+out:
+	if (dmt)
+		dm_task_destroy(dmt);
+
+	return ret;
+}
+
 int
 dm_setup(const char *mapname, struct tcplay_info *info)
 {
@@ -923,39 +947,14 @@ out:
 	return ret;
 }
 
-/* XXX: move up */
-static
-int
-dm_remove_device(const char *name)
-{
-	struct dm_task *dmt = NULL;
-	int ret = EINVAL;
-
-	if ((dmt = dm_task_create(DM_DEVICE_REMOVE)) == NULL)
-		goto out;
-
-	if ((dm_task_set_name(dmt, name)) == 0)
-		goto out;
-
-	if ((dm_task_run(dmt)) == 0)
-		goto out;
-
-	ret = 0;
-out:
-	if (dmt)
-		dm_task_destroy(dmt);
-
-	return ret;
-}
-
 int
 dm_teardown(const char *mapname, const char *device __unused)
 {
-	struct dm_task *dmt = NULL;
 #if 0
-	struct dm_info dmi;	
+	struct dm_task *dmt = NULL;
+	struct dm_info dmi;
 #endif
-	char map[PATH_MAX];	
+	char map[PATH_MAX];
 	int i, error;
 
 	if ((error = dm_remove_device(mapname)) != 0) {

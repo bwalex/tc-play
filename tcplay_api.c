@@ -148,6 +148,21 @@ tc_api_map_volume(tc_api_opts *api_opts)
 }
 
 int
+tc_api_unmap_volume(tc_api_opts *api_opts)
+{
+	int err;
+
+	if ((api_opts == NULL) ||
+	    (api_opts->tc_map_name == NULL)) {
+		errno = EFAULT;
+		return TC_ERR;
+	}
+
+	err = dm_teardown(api_opts->tc_map_name, api_opts->tc_device);
+	return (err) ? TC_ERR : TC_OK;
+}
+
+int
 tc_api_check_cipher(tc_api_opts *api_opts)
 {
 	struct tc_cipher_chain *chain;

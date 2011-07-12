@@ -47,6 +47,9 @@ main(void)
 		printf("API MAP ERROR: %s\n", tc_api_get_error_msg());
 	assert(error == 0);
 
+	system("dmsetup ls");
+	tc_api_unmap_volume(&api_opts);
+
 	error = tc_api_uninit();
 	assert(error == 0);
 
