@@ -138,20 +138,6 @@ get_gcrypt_cipher_id(struct tc_crypto_algo *cipher)
 		return -1;
 }
 
-static
-int
-get_gcrypt_hash_id(struct pbkdf_prf_algo *hash)
-{
-	if	(strcmp(hash->name, "RIPEMD160") == 0)
-		return GCRY_MD_RMD160;
-	else if (strcmp(hash->name, "SHA512") == 0)
-		return GCRY_MD_SHA512;
-	else if	(strcmp(hash->name, "whirlpool") == 0)
-		return GCRY_MD_WHIRLPOOL;
-	else
-		return -1;
-}
-
 int
 syscrypt(struct tc_crypto_algo *cipher, unsigned char *key, size_t klen, unsigned char *iv,
     unsigned char *in, unsigned char *out, size_t len, int do_encrypt)
