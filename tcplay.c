@@ -33,18 +33,24 @@
 #define __USE_GNU
 #endif
 
+#if defined(__DragonFly__)
+#include <sys/param.h>
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdarg.h>
 #include <inttypes.h>
 #include <unistd.h>
 #include <errno.h>
 #include <string.h>
 #include <err.h>
 #include <time.h>
-#include <libdevmapper.h>
 #if defined(__linux__)
+#include <libdevmapper.h>
 #include <uuid/uuid.h>
 #elif defined(__DragonFly__)
+#include <libdm.h>
 #include <uuid.h>
 #endif
 

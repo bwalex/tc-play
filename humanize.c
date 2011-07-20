@@ -39,6 +39,8 @@
 #include <ctype.h>
 #include <errno.h>
 
+#include "humanize.h"
+
 static const char prefixes[] = " KMGTPE";
 int
 _humanize_number(char *buf, size_t bufsz, uint64_t num)

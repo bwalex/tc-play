@@ -5,12 +5,12 @@ WARNFLAGS= -Wsystem-headers -Werror -Wall -W -Wno-unused-parameter \
 	-Winline -Wnested-externs -Wredundant-decls
 
 # for linux...
-WARNFLAGS= -Wall
+WARNFLAGS_LINUX= -Wall
 
 linux:
-	gcc -O0 $(WARNFLAGS) -g main.c tcplay.c crc32.c safe_mem.c io.c crypto-gcrypt.c hdr.c humanize.c -o tc-play -lcrypto -ldevmapper -luuid
+	gcc -O0 $(WARNFLAGS_LINUX) -g main.c tcplay.c crc32.c safe_mem.c io.c crypto-gcrypt.c hdr.c humanize.c -o tc-play -lcrypto -ldevmapper -luuid
 all:
-	gcc -O0 $(WARNFLAGS) -g main.c tcplay.c crc32.c safe_mem.c io.c crypto-dev.c hdr.c humanize.c -o tc-play -lcrypto -ldevmapper -lprop -lutil
+	gcc -O0 $(WARNFLAGS) -g main.c tcplay.c crc32.c safe_mem.c io.c crypto-dev.c hdr.c humanize.c -o tc-play -lcrypto -ldm -lprop
 lib:
 	gcc $(WARNFLAGS) -c -fPIC -O0 -Wall -g tcplay_api.c tcplay.c crc32.c safe_mem.c io.c crypto-dev.c hdr.c
 	gcc -shared -Wl,-version-script=tcplay.map -o libtcplay.so tcplay_api.o tcplay.o crc32.o safe_mem.o io.o crypto-dev.o hdr.o
