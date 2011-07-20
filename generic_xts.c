@@ -85,9 +85,9 @@ out:
 }
 
 int
-xts_init(struct xts_ctx *ctx, void *arg1, void *arg2, set_key_fn set_key_fn,
-    zero_key_fn zero_key_fn, encrypt_decrypt_fn encrypt_fn,
-    encrypt_decrypt_fn decrypt_fn, u_int blk_sz, u_int8_t *key, int len)
+xts_init(struct xts_ctx *ctx, void *arg1, void *arg2, set_key_fn _set_key_fn,
+    zero_key_fn _zero_key_fn, encrypt_decrypt_fn _encrypt_fn,
+    encrypt_decrypt_fn _decrypt_fn, u_int blk_sz, u_int8_t *key, int len)
 {
 	int err;
 
@@ -95,10 +95,10 @@ xts_init(struct xts_ctx *ctx, void *arg1, void *arg2, set_key_fn set_key_fn,
 		return -1;
 
 	ctx->blk_sz = blk_sz;
-	ctx->encrypt_fn = encrypt_fn;
-	ctx->decrypt_fn = decrypt_fn;
-	ctx->set_key_fn = set_key_fn;
-	ctx->zero_key_fn = zero_key_fn;
+	ctx->encrypt_fn = _encrypt_fn;
+	ctx->decrypt_fn = _decrypt_fn;
+	ctx->set_key_fn = _set_key_fn;
+	ctx->zero_key_fn = _zero_key_fn;
 
 	err = ctx->set_key_fn(&ctx->ctx1, arg1, arg2, key, len * 4);
 	if (err)
