@@ -27,18 +27,30 @@
  * SUCH DAMAGE.
  */
 #include <sys/types.h>
+
+#if defined(__linux__)
+#define _GNU_SOURCE
+#define __USE_GNU
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
+#include <inttypes.h>
 #include <unistd.h>
 #include <errno.h>
 #include <string.h>
 #include <err.h>
 #include <time.h>
 #include <libdevmapper.h>
-#include <libutil.h>
+#if defined(__linux__)
+#include <uuid/uuid.h>
+#elif defined(__DragonFly__)
+#include <uuid.h>
+#endif
 
 #include "crc32.h"
 #include "tcplay.h"
+#include "humanize.h"
 
 
 /* XXX TODO:
@@ -54,7 +66,7 @@ char tc_internal_log_buffer[LOG_BUFFER_SZ];
 void
 tc_log(int is_err, const char *fmt, ...)
 {
-	__va_list ap;
+	va_list ap;
 	FILE *fp;
 
 	if (is_err)
@@ -62,14 +74,14 @@ tc_log(int is_err, const char *fmt, ...)
 	else
 		fp = stdout;
 
-        __va_start(ap, fmt);
+        va_start(ap, fmt);
 
 	vsnprintf(tc_internal_log_buffer, LOG_BUFFER_SZ, fmt, ap);
 
 	if (tc_internal_verbose)
                 vfprintf(fp, fmt, ap);
 
-	__va_end(ap);
+	va_end(ap);
 }
 
 /* Supported algorithms */
@@ -360,7 +372,7 @@ create_volume(const char *dev, int hidden, const char *keyfiles[], int nkeyfiles
 	char buf[1024];
 	size_t blocks, blksz, hidden_blocks = 0;
 	struct tchdr_enc *ehdr, *hehdr = NULL;
-	int64_t tmp;
+	uint64_t tmp;
 	int error, r;
 
 	if (cipher_chain == NULL)
@@ -417,8 +429,8 @@ create_volume(const char *dev, int hidden, const char *keyfiles[], int nkeyfiles
 
 	if (nkeyfiles > 0) {
 		/* Apply keyfiles to 'pass' */
-		if ((error = apply_keyfiles(pass, MAX_PASSSZ, keyfiles,
-		    nkeyfiles))) {
+		if ((error = apply_keyfiles((unsigned char *)pass, MAX_PASSSZ,
+		    keyfiles, nkeyfiles))) {
 			tc_log(1, "could not apply keyfiles\n");
 		}
 	}
@@ -461,8 +473,8 @@ create_volume(const char *dev, int hidden, const char *keyfiles[], int nkeyfiles
 
 		if (n_hkeyfiles > 0) {
 			/* Apply keyfiles to 'h_pass' */
-			if ((error = apply_keyfiles(h_pass, MAX_PASSSZ, h_keyfiles,
-			n_hkeyfiles))) {
+			if ((error = apply_keyfiles((unsigned char *)h_pass,
+			    MAX_PASSSZ, h_keyfiles, n_hkeyfiles))) {
 				tc_log(1, "could not apply keyfiles\n");
 				return -1;
 			}
@@ -481,14 +493,14 @@ create_volume(const char *dev, int hidden, const char *keyfiles[], int nkeyfiles
 
 		/* This only happens in interactive mode */
 		while (hidden_blocks == 0) {
-			if ((r = humanize_number(buf, strlen("XXX MB"),
-			    (int64_t)(blocks * blksz), "B", 0, 0)) < 0) {
+			if ((r = _humanize_number(buf, sizeof(buf),
+			    (uint64_t)(blocks * blksz))) < 0) {
 				sprintf(buf, "%zu bytes", (blocks * blksz));
 			}
 
 			printf("The total volume size of %s is %s (bytes)\n", dev, buf);
 			memset(buf, 0, sizeof(buf));
-			printf("Size of hidden volume (e.g. 127M): ");
+			printf("Size of hidden volume (e.g. 127M):  ");
 			fflush(stdout);
 
 			if ((fgets(buf, sizeof(buf), stdin)) == NULL) {
@@ -498,7 +510,7 @@ create_volume(const char *dev, int hidden, const char *keyfiles[], int nkeyfiles
 
 			/* get rid of trailing newline */
 			buf[strlen(buf)-1] = '\0';
-			if ((error = dehumanize_number(buf,
+			if ((error = _dehumanize_number(buf,
 			    &tmp)) != 0) {
 				tc_log(1, "Could not interpret input: %s\n", buf);
 				return -1;
@@ -546,7 +558,8 @@ create_volume(const char *dev, int hidden, const char *keyfiles[], int nkeyfiles
 	}
 
 	/* create encrypted headers */
-	ehdr = create_hdr(pass, (nkeyfiles > 0)?MAX_PASSSZ:strlen(pass),
+	ehdr = create_hdr((unsigned char *)pass,
+	    (nkeyfiles > 0)?MAX_PASSSZ:strlen(pass),
 	    prf_algo, cipher_chain, blksz, blocks, MIN_VOL_BLOCKS,
 	    blocks-MIN_VOL_BLOCKS, 0);
 	if (ehdr == NULL) {
@@ -555,7 +568,7 @@ create_volume(const char *dev, int hidden, const char *keyfiles[], int nkeyfiles
 	}
 
 	if (hidden) {
-		hehdr = create_hdr(h_pass,
+		hehdr = create_hdr((unsigned char *)h_pass,
 		    (n_hkeyfiles > 0)?MAX_PASSSZ:strlen(h_pass), h_prf_algo,
 		    h_cipher_chain,
 		    blksz, blocks, blocks - hidden_blocks, hidden_blocks, 1);
@@ -625,8 +638,8 @@ info_map_common(const char *dev, int sflag, const char *sys_dev,
 
 		if (nkeyfiles > 0) {
 			/* Apply keyfiles to 'pass' */
-			if ((error = apply_keyfiles(pass, MAX_PASSSZ, keyfiles,
-			    nkeyfiles))) {
+			if ((error = apply_keyfiles((unsigned char *)pass, MAX_PASSSZ,
+			    keyfiles, nkeyfiles))) {
 				tc_log(1, "could not apply keyfiles");
 				return NULL;
 			}
@@ -653,8 +666,8 @@ info_map_common(const char *dev, int sflag, const char *sys_dev,
 
 			if (n_hkeyfiles > 0) {
 				/* Apply keyfiles to 'pass' */
-				if ((error = apply_keyfiles(h_pass, MAX_PASSSZ, h_keyfiles,
-				    n_hkeyfiles))) {
+				if ((error = apply_keyfiles((unsigned char *)h_pass, MAX_PASSSZ,
+				    h_keyfiles, n_hkeyfiles))) {
 					tc_log(1, "could not apply keyfiles");
 					return NULL;
 				}
@@ -681,7 +694,8 @@ info_map_common(const char *dev, int sflag, const char *sys_dev,
 			hehdr = NULL;
 		}
 
-		error = process_hdr(dev, pass, (nkeyfiles > 0)?MAX_PASSSZ:strlen(pass),
+		error = process_hdr(dev, (unsigned char *)pass,
+		    (nkeyfiles > 0)?MAX_PASSSZ:strlen(pass),
 		    ehdr, &info);
 
 		/*
@@ -691,11 +705,11 @@ info_map_common(const char *dev, int sflag, const char *sys_dev,
 		 */
 		if (hehdr && (error || protect_hidden)) {
 			if (error) {
-				error2 = process_hdr(dev, pass,
+				error2 = process_hdr(dev, (unsigned char *)pass,
 				    (nkeyfiles > 0)?MAX_PASSSZ:strlen(pass), hehdr,
 				    &info);
 			} else if (protect_hidden) {
-				error2 = process_hdr(dev, h_pass,
+				error2 = process_hdr(dev, (unsigned char *)h_pass,
 				    (n_hkeyfiles > 0)?MAX_PASSSZ:strlen(h_pass), hehdr,
 				    &hinfo);
 			}
@@ -814,7 +828,9 @@ dm_setup(const char *mapname, struct tcplay_info *info)
 	char *uu;
 	char *uu_stack[64];
 	int uu_stack_idx;
+#if defined(__DragonFly__)
 	uint32_t status;
+#endif
 	int ret = 0;
 	int j;
 	off_t start, offset;
@@ -842,7 +858,7 @@ dm_setup(const char *mapname, struct tcplay_info *info)
 		/*			   iv off---^  block off--^ */
 		snprintf(params, 512, "%s %s %"PRIu64 " %s %"PRIu64,
 		    cipher_chain->cipher->dm_crypt_str, cipher_chain->dm_key,
-		    info->skip, dev, offset);
+		    (uint64_t)info->skip, dev, (uint64_t)offset);
 #ifdef DEBUG
 		printf("Params: %s\n", params);
 #endif
@@ -868,6 +884,15 @@ dm_setup(const char *mapname, struct tcplay_info *info)
 			goto out;
 		}
 
+#if defined(__linux__)
+		uuid_generate(info->uuid);
+		if ((uu = malloc(1024)) == NULL) {
+			tc_log(1, "uuid_unparse memory failed\n");
+			ret = -1;
+			goto out;
+		}
+		uuid_unparse(info->uuid, uu);
+#elif defined(__DragonFly__)
 		uuid_create(&info->uuid, &status);
 		if (status != uuid_s_ok) {
 			tc_log(1, "uuid_create failed\n");
@@ -881,6 +906,7 @@ dm_setup(const char *mapname, struct tcplay_info *info)
 			ret = -1;
 			goto out;
 		}
+#endif
 
 		if ((dm_task_set_uuid(dmt, uu)) == 0) {
 			free(uu);

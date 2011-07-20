@@ -26,8 +26,19 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
+
+#if defined(__linux__)
+#define _GNU_SOURCE
+#define __USE_GNU
+#endif
+
 #include <sys/types.h>
+#if defined(__DragonFly__)
 #include <sys/diskslice.h>
+#elif defined(__linux__)
+#include <linux/fs.h>
+#include <sys/ioctl.h>
+#endif
 #include <sys/uio.h>
 #include <sys/select.h>
 #include <errno.h>
@@ -186,6 +197,7 @@ secure_erase(const char *dev, size_t bytes, size_t blksz)
 	return 0;
 }
 
+#if defined(__DragonFly__)
 int
 get_disk_info(const char *dev, size_t *blocks, size_t *bsize)
 {
@@ -210,6 +222,36 @@ get_disk_info(const char *dev, size_t *blocks, size_t *bsize)
 	close(fd);
 	return 0;
 }
+#elif defined(__linux__)
+int
+get_disk_info(const char *dev, size_t *blocks, size_t *bsize)
+{
+	uint64_t nbytes;
+	int blocksz;
+	int fd;
+
+	if ((fd = open(dev, O_RDONLY)) < 0) {
+		tc_log(1, "Error opening %s\n", dev);
+		return -1;
+	}
+
+	if ((ioctl(fd, BLKSSZGET, &blocksz)) < 0) {
+		close(fd);
+		return -1;
+	}
+
+	if ((ioctl(fd, BLKGETSIZE64, &nbytes)) < 0) {
+		close(fd);
+		return -1;
+	}
+
+	*blocks = (size_t)(nbytes / blocksz);
+	*bsize = (size_t)(blocksz);
+
+	close(fd);
+	return 0;
+}
+#endif
 
 int
 write_mem(const char *dev, off_t offset, size_t blksz __unused, void *mem,

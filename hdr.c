@@ -26,11 +26,23 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
+
+#if defined(__linux__)
+#define _GNU_SOURCE
+#define __USE_GNU
+#endif
+
 #include <sys/types.h>
+
+#if defined(__DragonFly__)
 #include <sys/endian.h>
+#elif defined(__linux__)
+#include <endian.h>
+#endif
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <inttypes.h>
 #include <string.h>
 
 #include "crc32.h"

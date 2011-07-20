@@ -26,19 +26,27 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
+
+#if defined(__linux__)
+#define _GNU_SOURCE
+#define __USE_GNU
+#endif
+
 #include <sys/types.h>
 #include <getopt.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
+#include <inttypes.h>
 #include <errno.h>
 #include <string.h>
 #include <signal.h>
-#include <err.h>
 #include <time.h>
-#include <libutil.h>
 
 #include "tcplay.h"
+
+#ifndef SIGINFO
+#define SIGINFO SIGUSR1
+#endif
 
 static
 void

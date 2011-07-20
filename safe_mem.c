@@ -26,6 +26,12 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
+
+#if defined(__linux__)
+#define _GNU_SOURCE
+#define __USE_GNU
+#endif
+
 #include <sys/types.h>
 #include <sys/mman.h>
 #include <stdlib.h>

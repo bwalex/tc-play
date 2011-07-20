@@ -57,7 +57,13 @@
 #define DEBUG 1
 #endif
 
+#include <inttypes.h>
+
+#if defined(__DragonFly__)
 #include <uuid.h>
+#elif defined(__linux__)
+#include <uuid/uuid.h>
+#endif
 
 struct pbkdf_prf_algo {
 	const char *name;
@@ -199,3 +205,5 @@ extern summary_fn_t summary_fn;
 
 #define free_safe_mem(x) \
 	_free_safe_mem(x, __FILE__, __LINE__)
+
+#define __unused       __attribute__((__unused__))

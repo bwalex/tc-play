@@ -1,3 +1,5 @@
+A Linux port is underway.
+
 *NOTE* tcplay has now been integrated into DragonFly BSD, it's actual home. I'll
 try to keep the version up here up to date, but I can't make any promises. For
 the newest version, check out DragonFly BSD and look into sbin/tcplay and
