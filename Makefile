@@ -17,31 +17,32 @@ OBJS+=	crypto.o generic_xts.o
 CFLAGS+= $(WARNFLAGS)
 
 ifeq (${DEBUG}, yes)
-CFLAGS+= -O0 -g -DDEBUG
+  CFLAGS+= -O0 -g -DDEBUG
 else
-CFLAGS+= -O3
+  CFLAGS+= -O3
 endif
 
 ifeq (${SYSTEM}, linux)
-LIBS+=	-lgcrypt -ldevmapper -luuid
-SRCS+=	crypto-gcrypt.c
-OBJS+=	crypto-gcrypt.o
-ifeq (${PBKDF_BACKEND}, gcrypt)
-SRCS+=	pbkdf2-gcrypt.c
-OBJS+=	pbkdf2-gcrypt.o
+  LIBS+=	-lgcrypt -ldevmapper -luuid
+  SRCS+=	crypto-gcrypt.c
+  OBJS+=	crypto-gcrypt.o
+  ifeq (${PBKDF_BACKEND}, gcrypt)
+    SRCS+=	pbkdf2-gcrypt.c
+    OBJS+=	pbkdf2-gcrypt.o
+  endif
+  ifeq (${PBKDF_BACKEND}, openssl)
+    SRCS+=	pbkdf2-openssl.c
+    OBJS+=	pbkdf2-openssl.o
+    LIBS+=	-lcrypto
+  endif
 endif
-ifeq (${PBKDF_BACKEND}, openssl)
-SRCS+=	pbkdf2-openssl.c
-OBJS+=	pbkdf2-openssl.o
-LIBS+=	-lcrypto
-endif
-endif
+
 ifeq (${SYSTEM}, dragonfly)
-LIBS+=	-lcrypto -ldm -lprop
-SRCS+=	crypto-dev.c
-OBJS+=	crypto-dev.o
-SRCS+=	pbkdf2-openssl.c
-OBJS+=	pbkdf2-openssl.o
+  LIBS+=	-lcrypto -ldm -lprop
+  SRCS+=	crypto-dev.c
+  OBJS+=	crypto-dev.o
+  SRCS+=	pbkdf2-openssl.c
+  OBJS+=	pbkdf2-openssl.o
 endif
 
 program:
@@ -51,6 +52,7 @@ lib:
 	$(CC) -shared -Wl,-version-script=tcplay.map -o libtcplay.so tcplay_api.o $(OBJS)
 
 test:
-	gcc -O0 -g -L. -I. tcplay_api_test.c -ltcplay -lcrypto -ldevmapper -lprop -lutil
+	gcc -O0 -g -L. -I. tcplay_api_test.c -ltcplay -lcrypto -ldm -lprop
 clean:
 	rm -f tc-play libtcplay.so tc-play.core *.o ktrace.out
+
