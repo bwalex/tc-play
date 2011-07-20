@@ -161,10 +161,9 @@ create_hdr(unsigned char *pass, int passlen, struct pbkdf_prf_algo *prf_algo,
 		return NULL;
 	}
 
-	error = pbkdf2(pass, passlen,
+	error = pbkdf2(prf_algo, pass, passlen,
 	    ehdr->salt, sizeof(ehdr->salt),
-	    prf_algo->iteration_count,
-	    prf_algo->name, MAX_KEYSZ, key);
+	    MAX_KEYSZ, key);
 	if (error) {
 		tc_log(1, "could not derive key\n");
 		return NULL;

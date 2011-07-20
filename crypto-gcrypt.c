@@ -32,294 +32,203 @@
 #define __USE_GNU
 #endif
 
-#include <sys/types.h>
-#include <sys/param.h>
-#include <sys/ioctl.h>
-#include <sys/sysctl.h>
-
-#include <fcntl.h>
 //#include <unistd.h>
 #include <inttypes.h>
 #include <errno.h>
 #include <string.h>
-#include <openssl/evp.h>
 
-#include "crc32.h"
+#include <gcrypt.h>
+
+#include "generic_xts.h"
 #include "tcplay.h"
 
 
+static int
+gcrypt_encrypt(void *ctx, size_t blk_len, const uint8_t *src, uint8_t *dst)
+{
+	gcry_cipher_hd_t cipher_hd = (gcry_cipher_hd_t)ctx;
+	gcry_error_t gcry_err;
+
+	gcry_err = gcry_cipher_encrypt(
+	    cipher_hd,
+	    dst,
+	    blk_len, /* gcry_cipher_get_algo_blklen(GCRY_CIPHER_AES256) */
+	    src,
+	    blk_len);
+
+	return (gcry_err != 0);
+}
+
+static int
+gcrypt_decrypt(void *ctx, size_t blk_len, const uint8_t *src, uint8_t *dst)
+{
+	gcry_cipher_hd_t cipher_hd = (gcry_cipher_hd_t)ctx;
+	gcry_error_t gcry_err;
+
+	gcry_err = gcry_cipher_decrypt(
+	    cipher_hd,
+	    dst,
+	    blk_len /* gcry_cipher_get_algo_blklen(GCRY_CIPHER_AES256) */,
+	    src,
+	    blk_len);
+
+	return (gcry_err != 0);
+}
+
+static int
+gcrypt_set_key(void **ctx, void *arg1, void *arg2 __unused, const u_int8_t *key,
+    int keybits __unused)
+{
+	gcry_cipher_hd_t *cipher_hd = (gcry_cipher_hd_t *)ctx;
+	int cipher = *((int *)arg1);
+	gcry_error_t	gcry_err;
+	int err;
+
+	gcry_err = gcry_cipher_open(
+	    cipher_hd,
+	    cipher,
+	    GCRY_CIPHER_MODE_ECB,
+	    0);
+
+	if (gcry_err)
+		return -1;
+
+	gcry_err = gcry_cipher_setkey(
+	    *cipher_hd,
+	    key,
+	    gcry_cipher_get_algo_keylen(cipher));
+
+	if (gcry_err) {
+		gcry_cipher_close(*cipher_hd);
+		*ctx = NULL;
+		return -1;
+	}
+
+	return 0;
+}
+
+static int
+gcrypt_zero_key(void **ctx)
+{
+	gcry_cipher_hd_t *cipher_hd = (gcry_cipher_hd_t *)ctx;
+
+	if (*cipher_hd == NULL)
+		return 0;
+
+	gcry_cipher_close(*cipher_hd);
+	return 0;
+}
+
 static
 int
-get_cryptodev_cipher_id(struct tc_crypto_algo *cipher)
+get_gcrypt_cipher_id(struct tc_crypto_algo *cipher)
 {
-#if 0
 	if	(strcmp(cipher->name, "AES-128-XTS") == 0)
-		return CRYPTO_AES_XTS;
+		return GCRY_CIPHER_AES128;
 	else if (strcmp(cipher->name, "AES-256-XTS") == 0)
-		return CRYPTO_AES_XTS;
+		return GCRY_CIPHER_AES256;
 	else if (strcmp(cipher->name, "TWOFISH-128-XTS") == 0)
-		return CRYPTO_TWOFISH_XTS;
+		return GCRY_CIPHER_TWOFISH128;
 	else if (strcmp(cipher->name, "TWOFISH-256-XTS") == 0)
-		return CRYPTO_TWOFISH_XTS;
+		return GCRY_CIPHER_TWOFISH256;
 	else if (strcmp(cipher->name, "SERPENT-128-XTS") == 0)
-		return CRYPTO_SERPENT_XTS;
+		return GCRY_CIPHER_SERPENT128;
 	else if (strcmp(cipher->name, "SERPENT-256-XTS") == 0)
-		return CRYPTO_SERPENT_XTS;
+		return GCRY_CIPHER_SERPENT256;
 	else
-#endif
 		return -1;
+}
+
+static
+int
+get_gcrypt_hash_id(struct pbkdf_prf_algo *hash)
+{
+	if	(strcmp(hash->name, "RIPEMD160") == 0)
+		return GCRY_MD_RMD160;
+	else if (strcmp(hash->name, "SHA512") == 0)
+		return GCRY_MD_SHA512;
+	else if	(strcmp(hash->name, "whirlpool") == 0)
+		return GCRY_MD_WHIRLPOOL;
+	else
+		return -1;
+}
+
+int
+syscrypt(struct tc_crypto_algo *cipher, unsigned char *key, size_t klen, unsigned char *iv,
+    unsigned char *in, unsigned char *out, size_t len, int do_encrypt)
+{
+	struct xts_ctx *ctx;
+	int cipher_id;
+	int err;
+
+	cipher_id = get_gcrypt_cipher_id(cipher);
+	if (cipher_id < 0) {
+		tc_log(1, "Cipher %s not found\n",
+		    cipher->name);
+		return ENOENT;
+	}
+
+	if ((ctx = (struct xts_ctx *)alloc_safe_mem(sizeof(struct xts_ctx))) ==
+	    NULL) {
+		tc_log(1, "Could not allocate safe xts_xts memory\n");
+		return ENOMEM;
+	}
+
+	err = xts_init(ctx, &cipher_id, NULL, gcrypt_set_key, gcrypt_zero_key,
+	    gcrypt_encrypt, gcrypt_decrypt,
+	    gcry_cipher_get_algo_blklen(cipher_id),
+	    key, klen);
+	if (err) {
+		tc_log(1, "Error initializing generic XTS\n");
+		return EINVAL;
+	}
+
+	memcpy(out, in, len);
+	if (do_encrypt)
+		err = xts_encrypt(ctx, out, len, iv);
+	else
+		err = xts_decrypt(ctx, out, len, iv);
+
+	if (err) {
+		tc_log(1, "Error encrypting/decrypting\n");
+		xts_uninit(ctx);
+		return EINVAL;
+	}
+
+	xts_uninit(ctx);
+	free_safe_mem(ctx);
+
+	return 0;
 }
 
 int
 tc_crypto_init(void)
 {
-	OpenSSL_add_all_algorithms();
+	gcry_control(GCRYCTL_SUSPEND_SECMEM_WARN);
+	gcry_control(GCRYCTL_INIT_SECMEM, 16384, 0);
+	gcry_control(GCRYCTL_RESUME_SECMEM_WARN);
+
+	gcry_control(GCRYCTL_INITIALIZATION_FINISHED, 0);
 
 	return 0;
 }
 
 int
-tc_cipher_chain_populate_keys(struct tc_cipher_chain *cipher_chain,
-    unsigned char *key)
+pbkdf2(struct pbkdf_prf_algo *hash, const char *pass, int passlen,
+    const unsigned char *salt, int saltlen,
+    int keylen, unsigned char *out)
 {
-	int total_key_bytes, used_key_bytes;
-	struct tc_cipher_chain *dummy_chain;
+	gpg_error_t err;
 
-	/*
-	 * We need to determine the total key bytes as the key locations
-	 * depend on it.
-	 */
-	total_key_bytes = 0;
-	for (dummy_chain = cipher_chain;
-	    dummy_chain != NULL;
-	    dummy_chain = dummy_chain->next) {
-		total_key_bytes += dummy_chain->cipher->klen;
-	}
+	err = gcry_kdf_derive(pass, passlen, GCRY_KDF_PBKDF2,
+	    get_gcrypt_hash_id(hash),
+            salt, saltlen, hash->iteration_count, keylen, out);
 
-	/*
-	 * Now we need to get prepare the keys, as the keys are in
-	 * forward order with respect to the cipher cascade, but
-	 * the actual decryption is in reverse cipher cascade order.
-	 */
-	used_key_bytes = 0;
-	for (dummy_chain = cipher_chain;
-	    dummy_chain != NULL;
-	    dummy_chain = dummy_chain->next) {
-		dummy_chain->key = alloc_safe_mem(dummy_chain->cipher->klen);
-		if (dummy_chain->key == NULL) {
-			tc_log(1, "tc_decrypt: Could not allocate key "
-			    "memory\n");
-			return ENOMEM;
-		}
-
-		/* XXX: here we assume XTS operation! */
-		memcpy(dummy_chain->key,
-		    key + used_key_bytes/2,
-		    dummy_chain->cipher->klen/2);
-		memcpy(dummy_chain->key + dummy_chain->cipher->klen/2,
-		    key + (total_key_bytes/2) + used_key_bytes/2,
-		    dummy_chain->cipher->klen/2);
-
-		/* Remember how many key bytes we've seen */
-		used_key_bytes += dummy_chain->cipher->klen;
-	}
-
-	return 0;
-}
-
-int
-tc_encrypt(struct tc_cipher_chain *cipher_chain, unsigned char *key,
-    unsigned char *iv,
-    unsigned char *in, int in_len, unsigned char *out)
-{
-	int cipher_id;
-	int err;
-
-	if ((err = tc_cipher_chain_populate_keys(cipher_chain, key)))
-		return err;
-
-#ifdef DEBUG
-	printf("tc_encrypt: starting chain\n");
-#endif
-
-	/*
-	 * Now process the actual decryption, in forward cascade order.
-	 */
-	for (;
-	    cipher_chain != NULL;
-	    cipher_chain = cipher_chain->next) {
-		cipher_id = get_cryptodev_cipher_id(cipher_chain->cipher);
-		if (cipher_id < 0) {
-			tc_log(1, "Cipher %s not found\n",
-			    cipher_chain->cipher->name);
-			return ENOENT;
-		}
-
-#ifdef DEBUG
-		printf("tc_encrypt: Currently using cipher %s\n",
-		    cipher_chain->cipher->name);
-#endif
-
-#if 0
-		err = syscrypt(cipher_id, cipher_chain->key,
-		    cipher_chain->cipher->klen, iv, in, out, in_len, 1);
-#endif
-
-		/* Deallocate this key, since we won't need it anymore */
-		free_safe_mem(cipher_chain->key);
-
-		if (err != 0)
-			return err;
-
-		/* Set next input buffer as current output buffer */
-		in = out;
-	}
-
-	return 0;
-}
-
-int
-tc_decrypt(struct tc_cipher_chain *cipher_chain, unsigned char *key,
-    unsigned char *iv,
-    unsigned char *in, int in_len, unsigned char *out)
-{
-	int cipher_id;
-	int err;
-
-	if ((err = tc_cipher_chain_populate_keys(cipher_chain, key)))
-		return err;
-
-#ifdef DEBUG
-	printf("tc_decrypt: starting chain!\n");
-#endif
-
-	/*
-	 * Now process the actual decryption, in reverse cascade order; so
-	 * first find the last element in the chain.
-	 */
-	for (; cipher_chain->next != NULL; cipher_chain = cipher_chain->next)
-		;
-	for (;
-	    cipher_chain != NULL;
-	    cipher_chain = cipher_chain->prev) {
-		cipher_id = get_cryptodev_cipher_id(cipher_chain->cipher);
-		if (cipher_id < 0) {
-			tc_log(1, "Cipher %s not found\n",
-			    cipher_chain->cipher->name);
-			return ENOENT;
-		}
-
-#ifdef DEBUG
-		printf("tc_decrypt: Currently using cipher %s\n",
-		    cipher_chain->cipher->name);
-#endif
-
-#if 0
-		err = syscrypt(cipher_id, cipher_chain->key,
-		    cipher_chain->cipher->klen, iv, in, out, in_len, 0);
-#endif
-
-		/* Deallocate this key, since we won't need it anymore */
-		free_safe_mem(cipher_chain->key);
-
-		if (err != 0)
-			return err;
-
-		/* Set next input buffer as current output buffer */
-		in = out;
-	}
-
-	return 0;
-}
-
-int
-pbkdf2(const char *pass, int passlen, const unsigned char *salt, int saltlen,
-    int iter, const char *hash_name, int keylen, unsigned char *out)
-{
-	const EVP_MD *md;
-	int r;
-
-	md = EVP_get_digestbyname(hash_name);
-	if (md == NULL) {
-		printf("Hash %s not found\n", hash_name);
-		return ENOENT;
-	}
-	r = PKCS5_PBKDF2_HMAC(pass, passlen, salt, saltlen, iter, md,
-	    keylen, out);
-
-	if (r == 0) {
-		printf("Error in PBKDF2\n");
+	if (err) {
+		tc_log(1, "Error in PBKDF2\n");
 		return EINVAL;
 	}
 
 	return 0;
 }
 
-int
-apply_keyfiles(unsigned char *pass, size_t pass_memsz, const char *keyfiles[],
-    int nkeyfiles)
-{
-	int pl, k;
-	unsigned char *kpool;
-	unsigned char *kdata;
-	int kpool_idx;
-	size_t i, kdata_sz;
-	uint32_t crc;
-
-	if (pass_memsz < MAX_PASSSZ) {
-		tc_log(1, "Not enough memory for password manipluation\n");
-		return ENOMEM;
-	}
-
-	pl = strlen(pass);
-	memset(pass+pl, 0, MAX_PASSSZ-pl);
-
-	if ((kpool = alloc_safe_mem(KPOOL_SZ)) == NULL) {
-		tc_log(1, "Error allocating memory for keyfile pool\n");
-		return ENOMEM;
-	}
-
-	memset(kpool, 0, KPOOL_SZ);
-
-	for (k = 0; k < nkeyfiles; k++) {
-#ifdef DEBUG
-		printf("Loading keyfile %s into kpool\n", keyfiles[k]);
-#endif
-		kpool_idx = 0;
-		crc = ~0U;
-		kdata_sz = MAX_KFILE_SZ;
-
-		if ((kdata = read_to_safe_mem(keyfiles[k], 0, &kdata_sz)) == NULL) {
-			tc_log(1, "Error reading keyfile %s content\n",
-			    keyfiles[k]);
-			free_safe_mem(kpool);
-			return EIO;
-		}
-
-		for (i = 0; i < kdata_sz; i++) {
-			crc = crc32_intermediate(crc, kdata[i]);
-
-			kpool[kpool_idx++] += (unsigned char)(crc >> 24);
-			kpool[kpool_idx++] += (unsigned char)(crc >> 16);
-			kpool[kpool_idx++] += (unsigned char)(crc >> 8);
-			kpool[kpool_idx++] += (unsigned char)(crc);
-
-			/* Wrap around */
-			if (kpool_idx == KPOOL_SZ)
-				kpool_idx = 0;
-		}
-
-		free_safe_mem(kdata);
-	}
-
-#ifdef DEBUG
-	printf("Applying kpool to passphrase\n");
-#endif
-	/* Apply keyfile pool to passphrase */
-	for (i = 0; i < KPOOL_SZ; i++)
-		pass[i] += kpool[i];
-
-	free_safe_mem(kpool);
-
-	return 0;
-}

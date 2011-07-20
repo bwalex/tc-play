@@ -148,8 +148,15 @@ int tc_encrypt(struct tc_cipher_chain *cipher_chain, unsigned char *key,
 int tc_decrypt(struct tc_cipher_chain *cipher_chain, unsigned char *key,
     unsigned char *iv,
     unsigned char *in, int in_len, unsigned char *out);
-int pbkdf2(const char *pass, int passlen, const unsigned char *salt, int saltlen,
-    int iter, const char *hash_name, int keylen, unsigned char *out);
+
+/* The following two are platform dependent */
+int syscrypt(struct tc_crypto_algo *cipher, unsigned char *key, size_t klen,
+    unsigned char *iv, unsigned char *in, unsigned char *out, size_t len,
+    int do_encrypt);
+int pbkdf2(struct pbkdf_prf_algo *hash, const char *pass, int passlen,
+    const unsigned char *salt, int saltlen,
+    int keylen, unsigned char *out);
+
 int apply_keyfiles(unsigned char *pass, size_t pass_memsz, const char *keyfiles[],
     int nkeyfiles);
 

@@ -306,10 +306,9 @@ process_hdr(const char *dev, unsigned char *pass, int passlen,
 		printf("Salt: ");
 		print_hex(ehdr->salt, 0, sizeof(ehdr->salt));
 #endif
-		error = pbkdf2(pass, passlen,
+		error = pbkdf2(&pbkdf_prf_algos[i], pass, passlen,
 		    ehdr->salt, sizeof(ehdr->salt),
-		    pbkdf_prf_algos[i].iteration_count,
-		    pbkdf_prf_algos[i].name, MAX_KEYSZ, key);
+		    MAX_KEYSZ, key);
 
 		if (error) {
 			tc_log(1, "pbkdf failed for algorithm %s\n",
