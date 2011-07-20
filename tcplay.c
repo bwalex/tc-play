@@ -84,10 +84,10 @@ tc_log(int is_err, const char *fmt, ...)
 
 	vsnprintf(tc_internal_log_buffer, LOG_BUFFER_SZ, fmt, ap);
 
-	if (tc_internal_verbose)
-                vfprintf(fp, fmt, ap);
-
 	va_end(ap);
+
+	if (tc_internal_verbose)
+	    fprintf(fp, "%s", tc_internal_log_buffer);
 }
 
 /* Supported algorithms */
