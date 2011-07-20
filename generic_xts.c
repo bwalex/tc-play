@@ -18,11 +18,6 @@
  * PURPOSE.
  */
 
-#if defined(__linux__)
-#define _GNU_SOURCE
-#define __USE_GNU
-#endif
-
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>

@@ -27,11 +27,6 @@
  * SUCH DAMAGE.
  */
 
-#if defined(__linux__)
-#define _GNU_SOURCE
-#define __USE_GNU
-#endif
-
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>

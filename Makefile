@@ -1,17 +1,56 @@
+SYSTEM?=linux
+PBKDF_BACKEND?=openssl
+CC?=gcc
+DEBUG?=no
+
 WARNFLAGS= -Wsystem-headers -Werror -Wall -W -Wno-unused-parameter \
 	-Wstrict-prototypes -Wmissing-prototypes -Wpointer-arith \
 	-Wold-style-definition -Wreturn-type -Wcast-qual -Wwrite-strings \
 	-Wswitch -Wshadow -Wcast-align -Wunused-parameter -Wchar-subscripts \
 	-Winline -Wnested-externs
 
-linux:
-	gcc -O0 $(WARNFLAGS) -g main.c tcplay.c crc32.c safe_mem.c io.c crypto.c generic_xts.c crypto-gcrypt.c pbkdf2-openssl.c hdr.c humanize.c -o tc-play -lgcrypt -lcrypto -ldevmapper -luuid
-all:
-	gcc -O0 $(WARNFLAGS) -g main.c tcplay.c crc32.c safe_mem.c io.c crypto.c generic_xts.c crypto-dev.c pbkdf2-openssl.c hdr.c humanize.c -o tc-play -lcrypto -ldm -lprop
+SRCS=	tcplay.c crc32.c safe_mem.c io.c hdr.c humanize.c
+SRCS+=	crypto.c generic_xts.c
+OBJS=	tcplay.o crc32.o safe_mem.o io.o hdr.o humanize.o
+OBJS+=	crypto.o generic_xts.o
+
+CFLAGS+= $(WARNFLAGS)
+
+ifeq (${DEBUG}, yes)
+CFLAGS+= -O0 -g -DDEBUG
+else
+CFLAGS+= -O3
+endif
+
+ifeq (${SYSTEM}, linux)
+LIBS+=	-lgcrypt -ldevmapper -luuid
+SRCS+=	crypto-gcrypt.c
+OBJS+=	crypto-gcrypt.o
+ifeq (${PBKDF_BACKEND}, gcrypt)
+SRCS+=	pbkdf2-gcrypt.c
+OBJS+=	pbkdf2-gcrypt.o
+endif
+ifeq (${PBKDF_BACKEND}, openssl)
+SRCS+=	pbkdf2-openssl.c
+OBJS+=	pbkdf2-openssl.o
+LIBS+=	-lcrypto
+endif
+endif
+ifeq (${SYSTEM}, dragonfly)
+LIBS+=	-lcrypto -ldm -lprop
+SRCS+=	crypto-dev.c
+OBJS+=	crypto-dev.o
+SRCS+=	pbkdf2-openssl.c
+OBJS+=	pbkdf2-openssl.o
+endif
+
+program:
+	$(CC) $(CFLAGS) -o tc-play main.c $(SRCS) $(LIBS)
 lib:
-	gcc $(WARNFLAGS) -c -fPIC -O0 -Wall -g tcplay_api.c tcplay.c crc32.c safe_mem.c io.c crypto-dev.c hdr.c
-	gcc -shared -Wl,-version-script=tcplay.map -o libtcplay.so tcplay_api.o tcplay.o crc32.o safe_mem.o io.o crypto-dev.o hdr.o
+	$(CC) $(CFLAGS) -c -fPIC tcplay_api.c $(SRCS)
+	$(CC) -shared -Wl,-version-script=tcplay.map -o libtcplay.so tcplay_api.o $(OBJS)
+
 test:
 	gcc -O0 -g -L. -I. tcplay_api_test.c -ltcplay -lcrypto -ldevmapper -lprop -lutil
 clean:
-	rm -f tc-play tc-play.core *.o ktrace.out
+	rm -f tc-play libtcplay.so tc-play.core *.o ktrace.out

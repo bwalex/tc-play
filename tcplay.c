@@ -26,12 +26,12 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-#include <sys/types.h>
 
 #if defined(__linux__)
-#define _GNU_SOURCE
-#define __USE_GNU
+#define _GNU_SOURCE /* for asprintf */
 #endif
+
+#include <sys/types.h>
 
 #if defined(__DragonFly__)
 #include <sys/param.h>
@@ -335,7 +335,7 @@ process_hdr(const char *dev, unsigned char *pass, int passlen,
 
 			if (verify_hdr(dhdr)) {
 #ifdef DEBUG
-				printf("tc_str: %.4s, tc_ver: %zd, tc_min_ver: %zd, "
+				printf("tc_str: %.4s, tc_ver: %d, tc_min_ver: %d, "
 				    "crc_keys: %d, sz_vol: %"PRIu64", "
 				    "off_mk_scope: %"PRIu64", sz_mk_scope: %"PRIu64", "
 				    "flags: %d, sec_sz: %d crc_dhdr: %d\n",

@@ -34,6 +34,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <string.h>
+#include <stdio.h>
 
 #include "crc32.h"
 #include "tcplay.h"
