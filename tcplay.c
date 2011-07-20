@@ -794,7 +794,7 @@ map_volume(const char *map_name, const char *device, int sflag,
 	}
 
 	if (interactive)
-		printf("All ok!");
+		printf("All ok!\n");
 
 	return 0;
 }
@@ -836,11 +836,14 @@ dm_setup(const char *mapname, struct tcplay_info *info)
 #if defined(__DragonFly__)
 	uint32_t status;
 #endif
-	int ret = 0;
+	int r, ret = 0;
 	int j;
 	off_t start, offset;
 	char dev[PATH_MAX];
 	char map[PATH_MAX];
+	uint32_t cookie;
+
+	dm_udev_set_sync_support(1);
 
 	if ((params = alloc_safe_mem(512)) == NULL) {
 		tc_log(1, "could not allocate safe parameters memory");
@@ -859,6 +862,9 @@ dm_setup(const char *mapname, struct tcplay_info *info)
 
 	for (j= 0; cipher_chain != NULL;
 	    cipher_chain = cipher_chain->prev, j++) {
+
+		cookie = 0;
+
 		/* aes-cbc-essiv:sha256 7997f8af... 0 /dev/ad0s0a 8 */
 		/*			   iv off---^  block off--^ */
 		snprintf(params, 512, "%s %s %"PRIu64 " %s %"PRIu64,
@@ -928,18 +934,27 @@ dm_setup(const char *mapname, struct tcplay_info *info)
 			goto out;
 		}
 
+		if ((dm_task_set_cookie(dmt, &cookie, 0)) == 0) {
+			tc_log(1, "dm_task_set_cookie failed\n");
+			ret = -1;
+			goto out;
+		}
+
 		if ((dm_task_run(dmt)) == 0) {
+			dm_udev_wait(cookie);
 			tc_log(1, "dm_task_task_run failed\n");
 			ret = -1;
 			goto out;
 		}
 
 		if ((dm_task_get_info(dmt, &dmi)) == 0) {
+			dm_udev_wait(cookie);
 			tc_log(1, "dm_task_get info failed\n");
-			/* XXX: probably do more than just erroring out... */
 			ret = -1;
 			goto out;
 		}
+
+		dm_udev_wait(cookie);
 
 		asprintf(&uu_stack[uu_stack_idx++], "%s", map);
 
@@ -948,6 +963,7 @@ dm_setup(const char *mapname, struct tcplay_info *info)
 		sprintf(dev, "/dev/mapper/%s.%d", mapname, j);
 
 		dm_task_destroy(dmt);
+		dm_task_update_nodes();
 	}
 
 out:
@@ -962,7 +978,7 @@ out:
 			printf("Unrolling dm changes! j = %d (%s)\n", j-1,
 			    uu_stack[j-1]);
 #endif
-			if ((ret = dm_remove_device(uu_stack[--j])) != 0) {
+			if ((r = dm_remove_device(uu_stack[--j])) != 0) {
 				tc_log(1, "Tried to unroll dm changes, "
 				    "giving up.\n");
 				break;
