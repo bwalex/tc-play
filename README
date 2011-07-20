@@ -1,12 +1,14 @@
-A Linux port is underway.
+tcplay is now available for both DragonFly BSD and Linux. The Linux port still
+needs extensive testing, but basic features should work.
 
-*NOTE* tcplay has now been integrated into DragonFly BSD, it's actual home. I'll
-try to keep the version up here up to date, but I can't make any promises. For
-the newest version, check out DragonFly BSD and look into sbin/tcplay and
-lib/tcplay. 
 If anyone wants to add new features or port it to another OS, I'll gladly merge
-your changes into this repository so that there is a single POC. But until then
-it's home will mainly be DragonFly.
+your changes into this repository so that there is a single point of contact.
+
+
+Coming features:
+	- writing of backup header
+	- restoring header from backup header
+	- ???
 
 *NOTE* This code is *EXPERIMENTAL*, use it at your own risk! It has been tested
 in quite a range of scenarios, though :)
