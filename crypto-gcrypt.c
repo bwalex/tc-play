@@ -212,22 +212,3 @@ tc_crypto_init(void)
 	return 0;
 }
 
-int
-pbkdf2(struct pbkdf_prf_algo *hash, const char *pass, int passlen,
-    const unsigned char *salt, int saltlen,
-    int keylen, unsigned char *out)
-{
-	gpg_error_t err;
-
-	err = gcry_kdf_derive(pass, passlen, GCRY_KDF_PBKDF2,
-	    get_gcrypt_hash_id(hash),
-            salt, saltlen, hash->iteration_count, keylen, out);
-
-	if (err) {
-		tc_log(1, "Error in PBKDF2\n");
-		return EINVAL;
-	}
-
-	return 0;
-}
-
