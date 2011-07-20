@@ -1,6 +1,14 @@
+# either linux or dragonfly
 SYSTEM?=linux
+
+# either openssl or gcrypt
 PBKDF_BACKEND?=openssl
+
+# system compiler, normally gcc
 CC?=gcc
+
+# whether to enable debugging or not
+# be careful with this option: it leaks the derived key!
 DEBUG?=no
 
 WARNFLAGS= -Wsystem-headers -Werror -Wall -W -Wno-unused-parameter \
