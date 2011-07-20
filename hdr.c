@@ -161,7 +161,7 @@ create_hdr(unsigned char *pass, int passlen, struct pbkdf_prf_algo *prf_algo,
 		return NULL;
 	}
 
-	error = pbkdf2(prf_algo, pass, passlen,
+	error = pbkdf2(prf_algo, (char *)pass, passlen,
 	    ehdr->salt, sizeof(ehdr->salt),
 	    MAX_KEYSZ, key);
 	if (error) {

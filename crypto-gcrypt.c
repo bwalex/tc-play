@@ -82,7 +82,6 @@ gcrypt_set_key(void **ctx, void *arg1, void *arg2 __unused, const u_int8_t *key,
 	gcry_cipher_hd_t *cipher_hd = (gcry_cipher_hd_t *)ctx;
 	int cipher = *((int *)arg1);
 	gcry_error_t	gcry_err;
-	int err;
 
 	gcry_err = gcry_cipher_open(
 	    cipher_hd,
@@ -130,7 +129,7 @@ get_gcrypt_cipher_id(struct tc_crypto_algo *cipher)
 	else if (strcmp(cipher->name, "TWOFISH-128-XTS") == 0)
 		return GCRY_CIPHER_TWOFISH128;
 	else if (strcmp(cipher->name, "TWOFISH-256-XTS") == 0)
-		return GCRY_CIPHER_TWOFISH256;
+		return GCRY_CIPHER_TWOFISH; /* XXX: really 256? */
 	else if (strcmp(cipher->name, "SERPENT-128-XTS") == 0)
 		return GCRY_CIPHER_SERPENT128;
 	else if (strcmp(cipher->name, "SERPENT-256-XTS") == 0)

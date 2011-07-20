@@ -188,7 +188,7 @@ apply_keyfiles(unsigned char *pass, size_t pass_memsz, const char *keyfiles[],
 		return ENOMEM;
 	}
 
-	pl = strlen(pass);
+	pl = strlen((char *)pass);
 	memset(pass+pl, 0, MAX_PASSSZ-pl);
 
 	if ((kpool = alloc_safe_mem(KPOOL_SZ)) == NULL) {

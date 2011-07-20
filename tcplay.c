@@ -306,7 +306,7 @@ process_hdr(const char *dev, unsigned char *pass, int passlen,
 		printf("Salt: ");
 		print_hex(ehdr->salt, 0, sizeof(ehdr->salt));
 #endif
-		error = pbkdf2(&pbkdf_prf_algos[i], pass, passlen,
+		error = pbkdf2(&pbkdf_prf_algos[i], (char *)pass, passlen,
 		    ehdr->salt, sizeof(ehdr->salt),
 		    MAX_KEYSZ, key);
 
