@@ -230,6 +230,9 @@ print_info(struct tcplay_info *info)
 	printf("CRC Key Data:\t\t%#x\n", info->hdr->crc_keys);
 	printf("Sector size:\t\t%d\n", info->hdr->sec_sz);
 	printf("Volume size:\t\t%zu sectors\n", info->size);
+	printf("Volume offset:\t\t%"PRIu64"\n", (uint64_t)info->start);
+	printf("IV offset:\t\t%"PRIu64"\n", (uint64_t)info->skip);
+	printf("Block offset:\t\t%"PRIu64"\n", (uint64_t)info->offset);
 }
 
 static
@@ -370,7 +373,7 @@ create_volume(const char *dev, int hidden, const char *keyfiles[], int nkeyfiles
     const char *h_keyfiles[], int n_hkeyfiles, struct pbkdf_prf_algo *prf_algo,
     struct tc_cipher_chain *cipher_chain, struct pbkdf_prf_algo *h_prf_algo,
     struct tc_cipher_chain *h_cipher_chain, char *passphrase,
-    char *h_passphrase, size_t hidden_blocks_in, int interactive)
+    char *h_passphrase, size_t size_hidden_bytes_in, int interactive)
 {
 	char *pass, *pass_again;
 	char *h_pass = NULL;
@@ -394,9 +397,9 @@ create_volume(const char *dev, int hidden, const char *keyfiles[], int nkeyfiles
 		return -1;
 	}
 
-	if (blocks <= MIN_VOL_BLOCKS) {
+	if ((blocks*blksz) <= MIN_VOL_BYTES) {
 		tc_log(1, "Cannot create volumes on devices with less "
-		    "than %d blocks/sectors\n", MIN_VOL_BLOCKS);
+		    "than %d bytes\n", MIN_VOL_BYTES);
 		return -1;
 	}
 
@@ -488,10 +491,17 @@ create_volume(const char *dev, int hidden, const char *keyfiles[], int nkeyfiles
 		if (interactive) {
 			hidden_blocks = 0;
 		} else {
-			hidden_blocks = hidden_blocks_in;
+			hidden_blocks = size_hidden_bytes_in/blksz;
 			if (hidden_blocks == 0) {
 				tc_log(1, "hidden_blocks to create volume "
 				    "cannot be zero!\n");
+				return -1;
+			}
+
+			if (size_hidden_bytes_in >=
+			    (blocks*blksz) - MIN_VOL_BYTES) {
+				tc_log(1, "Hidden volume needs to be "
+				    "smaller than the outer volume\n");
 				return -1;
 			}
 		}
@@ -521,14 +531,15 @@ create_volume(const char *dev, int hidden, const char *keyfiles[], int nkeyfiles
 				return -1;
 			}
 
-			hidden_blocks = (size_t)tmp;
-			hidden_blocks /= blksz;
-			if (hidden_blocks >= blocks - MIN_VOL_BLOCKS) {
+			if (tmp >= (blocks*blksz) - MIN_VOL_BYTES) {
 				tc_log(1, "Hidden volume needs to be "
 				    "smaller than the outer volume\n");
 				hidden_blocks = 0;
 				continue;
 			}
+
+			hidden_blocks = (size_t)tmp;
+			hidden_blocks /= blksz;
 		}
 	}
 
@@ -565,8 +576,8 @@ create_volume(const char *dev, int hidden, const char *keyfiles[], int nkeyfiles
 	/* create encrypted headers */
 	ehdr = create_hdr((unsigned char *)pass,
 	    (nkeyfiles > 0)?MAX_PASSSZ:strlen(pass),
-	    prf_algo, cipher_chain, blksz, blocks, MIN_VOL_BLOCKS,
-	    blocks-MIN_VOL_BLOCKS, 0);
+	    prf_algo, cipher_chain, blksz, blocks, VOL_RSVD_BYTES_START/blksz,
+	    blocks - (MIN_VOL_BYTES/blksz), 0);
 	if (ehdr == NULL) {
 		tc_log(1, "Could not create header\n");
 		return -1;
@@ -576,20 +587,22 @@ create_volume(const char *dev, int hidden, const char *keyfiles[], int nkeyfiles
 		hehdr = create_hdr((unsigned char *)h_pass,
 		    (n_hkeyfiles > 0)?MAX_PASSSZ:strlen(h_pass), h_prf_algo,
 		    h_cipher_chain,
-		    blksz, blocks, blocks - hidden_blocks, hidden_blocks, 1);
+		    blksz, blocks,
+		    blocks - (VOL_RSVD_BYTES_END/blksz) - hidden_blocks,
+		    hidden_blocks, 1);
 		if (hehdr == NULL) {
 			tc_log(1, "Could not create hidden volume header\n");
 			return -1;
 		}
 	}
 
-	if ((error = write_mem(dev, 0, blksz, ehdr, sizeof(*ehdr))) != 0) {
+	if ((error = write_to_disk(dev, 0, blksz, ehdr, sizeof(*ehdr))) != 0) {
 		tc_log(1, "Could not write volume header to device\n");
 		return -1;
 	}
 
 	if (hidden) {
-		if ((error = write_mem(dev, HDR_OFFSET_HIDDEN, blksz, hehdr,
+		if ((error = write_to_disk(dev, HDR_OFFSET_HIDDEN, blksz, hehdr,
 		    sizeof(*hehdr))) != 0) {
 			tc_log(1, "Could not write hidden volume header to "
 			    "device\n");
@@ -613,6 +626,12 @@ info_map_common(const char *dev, int sflag, const char *sys_dev,
 	char *h_pass;
 	int error, error2 = 0;
 	size_t sz;
+	size_t blocks, blksz;
+
+	if ((error = get_disk_info(dev, &blocks, &blksz)) != 0) {
+		tc_log(1, "could not get disk information\n");
+		return NULL;
+	}
 
 	info = NULL;
 	if (retries < 1)
@@ -679,7 +698,9 @@ info_map_common(const char *dev, int sflag, const char *sys_dev,
 			}
 		}
 
-		sz = HDRSZ;
+		/* Always read blksz-sized chunks */
+		sz = blksz;
+
 		ehdr = (struct tchdr_enc *)read_to_safe_mem((sflag) ? sys_dev : dev,
 		    (sflag) ? HDR_OFFSET_SYS : 0, &sz);
 		if (ehdr == NULL) {
@@ -688,7 +709,9 @@ info_map_common(const char *dev, int sflag, const char *sys_dev,
 		}
 
 		if (!sflag) {
-			sz = HDRSZ;
+			/* Always read blksz-sized chunks */
+			sz = blksz;
+
 			hehdr = (struct tchdr_enc *)read_to_safe_mem(dev,
 			    HDR_OFFSET_HIDDEN, &sz);
 			if (hehdr == NULL) {

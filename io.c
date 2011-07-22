@@ -85,12 +85,27 @@ m_err:
 	return NULL;
 }
 
+static size_t get_random_total_bytes = 0;
+static size_t get_random_read_bytes = 0;
+
+static
+void
+get_random_summary(void)
+{
+	float pct_done;
+
+	pct_done = (1.0 * get_random_read_bytes) /
+	    (1.0 * get_random_total_bytes) * 100.0;
+	tc_log(0, "Gathering true randomness, %.0f%% done.\n", pct_done);
+}
+
 int
 get_random(unsigned char *buf, size_t len)
 {
 	int fd;
 	ssize_t r;
 	size_t rd = 0;
+	size_t sz;
 	struct timespec ts = { .tv_sec = 0, .tv_nsec = 10000000 }; /* 10 ms */
 
 
@@ -99,10 +114,21 @@ get_random(unsigned char *buf, size_t len)
 		return -1;
 	}
 
+	summary_fn = get_random_summary;
+	get_random_total_bytes = len;
+
+	/* Get random data in 16-byte chunks */
+	sz = 16;
 	while (rd < len) {
-		if ((r = read(fd, buf+rd, len-rd)) < 0) {
+		get_random_read_bytes = rd;
+
+		if ((len - rd) < sz)
+			sz = (len - rd);
+
+		if ((r = read(fd, buf+rd, sz)) < 0) {
 			tc_log(1, "Error reading from /dev/random\n");
 			close(fd);
+			summary_fn = NULL;
 			return -1;
 		}
 		rd += r;
@@ -110,6 +136,8 @@ get_random(unsigned char *buf, size_t len)
 	}
 
 	close(fd);
+	summary_fn = NULL;
+
 	return 0;
 }
 
@@ -249,11 +277,39 @@ get_disk_info(const char *dev, size_t *blocks, size_t *bsize)
 #endif
 
 int
-write_mem(const char *dev, off_t offset, size_t blksz __unused, void *mem,
+write_to_disk(const char *dev, off_t offset, size_t blksz, void *mem,
     size_t bytes)
 {
+	unsigned char *mem_buf = NULL;
 	ssize_t w;
+	size_t sz;
+	off_t internal_off;
 	int fd;
+
+	/* Align to block sizes */
+	internal_off = offset % blksz;
+#ifdef DEBUG
+	printf("offset: %"PRIu64", internal offset: %"PRIu64"\n",
+	    (uint64_t)offset, (uint64_t)internal_off);
+#endif
+	offset = (offset/blksz) * blksz;
+
+	if ((internal_off + bytes) > blksz) {
+		tc_log(1, "This should never happen: internal_off + bytes > "
+		    "blksz (write_to_disk)\n");
+		return -1;
+	}
+
+	if ((bytes < blksz) || (internal_off != 0)) {
+		sz = blksz;
+		if ((mem_buf = read_to_safe_mem(dev, offset, &sz)) == NULL) {
+			tc_log(1, "Error buffering data on "
+			    "write_to_disk(%s)\n", dev);
+			return -1;
+		}
+
+		memcpy(mem_buf + internal_off, mem, bytes);
+	}
 
 	if ((fd = open(dev, O_WRONLY)) < 0) {
 		tc_log(1, "Error opening device %s\n", dev);
@@ -266,13 +322,16 @@ write_mem(const char *dev, off_t offset, size_t blksz __unused, void *mem,
 		return -1;
 	}
 
-	if ((w = write(fd, mem, bytes)) <= 0) {
+	if ((w = write(fd, (mem_buf != NULL) ? mem_buf : mem, bytes)) <= 0) {
 		tc_log(1, "Error writing to device %s\n", dev);
 		close(fd);
 		return -1;
 	}
 
 	close(fd);
+
+	if (mem_buf != NULL)
+		free_safe_mem(mem_buf);
 	return 0;
 }
 

@@ -29,7 +29,7 @@
 
 /* Version of tcplay */
 #define MAJ_VER			0
-#define MIN_VER			8
+#define MIN_VER			9
 
 
 #define MAX_BLKSZ		4096
@@ -43,7 +43,10 @@
 #define MAX_KEYFILES		256
 #define HDR_OFFSET_HIDDEN	65536
 #define SALT_LEN		64
-#define MIN_VOL_BLOCKS		256
+#define VOL_RSVD_BYTES_START	(256*512) /* Reserved bytes at vol. start */
+#define VOL_RSVD_BYTES_END	(256*512) /* Reserved bytes at vol. end */
+#define MIN_VOL_BYTES		(VOL_RSVD_BYTES_START + VOL_RSVD_BYTES_END)
+
 #define MAX_CIPHER_CHAINS	64
 #define DEFAULT_RETRIES		3
 #define ERASE_BUFFER_SIZE	4*1024*1024 /* 4 MB */
@@ -135,7 +138,8 @@ void *read_to_safe_mem(const char *file, off_t offset, size_t *sz);
 int get_random(unsigned char *buf, size_t len);
 int secure_erase(const char *dev, size_t bytes, size_t blksz);
 int get_disk_info(const char *dev, size_t *blocks, size_t *bsize);
-int write_mem(const char *dev, off_t offset, size_t blksz, void *mem, size_t bytes);
+int write_to_disk(const char *dev, off_t offset, size_t blksz, void *mem,
+    size_t bytes);
 int read_passphrase(const char *prompt, char *pass, size_t passlen,
     time_t timeout);
 
@@ -186,7 +190,7 @@ int create_volume(const char *dev, int hidden, const char *keyfiles[],
     int nkeyfiles, const char *h_keyfiles[], int n_hkeyfiles,
     struct pbkdf_prf_algo *prf_algo, struct tc_cipher_chain *cipher_chain,
     struct pbkdf_prf_algo *h_prf_algo, struct tc_cipher_chain *h_cipher_chain,
-    char *passphrase, char *h_passphrase, size_t hidden_blocks_in,
+    char *passphrase, char *h_passphrase, size_t hidden_bytes_in,
     int interactive);
 int info_volume(const char *device, int sflag, const char *sys_dev,
     int protect_hidden, const char *keyfiles[], int nkeyfiles,
