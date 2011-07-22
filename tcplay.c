@@ -230,7 +230,10 @@ print_info(struct tcplay_info *info)
 	printf("CRC Key Data:\t\t%#x\n", info->hdr->crc_keys);
 	printf("Sector size:\t\t%d\n", info->hdr->sec_sz);
 	printf("Volume size:\t\t%zu sectors\n", info->size);
+#if 0
+	/* Don't print this; it's always 0 and is rather confusing */
 	printf("Volume offset:\t\t%"PRIu64"\n", (uint64_t)info->start);
+#endif
 	printf("IV offset:\t\t%"PRIu64"\n", (uint64_t)info->skip);
 	printf("Block offset:\t\t%"PRIu64"\n", (uint64_t)info->offset);
 }
