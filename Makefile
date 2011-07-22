@@ -8,7 +8,6 @@ PBKDF_BACKEND?=openssl
 CC?=gcc
 
 # whether to enable debugging or not
-# be careful with this option: it leaks the derived key!
 DEBUG?=no
 
 WARNFLAGS= -Wsystem-headers -Werror -Wall -W -Wno-unused-parameter \
