@@ -146,6 +146,7 @@ int read_passphrase(const char *prompt, char *pass, size_t passlen,
 int tc_crypto_init(void);
 int tc_cipher_chain_populate_keys(struct tc_cipher_chain *cipher_chain,
     unsigned char *key);
+int tc_cipher_chain_free_keys(struct tc_cipher_chain *cipher_chain);
 int tc_encrypt(struct tc_cipher_chain *cipher_chain, unsigned char *key,
     unsigned char *iv,
     unsigned char *in, int in_len, unsigned char *out);
@@ -167,7 +168,8 @@ int apply_keyfiles(unsigned char *pass, size_t pass_memsz, const char *keyfiles[
 struct tchdr_enc *create_hdr(unsigned char *pass, int passlen,
     struct pbkdf_prf_algo *prf_algo, struct tc_cipher_chain *cipher_chain,
     size_t sec_sz, size_t total_blocks,
-    off_t offset, size_t blocks, int hidden);
+    off_t offset, size_t blocks, int hidden,
+    struct tchdr_enc **backup_hdr);
 struct tchdr_dec *decrypt_hdr(struct tchdr_enc *ehdr,
     struct tc_cipher_chain *cipher_chain, unsigned char *key);
 int verify_hdr(struct tchdr_dec *hdr);

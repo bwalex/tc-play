@@ -126,7 +126,8 @@ get_random(unsigned char *buf, size_t len)
 			sz = (len - rd);
 
 		if ((r = read(fd, buf+rd, sz)) < 0) {
-			tc_log(1, "Error reading from /dev/random\n");
+			tc_log(1, "Error reading from /dev/random(%d): %s\n",
+			    fd, strerror(errno));
 			close(fd);
 			summary_fn = NULL;
 			return -1;

@@ -89,11 +89,27 @@ tc_cipher_chain_populate_keys(struct tc_cipher_chain *cipher_chain,
 }
 
 int
+tc_cipher_chain_free_keys(struct tc_cipher_chain *cipher_chain)
+{
+	for (; cipher_chain != NULL; cipher_chain = cipher_chain->next) {
+		if (cipher_chain->key != NULL) {
+			free_safe_mem(cipher_chain->key);
+			cipher_chain->key = NULL;
+		}
+	}
+
+	return 0;
+}
+
+int
 tc_encrypt(struct tc_cipher_chain *cipher_chain, unsigned char *key,
     unsigned char *iv,
     unsigned char *in, int in_len, unsigned char *out)
 {
+	struct tc_cipher_chain *chain_start;
 	int err;
+
+	chain_start = cipher_chain;
 
 	if ((err = tc_cipher_chain_populate_keys(cipher_chain, key)))
 		return err;
@@ -119,12 +135,16 @@ tc_encrypt(struct tc_cipher_chain *cipher_chain, unsigned char *key,
 		/* Deallocate this key, since we won't need it anymore */
 		free_safe_mem(cipher_chain->key);
 
-		if (err != 0)
+		if (err != 0) {
+			tc_cipher_chain_free_keys(chain_start);
 			return err;
+		}
 
 		/* Set next input buffer as current output buffer */
 		in = out;
 	}
+
+	tc_cipher_chain_free_keys(chain_start);
 
 	return 0;
 }
@@ -134,7 +154,10 @@ tc_decrypt(struct tc_cipher_chain *cipher_chain, unsigned char *key,
     unsigned char *iv,
     unsigned char *in, int in_len, unsigned char *out)
 {
+	struct tc_cipher_chain *chain_start;
 	int err;
+
+	chain_start = cipher_chain;
 
 	if ((err = tc_cipher_chain_populate_keys(cipher_chain, key)))
 		return err;
@@ -163,12 +186,16 @@ tc_decrypt(struct tc_cipher_chain *cipher_chain, unsigned char *key,
 		/* Deallocate this key, since we won't need it anymore */
 		free_safe_mem(cipher_chain->key);
 
-		if (err != 0)
+		if (err != 0) {
+			tc_cipher_chain_free_keys(chain_start);
 			return err;
+		}
 
 		/* Set next input buffer as current output buffer */
 		in = out;
 	}
+
+	tc_cipher_chain_free_keys(chain_start);
 
 	return 0;
 }
