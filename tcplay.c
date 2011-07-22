@@ -585,11 +585,18 @@ create_volume(const char *dev, int hidden, const char *keyfiles[], int nkeyfiles
 		}
 	}
 
+	tc_log(0, "Securely erasing the volume...\nThis process may take "
+	    "some time depending on the size of the volume\n");
+
 	/* erase volume */
 	if ((error = secure_erase(dev, blocks * blksz, blksz)) != 0) {
 		tc_log(1, "could not securely erase device %s\n", dev);
 		goto out;
 	}
+
+	tc_log(0, "Creating volume headers...\nDepending on your system, this "
+	    "process may take a few minutes as it uses true random data which "
+	    "might take a while to refill\n");
 
 	/* create encrypted headers */
 	ehdr = create_hdr((unsigned char *)pass,
@@ -614,11 +621,19 @@ create_volume(const char *dev, int hidden, const char *keyfiles[], int nkeyfiles
 		}
 	}
 
+	tc_log(0, "Writing volume headers to disk...\n");
+
 	if ((error = write_to_disk(dev, 0, blksz, ehdr, sizeof(*ehdr))) != 0) {
 		tc_log(1, "Could not write volume header to device\n");
 		goto out;
 	}
-	/* XXX: write backup header */
+
+	/* Write backup header; it's offset is relative to the end */
+	if ((error = write_to_disk(dev, (blocks*blksz - BACKUP_HDR_OFFSET_END),
+	    blksz, ehdr_backup, sizeof(*ehdr_backup))) != 0) {
+		tc_log(1, "Could not write backup volume header to device\n");
+		goto out;
+	}
 
 	if (hidden) {
 		if ((error = write_to_disk(dev, HDR_OFFSET_HIDDEN, blksz, hehdr,
@@ -627,10 +642,20 @@ create_volume(const char *dev, int hidden, const char *keyfiles[], int nkeyfiles
 			    "device\n");
 			goto out;
 		}
-		/* XXX: write backup header */
+
+		/* Write backup hidden header; offset is relative to end */
+		if ((error = write_to_disk(dev,
+		    (blocks*blksz - BACKUP_HDR_HIDDEN_OFFSET_END), blksz,
+		    hehdr_backup, sizeof(*hehdr_backup))) != 0) {
+			tc_log(1, "Could not write backup hidden volume "
+			    "header to device\n");
+			goto out;
+		}
 	}
 
 	/* Everything went ok */
+	tc_log(0, "All done!\n");
+
 	ret = 0;
 
 out:
@@ -676,6 +701,9 @@ info_map_common(const char *dev, int sflag, const char *sys_dev,
 		retries = 1;
 
 	info = NULL;
+
+	ehdr = NULL;
+	pass = h_pass = NULL;
 
 	while ((info == NULL) && retries-- > 0)
 	{

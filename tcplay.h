@@ -42,6 +42,8 @@
 #define MAX_KFILE_SZ		1048576	/* 1 MB */
 #define MAX_KEYFILES		256
 #define HDR_OFFSET_HIDDEN	65536
+#define BACKUP_HDR_HIDDEN_OFFSET_END	65536
+#define BACKUP_HDR_OFFSET_END	131072
 #define SALT_LEN		64
 #define VOL_RSVD_BYTES_START	(256*512) /* Reserved bytes at vol. start */
 #define VOL_RSVD_BYTES_END	(256*512) /* Reserved bytes at vol. end */
