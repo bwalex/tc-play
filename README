@@ -1,23 +1,24 @@
 tcplay is now available for both DragonFly BSD and Linux. The Linux port still
-needs extensive testing, but basic features should work.
+needs extensive testing, but most stuff works.
 
 If anyone wants to add new features or port it to another OS, I'll gladly merge
 your changes into this repository so that there is a single point of contact.
 
-
 Coming features:
-	- writing of backup header
 	- restoring header from backup header
 	- ???
 
 *NOTE* This code is *EXPERIMENTAL*, use it at your own risk! It has been tested
 in quite a range of scenarios, though :)
 
-This is a free (BSD-licensed) TrueCrypt implementation. It is based solely on
-the documentation available on the TrueCrypt website, many hours of
-trial and error and the output of the Linux' TrueCrypt client. As it turns out,
-most technical documents on TrueCrypt contains mistakes, hence the trial and
-error approach :)
+This is a free (BSD-licensed), pretty much fully featured (including multiple
+keyfiles, cipher cascades, etc) TrueCrypt implementation. I would consider
+dual-licensing it if required. Drop me an email to discuss the options :)
+
+It is based solely on the documentation available on the TrueCrypt website,
+many hours of trial and error and the output of the Linux' TrueCrypt client.
+As it turns out, most technical documents on TrueCrypt contains mistakes, hence
+the trial and error approach :)
 
 Some notable differences between actual implementation and documentation:
  - PBKDF using RIPEMD160 only uses 2000 iterations if the volume isn't a system
@@ -30,33 +31,22 @@ Some notable differences between actual implementation and documentation:
  - All two-way cipher cascades are the wrong way round in the documentation,
    but all three-way cipher cascades are correct.
 
-It is designed for DragonFly BSD, but would work, with minor changes, on any
-OS with device mapper and dm-crypt. This is also the reason for the dependency
-on libprop, since the DragonFly libdevmapper uses libprop. One of the main
-bits that would need porting is the crypto.c or crypto-dev.c implementation;
-for Linux a reasonable approach would be to create a crypto-gcrypt.c that uses
-libgcrypt instead of a mix of OpenSSL and cryptodev(9). Since libdevmapper
-is GPL-licensed, on DragonFly libdm is used, a BSD-licensed version of libdevmapper
-that I hacked together in a few hours.
+DragonFly BSD uses the hybrid OpenSSL + cryptodev(9) approach that can be 
+found in crypto-dev.c. OpenSSL is only used for the hash/pbkdf2. The
+encryption/decryption is performed via cryptodev(9) with enabled cryptosoft.
 
-Another thing requiring porting are bits and pieces in io.c; mainly the
-get_disk_info function needs to be adapted to the system. Depending on whether
-your system has urandom, random and tty in /dev or not, other changes may be
-required, too. Some of the endianess macros in hdr.c might need to be changed
-if you don't have be32toh, htobe32, etc.
+On Linux gcrypt is used for the encryption and decryption. For the hash/pbkdf2
+either gcrypt or OpenSSL can be used. gcrypt only supports pbkdf2 since its
+July release (1.5.0), while OpenSSL has had pbkdf2 since around December, so
+its easier to find in most distros.
 
-The implementation in crypto.c (the file is now gone, but is present in older
-revisions) is not very useful right now; it's just a proof of concept
-of how to use OpenSSL to do the crypto and hashing, but since the
-current OpenSSL version doesn't support XTS mode, and the coming versions will
-only support AES-XTS, it is not for real use. DragonFly BSD uses the hybrid
-OpenSSL + cryptodev(9) approach that can be found in crypto-dev.c. OpenSSL is
-only used for the hash/pbkdf2. The encryption/decryption is performed via
-cryptodev(9) with enabled cryptosoft.
+The crypto options can be chosen with make/Makefile parameters.
+
+The interface to device mapper is libdevmapper on Linux and libdm on DragonFly.
+libdm is a BSD-licensed version of libdevmapper that I hacked together in a few
+hours.
 
 This implementation supports mapping (opening) both system and normal TrueCrypt
 volumes, as well as opening hidden volumes and opening an outer volume while
-protecting a hidden volume.
-
-Support for creating volume was only recently added and has been tested, but it
-is still considered experimental.
+protecting a hidden volume. There is also support to create volumes, including
+hidden volumes, etc.
