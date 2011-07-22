@@ -372,9 +372,6 @@ process_hdr(const char *dev, unsigned char *pass, int passlen,
 		return ENOMEM;
 	}
 
-	if (dhdr)
-		free_safe_mem(dhdr);
-
 	*pinfo = info;
 
 	return 0;
@@ -793,10 +790,14 @@ info_map_common(const char *dev, int sflag, const char *sys_dev,
 			tc_log(1, "Incorrect password or not a TrueCrypt volume\n");
 
 			if (info) {
+				if (info->hdr)
+					free_safe_mem(info->hdr);
 				free_safe_mem(info);
 				info = NULL;
 			}
 			if (hinfo) {
+				if (hinfo->hdr)
+					free_safe_mem(hinfo->hdr);
 				free_safe_mem(hinfo);
 				hinfo = NULL;
 			}
@@ -823,14 +824,24 @@ info_map_common(const char *dev, int sflag, const char *sys_dev,
 		if (protect_hidden) {
 			if (adjust_info(info, hinfo) != 0) {
 				tc_log(1, "Could not protect hidden volume\n");
-				if (info)
+				if (info) {
+					if (info->hdr)
+						free_safe_mem(info->hdr);
 					free_safe_mem(info);
+				}
 				info = NULL;
+
+				if (hinfo->hdr)
+					free_safe_mem(hinfo->hdr);
 				free_safe_mem(hinfo);
 				hinfo = NULL;
 				goto out;
 			}
+
+			if (hinfo->hdr)
+				free_safe_mem(hinfo->hdr);
 			free_safe_mem(hinfo);
+			hinfo = NULL;
 		}
         }
 
@@ -865,6 +876,8 @@ info_volume(const char *device, int sflag, const char *sys_dev,
 	if (info != NULL) {
 		if (interactive)
 			print_info(info);
+		if (info->hdr)
+			free_safe_mem(info->hdr);
 		free_safe_mem(info);
 
 		return 0;
@@ -894,6 +907,8 @@ map_volume(const char *map_name, const char *device, int sflag,
 
 	if ((error = dm_setup(map_name, info)) != 0) {
 		tc_log(1, "Could not set up mapping %s\n", map_name);
+		if (info->hdr)
+			free_safe_mem(info->hdr);
 		free_safe_mem(info);
 		return -1;
 	}

@@ -134,6 +134,7 @@ tc_encrypt(struct tc_cipher_chain *cipher_chain, unsigned char *key,
 
 		/* Deallocate this key, since we won't need it anymore */
 		free_safe_mem(cipher_chain->key);
+		cipher_chain->key = NULL;
 
 		if (err != 0) {
 			tc_cipher_chain_free_keys(chain_start);
@@ -185,6 +186,7 @@ tc_decrypt(struct tc_cipher_chain *cipher_chain, unsigned char *key,
 
 		/* Deallocate this key, since we won't need it anymore */
 		free_safe_mem(cipher_chain->key);
+		cipher_chain->key = NULL;
 
 		if (err != 0) {
 			tc_cipher_chain_free_keys(chain_start);
