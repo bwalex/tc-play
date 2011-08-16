@@ -54,7 +54,7 @@ ifeq (${SYSTEM}, dragonfly)
 endif
 
 program:
-	$(CC) $(CFLAGS) -o tc-play main.c $(SRCS) $(LIBS)
+	$(CC) $(CFLAGS) -o tcplay main.c $(SRCS) $(LIBS)
 lib:
 	$(CC) $(CFLAGS) -c -fPIC tcplay_api.c $(SRCS)
 	$(CC) -shared -Wl,-version-script=tcplay.map -o libtcplay.so tcplay_api.o $(OBJS)
@@ -62,5 +62,5 @@ lib:
 test:
 	gcc -O0 -g -L. -I. tcplay_api_test.c -ltcplay -lcrypto -ldm -lprop
 clean:
-	rm -f tc-play libtcplay.so tc-play.core *.o ktrace.out
+	rm -f tcplay libtcplay.so tcplay.core *.o ktrace.out
 
