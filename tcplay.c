@@ -27,10 +27,6 @@
  * SUCH DAMAGE.
  */
 
-#if defined(__linux__)
-#define _GNU_SOURCE /* for asprintf */
-#endif
-
 #include <sys/types.h>
 
 #if defined(__DragonFly__)
@@ -1109,7 +1105,10 @@ dm_setup(const char *mapname, struct tcplay_info *info)
 
 		dm_udev_wait(cookie);
 
-		asprintf(&uu_stack[uu_stack_idx++], "%s", map);
+		if ((r = asprintf(&uu_stack[uu_stack_idx++], "%s", map)) < 0)
+			tc_log(1, "warning, asprintf failed. won't be able to "
+			    "unroll changes\n");
+
 
 		offset = 0;
 		start = 0;
@@ -1131,7 +1130,8 @@ out:
 			printf("Unrolling dm changes! j = %d (%s)\n", j-1,
 			    uu_stack[j-1]);
 #endif
-			if ((r = dm_remove_device(uu_stack[--j])) != 0) {
+			if ((uu_stack[j-1] == NULL) ||
+			    ((r = dm_remove_device(uu_stack[--j])) != 0)) {
 				tc_log(1, "Tried to unroll dm changes, "
 				    "giving up.\n");
 				break;

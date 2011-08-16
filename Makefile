@@ -30,6 +30,7 @@ else
 endif
 
 ifeq (${SYSTEM}, linux)
+  CFLAGS+=	-D_GNU_SOURCE
   LIBS+=	-lgcrypt -ldevmapper -luuid
   SRCS+=	crypto-gcrypt.c
   OBJS+=	crypto-gcrypt.o
