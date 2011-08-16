@@ -32,7 +32,15 @@
 #include <errno.h>
 #include <string.h>
 
+/*
+ * Yey for gcrypt and its broken includes...
+ * see http://lists.gnupg.org/pipermail/gcrypt-devel/2011-July/001830.html
+ * and http://seclists.org/wireshark/2011/Jul/208
+ * for more details...
+ */
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <gcrypt.h>
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
 
 #include "generic_xts.h"
 #include "tcplay.h"
