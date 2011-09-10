@@ -1091,7 +1091,7 @@ dm_setup(const char *mapname, struct tcplay_info *info)
 
 		if ((dm_task_run(dmt)) == 0) {
 			dm_udev_wait(cookie);
-			tc_log(1, "dm_task_task_run failed\n");
+			tc_log(1, "dm_task_run failed\n");
 			ret = -1;
 			goto out;
 		}
