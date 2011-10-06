@@ -56,7 +56,7 @@ void
 usage(void)
 {
 	fprintf(stderr,
-	    "usage: tcplay -c -d device [-g] [-a pbkdb_hash] [-b cipher]\n"
+	    "usage: tcplay -c -d device [-g] [-z] [-a pbkdb_hash] [-b cipher]\n"
 	    "              [-f keyfile_hidden] [-k keyfile] [-x pbkdf_hash] [-y cipher]\n"
 	    "       tcplay -i -d device [-e] [-f keyfile_hidden] [-k keyfile]\n"
 	    "              [-s system_devcie]\n"
@@ -96,6 +96,8 @@ usage(void)
 	    "\t Specifies which cipher to use when creating a new hidden volume.\n"
 	    "\t By default, the same as for the outer volume will be used.\n"
 	    "\t To see valid options, specify '-y help'.\n"
+	    " -z, --insecure-erase\n"
+	    "\t Skips the erase of the disk. Possible security hazard.\n"
 	    "\n"
 	    "Valid options for --info and --map are:\n"
 	    " -e, --protect-hidden\n"
