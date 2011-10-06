@@ -195,7 +195,7 @@ int create_volume(const char *dev, int hidden, const char *keyfiles[],
     struct pbkdf_prf_algo *prf_algo, struct tc_cipher_chain *cipher_chain,
     struct pbkdf_prf_algo *h_prf_algo, struct tc_cipher_chain *h_cipher_chain,
     char *passphrase, char *h_passphrase, size_t hidden_bytes_in,
-    int interactive);
+    int interactive, int secure_erase);
 int info_volume(const char *device, int sflag, const char *sys_dev,
     int protect_hidden, const char *keyfiles[], int nkeyfiles,
     const char *h_keyfiles[], int n_hkeyfiles,

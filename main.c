@@ -133,6 +133,7 @@ static struct option longopts[] = {
 	{ "device",		required_argument,	NULL, 'd' },
 	{ "system-encryption",	required_argument,	NULL, 's' },
 	{ "version",		no_argument,		NULL, 'v' },
+	{ "insecure-erase",	no_argument,		NULL, 'z' },
 	{ "help",		no_argument,		NULL, 'h' },
 	{ NULL,			0,			NULL, 0   },
 };
@@ -147,7 +148,7 @@ main(int argc, char *argv[])
 	int n_hkeyfiles;
 	int ch, error;
 	int sflag = 0, info_vol = 0, map_vol = 0, protect_hidden = 0,
-	    create_vol = 0, contain_hidden = 0;
+	    create_vol = 0, contain_hidden = 0, use_secure_erase = 1;
 	struct pbkdf_prf_algo *prf = NULL;
 	struct tc_cipher_chain *cipher_chain = NULL;
 	struct pbkdf_prf_algo *h_prf = NULL;
@@ -165,7 +166,7 @@ main(int argc, char *argv[])
 	nkeyfiles = 0;
 	n_hkeyfiles = 0;
 
-	while ((ch = getopt_long(argc, argv, "a:b:cd:ef:ghik:m:s:vx:y:",
+	while ((ch = getopt_long(argc, argv, "a:b:cd:ef:ghik:m:s:vx:y:z",
 	    longopts, NULL)) != -1) {
 		switch(ch) {
 		case 'a':
@@ -245,6 +246,10 @@ main(int argc, char *argv[])
 				/* NOT REACHED */
 			}
 			break;
+
+		case 'z':
+			use_secure_erase = 0;
+			break;
 		case 'h':
 		case '?':
 		default:
@@ -274,7 +279,8 @@ main(int argc, char *argv[])
 		error = create_volume(dev, contain_hidden, keyfiles, nkeyfiles,
 		    h_keyfiles, n_hkeyfiles, prf, cipher_chain, h_prf,
 		    h_cipher_chain, NULL, NULL,
-		    0, 1 /* interactive */);
+		    0, 1 /* interactive */,
+		    use_secure_erase);
 		if (error) {
 			tc_log(1, "could not create new volume on %s\n", dev);
 		}
