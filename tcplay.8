@@ -228,6 +228,33 @@ using the keyfile
 .Fl -device Ns = Ns Cm /dev/vn0
 .Fl -keyfile Ns = Ns Cm hidden.key
 .Ed
+.Pp
+Map and mount the volume in the file
+.Pa secvol
+on Linux:
+.Bd -ragged -offset indent
+.Sy losetup Cm /dev/loop1 Cm secvol
+.Ed
+.Bd -ragged -offset indent
+.Nm Fl -map Ns = Ns Cm secv
+.Fl -device Ns = Ns Cm /dev/loop1
+.Ed
+.Bd -ragged -offset indent
+.Sy mount Cm /dev/mapper/secv Cm /mnt
+.Ed
+.Pp
+Similarly on
+.Dx :
+.Bd -ragged -offset indent
+.Sy vnconfig Cm vn1 Cm secvol
+.Ed
+.Bd -ragged -offset indent
+.Nm Fl -map Ns = Ns Cm secv
+.Fl -device Ns = Ns Cm /dev/vn1
+.Ed
+.Bd -ragged -offset indent
+.Sy mount Cm /dev/mapper/secv Cm /mnt
+.Ed
 .Sh SEE ALSO
 .Xr crypttab 5 ,
 .Xr cryptsetup 8
