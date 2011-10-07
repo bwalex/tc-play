@@ -40,6 +40,7 @@
 .Fl c
 .Fl d Ar device
 .Op Fl g
+.Op Fl z
 .Op Fl a Ar pbkdf_hash
 .Op Fl b Ar cipher
 .Op Fl f Ar keyfile_hidden
@@ -155,6 +156,9 @@ If no cipher is specified, the same as for the outer volume
 will be used.
 To see which algorithms are supported, specify
 .Fl -cipher-hidden Ns = Ns Cm help .
+.It Fl z, Fl -insecure-erase
+Skips the secure erase of the disk.
+Use this option carefully as it is a security risk!
 .El
 .Pp
 Additional options for the
