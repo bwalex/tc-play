@@ -381,7 +381,8 @@ create_volume(const char *dev, int hidden, const char *keyfiles[], int nkeyfiles
     const char *h_keyfiles[], int n_hkeyfiles, struct pbkdf_prf_algo *prf_algo,
     struct tc_cipher_chain *cipher_chain, struct pbkdf_prf_algo *h_prf_algo,
     struct tc_cipher_chain *h_cipher_chain, char *passphrase,
-    char *h_passphrase, size_t size_hidden_bytes_in, int interactive)
+    char *h_passphrase, size_t size_hidden_bytes_in, int interactive,
+    int use_secure_erase)
 {
 	char *pass, *pass_again;
 	char *h_pass = NULL;
@@ -584,13 +585,14 @@ create_volume(const char *dev, int hidden, const char *keyfiles[], int nkeyfiles
 		}
 	}
 
-	tc_log(0, "Securely erasing the volume...\nThis process may take "
-	    "some time depending on the size of the volume\n");
-
 	/* erase volume */
-	if ((error = secure_erase(dev, blocks * blksz, blksz)) != 0) {
-		tc_log(1, "could not securely erase device %s\n", dev);
-		goto out;
+	if (use_secure_erase) {
+		tc_log(0, "Securely erasing the volume...\nThis process may take "
+		    "some time depending on the size of the volume\n");
+		if ((error = secure_erase(dev, blocks * blksz, blksz)) != 0) {
+			tc_log(1, "could not securely erase device %s\n", dev);
+			goto out;
+		}
 	}
 
 	tc_log(0, "Creating volume headers...\nDepending on your system, this "
@@ -1091,7 +1093,7 @@ dm_setup(const char *mapname, struct tcplay_info *info)
 
 		if ((dm_task_run(dmt)) == 0) {
 			dm_udev_wait(cookie);
-			tc_log(1, "dm_task_task_run failed\n");
+			tc_log(1, "dm_task_run failed\n");
 			ret = -1;
 			goto out;
 		}

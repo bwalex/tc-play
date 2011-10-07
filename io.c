@@ -43,6 +43,7 @@
 #include <string.h>
 #include <termios.h>
 #include <unistd.h>
+#include <signal.h>
 
 #include "tcplay.h"
 
@@ -336,14 +337,25 @@ write_to_disk(const char *dev, off_t offset, size_t blksz, void *mem,
 	return 0;
 }
 
+
+static struct termios termios_old;
+static int tty_fd;
+
+static void sigint_termios(int sa)
+{
+	tcsetattr(tty_fd, TCSAFLUSH, &termios_old);
+	exit(sa);
+}
+
 int
 read_passphrase(const char *prompt, char *pass, size_t passlen, time_t timeout)
 {
-	struct termios termios_old, termios_new;
+	struct termios termios_new;
 	struct timeval to;
 	fd_set fds;
 	ssize_t n;
 	int fd, r = 0, cfd = 0, nready;
+	struct sigaction act, old_act;
 
 	if ((fd = open("/dev/tty", O_RDONLY)) == -1) {
 		fd = STDIN_FILENO;
@@ -358,6 +370,14 @@ read_passphrase(const char *prompt, char *pass, size_t passlen, time_t timeout)
 	tcgetattr(fd, &termios_old);
 	memcpy(&termios_new, &termios_old, sizeof(termios_new));
 	termios_new.c_lflag &= ~ECHO;
+
+	act.sa_handler = sigint_termios;
+	act.sa_flags   = SA_RESETHAND;
+	sigemptyset(&act.sa_mask);
+
+	tty_fd = fd;
+	sigaction(SIGINT, &act, &old_act);
+
 	tcsetattr(fd, TCSAFLUSH, &termios_new);
 
 	if (timeout > 0) {
@@ -386,6 +406,8 @@ out:
 
 	tcsetattr(fd, TCSAFLUSH, &termios_old);
 	putchar('\n');
+
+	sigaction(SIGINT, &old_act, NULL);
 
 	return r;
 }
