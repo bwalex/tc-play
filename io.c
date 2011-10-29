@@ -354,31 +354,30 @@ read_passphrase(const char *prompt, char *pass, size_t passlen, time_t timeout)
 	struct timeval to;
 	fd_set fds;
 	ssize_t n;
-	int fd, r = 0, cfd = 0, nready;
+	int fd = STDIN_FILENO, r = 0, nready;
 	struct sigaction act, old_act;
-
-	if ((fd = open("/dev/tty", O_RDONLY)) == -1) {
-		fd = STDIN_FILENO;
-		cfd = 1;
-	}
-
-	printf("%s", prompt);
-	fflush(stdout);
 
 	memset(pass, 0, passlen);
 
-	tcgetattr(fd, &termios_old);
-	memcpy(&termios_new, &termios_old, sizeof(termios_new));
-	termios_new.c_lflag &= ~ECHO;
+	/* If input is being provided by something which is not a terminal, don't
+	 * change the settings. */
+	if (isatty(fd)) {
+		printf("%s", prompt);
+		fflush(stdout);
 
-	act.sa_handler = sigint_termios;
-	act.sa_flags   = SA_RESETHAND;
-	sigemptyset(&act.sa_mask);
+		tcgetattr(fd, &termios_old);
+		memcpy(&termios_new, &termios_old, sizeof(termios_new));
+		termios_new.c_lflag &= ~ECHO;
 
-	tty_fd = fd;
-	sigaction(SIGINT, &act, &old_act);
+		act.sa_handler = sigint_termios;
+		act.sa_flags   = SA_RESETHAND;
+		sigemptyset(&act.sa_mask);
 
-	tcsetattr(fd, TCSAFLUSH, &termios_new);
+		tty_fd = fd;
+		sigaction(SIGINT, &act, &old_act);
+
+		tcsetattr(fd, TCSAFLUSH, &termios_new);
+	}
 
 	if (timeout > 0) {
 		memset(&to, 0, sizeof(to));
@@ -388,26 +387,29 @@ read_passphrase(const char *prompt, char *pass, size_t passlen, time_t timeout)
 		FD_SET(fd, &fds);
 		nready = select(fd + 1, &fds, NULL, NULL, &to);
 		if (nready <= 0) {
+			tc_log(1, "Timeout waiting for password.\n");
 			r = EINTR;
 			goto out;
 		}
 	}
 
 	n = read(fd, pass, passlen-1);
+
 	if (n > 0) {
 		pass[n-1] = '\0'; /* Strip trailing \n */
 	} else {
+		tc_log(1, "IO error %d, %s\n", n, errno);
 		r = EIO;
 	}
 
+
 out:
-	if (cfd)
-		close(fd);
+	if (isatty(fd)) {
+		tcsetattr(fd, TCSAFLUSH, &termios_old);
+		putchar('\n');
 
-	tcsetattr(fd, TCSAFLUSH, &termios_old);
-	putchar('\n');
-
-	sigaction(SIGINT, &old_act, NULL);
+		sigaction(SIGINT, &old_act, NULL);
+	}
 
 	return r;
 }
