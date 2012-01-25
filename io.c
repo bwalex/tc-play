@@ -356,12 +356,13 @@ read_passphrase(const char *prompt, char *pass, size_t passlen, time_t timeout)
 	ssize_t n;
 	int fd = STDIN_FILENO, r = 0, nready;
 	struct sigaction act, old_act;
+	int is_tty = isatty(fd);
 
 	memset(pass, 0, passlen);
 
 	/* If input is being provided by something which is not a terminal, don't
 	 * change the settings. */
-	if (isatty(fd)) {
+	if (is_tty) {
 		printf("%s", prompt);
 		fflush(stdout);
 
@@ -404,7 +405,7 @@ read_passphrase(const char *prompt, char *pass, size_t passlen, time_t timeout)
 
 
 out:
-	if (isatty(fd)) {
+	if (is_tty) {
 		tcsetattr(fd, TCSAFLUSH, &termios_old);
 		putchar('\n');
 
