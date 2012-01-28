@@ -185,6 +185,11 @@ option will point at the actual encrypted partition, while the
 argument will point to the parent device (i.e.\& underlying physical disk)
 of the encrypted partition.
 .El
+.Pp
+To unmap volumes,
+the
+.Xr dmsetup 8
+utility is used.
 .Sh EXAMPLES
 Create a new TrueCrypt volume on
 .Pa /dev/vn0
@@ -254,6 +259,15 @@ Similarly on
 .Ed
 .Bd -ragged -offset indent
 .Sy mount Cm /dev/mapper/secv Cm /mnt
+.Ed
+.Pp
+Unmapping the volume
+.Sy truecrypt2
+on both Linux and
+.Dx
+after unmounting:
+.Bd -ragged -offset indent
+.Sy dmsetup Cm remove Cm truecrypt2
 .Ed
 .Sh SEE ALSO
 .Xr crypttab 5 ,
