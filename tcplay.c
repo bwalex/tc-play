@@ -236,7 +236,7 @@ print_info(struct tcplay_info *info)
 
 static
 struct tcplay_info *
-new_info(const char *dev, struct tc_cipher_chain *cipher_chain,
+new_info(const char *dev, int sflag, struct tc_cipher_chain *cipher_chain,
     struct pbkdf_prf_algo *prf, struct tchdr_dec *hdr, off_t start)
 {
 	struct tc_cipher_chain *chain_start;
@@ -258,7 +258,11 @@ new_info(const char *dev, struct tc_cipher_chain *cipher_chain,
 	info->hdr = hdr;
 	info->size = hdr->sz_mk_scope / hdr->sec_sz;	/* volume size */
 	info->skip = hdr->off_mk_scope / hdr->sec_sz;	/* iv skip */
-	info->offset = hdr->off_mk_scope / hdr->sec_sz;	/* block offset */
+
+	if (sflag)
+		info->offset = 0; /* offset is 0 for system volumes */
+	else
+		info->offset = hdr->off_mk_scope / hdr->sec_sz;	/* block offset */
 
 	/* Associate a key out of the key pool with each cipher in the chain */
 	error = tc_cipher_chain_populate_keys(cipher_chain, hdr->keys);
@@ -289,7 +293,7 @@ adjust_info(struct tcplay_info *info, struct tcplay_info *hinfo)
 }
 
 int
-process_hdr(const char *dev, unsigned char *pass, int passlen,
+process_hdr(const char *dev, int sflag, unsigned char *pass, int passlen,
     struct tchdr_enc *ehdr, struct tcplay_info **pinfo)
 {
 	struct tchdr_dec *dhdr;
@@ -365,8 +369,8 @@ process_hdr(const char *dev, unsigned char *pass, int passlen,
 	if (!found)
 		return EINVAL;
 
-	if ((info = new_info(dev, tc_cipher_chains[j-1], &pbkdf_prf_algos[i-1],
-	    dhdr, 0)) == NULL) {
+	if ((info = new_info(dev, sflag, tc_cipher_chains[j-1],
+	    &pbkdf_prf_algos[i-1], dhdr, 0)) == NULL) {
 		free_safe_mem(dhdr);
 		return ENOMEM;
 	}
@@ -792,7 +796,7 @@ info_map_common(const char *dev, int sflag, const char *sys_dev,
 			hehdr = NULL;
 		}
 
-		error = process_hdr(dev, (unsigned char *)pass,
+		error = process_hdr(dev, sflag, (unsigned char *)pass,
 		    (nkeyfiles > 0)?MAX_PASSSZ:strlen(pass),
 		    ehdr, &info);
 
@@ -803,11 +807,11 @@ info_map_common(const char *dev, int sflag, const char *sys_dev,
 		 */
 		if (hehdr && (error || protect_hidden)) {
 			if (error) {
-				error2 = process_hdr(dev, (unsigned char *)pass,
+				error2 = process_hdr(dev, sflag, (unsigned char *)pass,
 				    (nkeyfiles > 0)?MAX_PASSSZ:strlen(pass), hehdr,
 				    &info);
 			} else if (protect_hidden) {
-				error2 = process_hdr(dev, (unsigned char *)h_pass,
+				error2 = process_hdr(dev, sflag, (unsigned char *)h_pass,
 				    (n_hkeyfiles > 0)?MAX_PASSSZ:strlen(h_pass), hehdr,
 				    &hinfo);
 			}

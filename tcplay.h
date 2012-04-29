@@ -29,7 +29,7 @@
 
 /* Version of tcplay */
 #define MAJ_VER			0
-#define MIN_VER			9
+#define MIN_VER			10
 
 
 #define MAX_BLKSZ		4096
@@ -188,7 +188,7 @@ int tc_play_init(void);
 void tc_log(int err, const char *fmt, ...);
 void print_info(struct tcplay_info *info);
 int adjust_info(struct tcplay_info *info, struct tcplay_info *hinfo);
-int process_hdr(const char *dev, unsigned char *pass, int passlen,
+int process_hdr(const char *dev, int sflag, unsigned char *pass, int passlen,
     struct tchdr_enc *ehdr, struct tcplay_info **pinfo);
 int create_volume(const char *dev, int hidden, const char *keyfiles[],
     int nkeyfiles, const char *h_keyfiles[], int n_hkeyfiles,
