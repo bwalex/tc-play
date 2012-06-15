@@ -358,6 +358,9 @@ read_passphrase(const char *prompt, char *pass, size_t passlen, time_t timeout)
 	struct sigaction act, old_act;
 	int is_tty = isatty(fd);
 
+	if (is_tty == 0)
+		errno = 0;
+
 	memset(pass, 0, passlen);
 
 	/* If input is being provided by something which is not a terminal, don't
