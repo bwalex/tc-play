@@ -171,7 +171,10 @@ syscrypt(struct tc_crypto_algo *cipher, unsigned char *key, size_t klen, unsigne
 		return EINVAL;
 	}
 
-	memcpy(out, in, len);
+	/* When chaining ciphers, we reuse the input buffer as the output buffer */
+	if (out != in)
+		memcpy(out, in, len);
+
 	if (do_encrypt)
 		err = xts_encrypt(ctx, out, len, iv);
 	else
