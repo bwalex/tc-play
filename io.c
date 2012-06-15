@@ -399,10 +399,9 @@ read_passphrase(const char *prompt, char *pass, size_t passlen, time_t timeout)
 	if (n > 0) {
 		pass[n-1] = '\0'; /* Strip trailing \n */
 	} else {
-		tc_log(1, "IO error %d, %s\n", n, errno);
+		tc_log(1, "IO error %d, %d, %s\n", n, errno, strerror(errno));
 		r = EIO;
 	}
-
 
 out:
 	if (is_tty) {
