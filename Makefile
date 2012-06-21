@@ -7,6 +7,8 @@ PBKDF_BACKEND?=openssl
 # system compiler, normally gcc
 CC?=gcc
 
+RM?=rm -f
+
 # whether to enable debugging or not
 DEBUG?=no
 
@@ -60,7 +62,7 @@ lib:
 	$(CC) -shared -Wl,-version-script=tcplay.map -o libtcplay.so tcplay_api.o $(OBJS)
 
 test:
-	gcc -O0 -g -L. -I. tcplay_api_test.c -ltcplay -lcrypto -ldm -lprop
+	$(CC) -O0 -g -L. -I. tcplay_api_test.c -ltcplay -lcrypto -ldm -lprop
 clean:
-	rm -f tcplay libtcplay.so tcplay.core *.o ktrace.out
+	$(RM) tcplay libtcplay.so tcplay.core *.o ktrace.out
 
