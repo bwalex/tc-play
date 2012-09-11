@@ -59,7 +59,7 @@ usage(void)
 	    "usage: tcplay -c -d device [-g] [-z] [-a pbkdb_hash] [-b cipher]\n"
 	    "              [-f keyfile_hidden] [-k keyfile] [-x pbkdf_hash] [-y cipher]\n"
 	    "       tcplay -i -d device [-e] [-f keyfile_hidden] [-k keyfile]\n"
-	    "              [-s system_devcie]\n"
+	    "              [-s system_device]\n"
 	    "       tcplay -m mapping -d device [-e] [-f keyfile_hidden] [-k keyfile]\n"
 	    "              [-s system_device]\n"
 	    "       tcplay -h | -v\n"
