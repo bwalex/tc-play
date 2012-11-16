@@ -1,0 +1,18 @@
+2012-11-16 Version 0.11 - Alex Hornung <alex@alexhornung.com>
+
+Special thanks to Cody Schafer(jmesmon) for providing some of the
+fixes and to all the people out there packaging tcplay for their
+distros! If there's any way that I can make your life easier, let
+me know! Thanks to all the bug reporters as well.
+
+ * Restored the library/API to working condition
+
+ * Made it possible to pipe in passwords
+
+ * Fixed edge case with memcpy copying in and out to the same place
+
+ * Given up on -Werror, as some Linux distros have warnings even in
+   their standard header files.
+
+ * Fixed typos
+
