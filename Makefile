@@ -12,7 +12,9 @@ RM?=rm -f
 # whether to enable debugging or not
 DEBUG?=no
 
-WARNFLAGS= -Wsystem-headers -Werror -Wall -W -Wno-unused-parameter \
+# I've given up on -Werror for now; many Linux distros have warnings even in
+# their standard header files.
+WARNFLAGS= -Wsystem-headers -Wall -W -Wno-unused-parameter \
 	-Wstrict-prototypes -Wmissing-prototypes -Wpointer-arith \
 	-Wold-style-definition -Wreturn-type -Wcast-qual -Wwrite-strings \
 	-Wswitch -Wshadow -Wcast-align -Wunused-parameter -Wchar-subscripts \
