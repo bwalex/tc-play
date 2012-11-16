@@ -391,18 +391,15 @@ read_passphrase(const char *prompt, char *pass, size_t passlen, time_t timeout)
 		FD_SET(fd, &fds);
 		nready = select(fd + 1, &fds, NULL, NULL, &to);
 		if (nready <= 0) {
-			tc_log(1, "Timeout waiting for password.\n");
 			r = EINTR;
 			goto out;
 		}
 	}
 
 	n = read(fd, pass, passlen-1);
-
 	if (n > 0) {
 		pass[n-1] = '\0'; /* Strip trailing \n */
 	} else {
-		tc_log(1, "IO error %d, %s\n", n, errno);
 		r = EIO;
 	}
 
