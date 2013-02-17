@@ -48,7 +48,13 @@ The interface to device mapper is libdevmapper on Linux and libdm on DragonFly.
 libdm is a BSD-licensed version of libdevmapper that I hacked together in a few
 hours.
 
+Installation Notes
+==================
+Ubuntu 12.04
+------------
+Install dependencies before the `make` step:
 
+`sudo apt-get install uuid-dev libdevmapper-dev libgnutls-dev`
 
 OS Support
 ==========
