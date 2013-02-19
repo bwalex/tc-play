@@ -208,6 +208,15 @@ To unmap volumes,
 the
 .Xr dmsetup 8
 utility is used.
+.Sh NOTES
+TrueCrypt limits passphrases to 64 characters (including the terminating
+null character).
+To be compatible with it,
+.Nm
+does the same.
+All passphrases (excluding keyfiles) are trimmed to 64 characters.
+Similarly, keyfiles are limited to a size of 1 MB, but up to
+256 keyfiles can be used.
 .Sh EXAMPLES
 Create a new TrueCrypt volume on
 .Pa /dev/vn0

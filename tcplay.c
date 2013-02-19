@@ -452,7 +452,7 @@ create_volume(const char *dev, int hidden, const char *keyfiles[], int nkeyfiles
 		}
 
 		if (passphrase != NULL)
-			strcpy(pass, passphrase);
+			strncpy(pass, passphrase, MAX_PASSSZ);
 	}
 
 	if (nkeyfiles > 0) {
@@ -498,7 +498,7 @@ create_volume(const char *dev, int hidden, const char *keyfiles[], int nkeyfiles
 			}
 
 			if (h_passphrase != NULL)
-				strcpy(h_pass, h_passphrase);
+				strncpy(h_pass, h_passphrase, MAX_PASSSZ);
 		}
 
 		if (n_hkeyfiles > 0) {
@@ -737,7 +737,7 @@ info_map_common(const char *dev, int sflag, const char *sys_dev,
 		} else {
 			/* In batch mode, use provided passphrase */
 			if (passphrase != NULL)
-				strcpy(pass, passphrase);
+				strncpy(pass, passphrase, MAX_PASSSZ);
 		}
 
 		if (nkeyfiles > 0) {
@@ -765,7 +765,7 @@ info_map_common(const char *dev, int sflag, const char *sys_dev,
 			} else {
 				/* In batch mode, use provided passphrase */
 				if (passphrase_hidden != NULL)
-					strcpy(h_pass, passphrase_hidden);
+					strncpy(h_pass, passphrase_hidden, MAX_PASSSZ);
 			}
 
 			if (n_hkeyfiles > 0) {
