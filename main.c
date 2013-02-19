@@ -56,7 +56,7 @@ void
 usage(void)
 {
 	fprintf(stderr,
-	    "usage: tcplay -c -d device [-g] [-z] [-a pbkdb_hash] [-b cipher]\n"
+	    "usage: tcplay -c -d device [-g] [-z] [-w] [-a pbkdb_hash] [-b cipher]\n"
 	    "              [-f keyfile_hidden] [-k keyfile] [-x pbkdf_hash] [-y cipher]\n"
 	    "       tcplay -i -d device [-e] [-f keyfile_hidden] [-k keyfile]\n"
 	    "              [-s system_device]\n"
@@ -98,6 +98,10 @@ usage(void)
 	    "\t To see valid options, specify '-y help'.\n"
 	    " -z, --insecure-erase\n"
 	    "\t Skips the erase of the disk. Possible security hazard.\n"
+	    " -w, --weak-keys\n"
+	    "\t Uses a weak source of entropy (urandom) for key material.\n"
+	    "\t WARNING: This is a REALLY REALLY bad idea for anything but\n"
+	    "\t testing.\n"
 	    "\n"
 	    "Valid options for --info and --map are:\n"
 	    " -e, --protect-hidden\n"
@@ -135,6 +139,7 @@ static struct option longopts[] = {
 	{ "device",		required_argument,	NULL, 'd' },
 	{ "system-encryption",	required_argument,	NULL, 's' },
 	{ "version",		no_argument,		NULL, 'v' },
+	{ "weak-keys",		no_argument,		NULL, 'w' },
 	{ "insecure-erase",	no_argument,		NULL, 'z' },
 	{ "help",		no_argument,		NULL, 'h' },
 	{ NULL,			0,			NULL, 0   },
@@ -150,7 +155,8 @@ main(int argc, char *argv[])
 	int n_hkeyfiles;
 	int ch, error;
 	int sflag = 0, info_vol = 0, map_vol = 0, protect_hidden = 0,
-	    create_vol = 0, contain_hidden = 0, use_secure_erase = 1;
+	    create_vol = 0, contain_hidden = 0, use_secure_erase = 1,
+	    use_weak_keys = 0;
 	struct pbkdf_prf_algo *prf = NULL;
 	struct tc_cipher_chain *cipher_chain = NULL;
 	struct pbkdf_prf_algo *h_prf = NULL;
@@ -226,6 +232,11 @@ main(int argc, char *argv[])
 			printf("tcplay v%d.%d\n", MAJ_VER, MIN_VER);
 			exit(0);
 			/* NOT REACHED */
+		case 'w':
+			fprintf(stderr, "WARNING: Using urandom as source of "
+			    "entropy for key material is a really bad idea.\n");
+			use_weak_keys = 1;
+			break;
 		case 'x':
 			if (h_prf != NULL)
 				usage();
@@ -282,7 +293,7 @@ main(int argc, char *argv[])
 		    h_keyfiles, n_hkeyfiles, prf, cipher_chain, h_prf,
 		    h_cipher_chain, NULL, NULL,
 		    0, 1 /* interactive */,
-		    use_secure_erase);
+		    use_secure_erase, use_weak_keys);
 		if (error) {
 			tc_log(1, "could not create new volume on %s\n", dev);
 		}

@@ -386,7 +386,7 @@ create_volume(const char *dev, int hidden, const char *keyfiles[], int nkeyfiles
     struct tc_cipher_chain *cipher_chain, struct pbkdf_prf_algo *h_prf_algo,
     struct tc_cipher_chain *h_cipher_chain, char *passphrase,
     char *h_passphrase, size_t size_hidden_bytes_in, int interactive,
-    int use_secure_erase)
+    int use_secure_erase, int weak_keys)
 {
 	char *pass, *pass_again;
 	char *h_pass = NULL;
@@ -603,11 +603,17 @@ create_volume(const char *dev, int hidden, const char *keyfiles[], int nkeyfiles
 	    "process may take a few minutes as it uses true random data which "
 	    "might take a while to refill\n");
 
+	if (weak_keys) {
+		tc_log(0, "WARNING: Using a weak random generator to get "
+		    "entropy for the key material. Odds are this is NOT "
+		    "what you want.\n");
+	}
+
 	/* create encrypted headers */
 	ehdr = create_hdr((unsigned char *)pass,
 	    (nkeyfiles > 0)?MAX_PASSSZ:strlen(pass),
 	    prf_algo, cipher_chain, blksz, blocks, VOL_RSVD_BYTES_START/blksz,
-	    blocks - (MIN_VOL_BYTES/blksz), 0, &ehdr_backup);
+	    blocks - (MIN_VOL_BYTES/blksz), 0, weak_keys, &ehdr_backup);
 	if (ehdr == NULL) {
 		tc_log(1, "Could not create header\n");
 		goto out;
@@ -619,7 +625,7 @@ create_volume(const char *dev, int hidden, const char *keyfiles[], int nkeyfiles
 		    h_cipher_chain,
 		    blksz, blocks,
 		    blocks - (VOL_RSVD_BYTES_END/blksz) - hidden_blocks,
-		    hidden_blocks, 1, &hehdr_backup);
+		    hidden_blocks, 1, weak_keys, &hehdr_backup);
 		if (hehdr == NULL) {
 			tc_log(1, "Could not create hidden volume header\n");
 			goto out;

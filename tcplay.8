@@ -41,6 +41,7 @@
 .Fl d Ar device
 .Op Fl g
 .Op Fl z
+.Op Fl w
 .Op Fl a Ar pbkdf_hash
 .Op Fl b Ar cipher
 .Op Fl f Ar keyfile_hidden
@@ -138,6 +139,12 @@ volume are those specified by
 .Fl -keyfile-hidden .
 The user will be prompted for the size of the hidden volume
 interactively.
+.It Fl w, Fl -weak-keys
+Use
+.Xr urandom 4
+for key material instead of a strong entropy source.
+This is in general a really bad idea and should only be used
+for testing.
 .It Fl x Ar pbkdf_hash , Fl -pbkdf-prf-hidden Ns = Ns Ar pbkdf_hash
 Specifies which hash algorithm to use for the PBKDF2 password
 derivation for the hidden volume.

@@ -137,7 +137,7 @@ struct tcplay_info {
 };
 
 void *read_to_safe_mem(const char *file, off_t offset, size_t *sz);
-int get_random(unsigned char *buf, size_t len);
+int get_random(unsigned char *buf, size_t len, int weak);
 int secure_erase(const char *dev, size_t bytes, size_t blksz);
 int get_disk_info(const char *dev, size_t *blocks, size_t *bsize);
 int write_to_disk(const char *dev, off_t offset, size_t blksz, void *mem,
@@ -170,7 +170,7 @@ int apply_keyfiles(unsigned char *pass, size_t pass_memsz, const char *keyfiles[
 struct tchdr_enc *create_hdr(unsigned char *pass, int passlen,
     struct pbkdf_prf_algo *prf_algo, struct tc_cipher_chain *cipher_chain,
     size_t sec_sz, size_t total_blocks,
-    off_t offset, size_t blocks, int hidden,
+    off_t offset, size_t blocks, int hidden, int weak,
     struct tchdr_enc **backup_hdr);
 struct tchdr_dec *decrypt_hdr(struct tchdr_enc *ehdr,
     struct tc_cipher_chain *cipher_chain, unsigned char *key);
@@ -195,7 +195,7 @@ int create_volume(const char *dev, int hidden, const char *keyfiles[],
     struct pbkdf_prf_algo *prf_algo, struct tc_cipher_chain *cipher_chain,
     struct pbkdf_prf_algo *h_prf_algo, struct tc_cipher_chain *h_cipher_chain,
     char *passphrase, char *h_passphrase, size_t hidden_bytes_in,
-    int interactive, int secure_erase);
+    int interactive, int secure_erase, int weak_keys);
 int info_volume(const char *device, int sflag, const char *sys_dev,
     int protect_hidden, const char *keyfiles[], int nkeyfiles,
     const char *h_keyfiles[], int n_hkeyfiles,

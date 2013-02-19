@@ -101,7 +101,7 @@ get_random_summary(void)
 }
 
 int
-get_random(unsigned char *buf, size_t len)
+get_random(unsigned char *buf, size_t len, int weak)
 {
 	int fd;
 	ssize_t r;
@@ -110,7 +110,7 @@ get_random(unsigned char *buf, size_t len)
 	struct timespec ts = { .tv_sec = 0, .tv_nsec = 10000000 }; /* 10 ms */
 
 
-	if ((fd = open("/dev/random", O_RDONLY)) < 0) {
+	if ((fd = open((weak) ? "/dev/urandom" : "/dev/random", O_RDONLY)) < 0) {
 		tc_log(1, "Error opening /dev/random\n");
 		return -1;
 	}

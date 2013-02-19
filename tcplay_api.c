@@ -115,7 +115,7 @@ tc_api_create_volume(tc_api_opts *api_opts)
 	    check_cipher_chain(api_opts->tc_cipher_hidden, 1),
 	    api_opts->tc_passphrase, api_opts->tc_passphrase_hidden,
 	    api_opts->tc_size_hidden_in_bytes, 0 /* non-interactive */,
-	    0 /* non-secure erase */);
+	    0 /* non-secure erase */, 0 /* no weak keys */);
 
 	return (err) ? TC_ERR : TC_OK;
 }

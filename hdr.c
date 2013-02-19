@@ -128,7 +128,7 @@ struct tchdr_enc *
 create_hdr(unsigned char *pass, int passlen, struct pbkdf_prf_algo *prf_algo,
     struct tc_cipher_chain *cipher_chain, size_t sec_sz,
     size_t total_blocks __unused,
-    off_t offset, size_t blocks, int hidden, struct tchdr_enc **backup_hdr)
+    off_t offset, size_t blocks, int hidden, int weak, struct tchdr_enc **backup_hdr)
 {
 	struct tchdr_enc *ehdr, *ehdr_backup;
 	struct tchdr_dec *dhdr;
@@ -169,12 +169,12 @@ create_hdr(unsigned char *pass, int passlen, struct pbkdf_prf_algo *prf_algo,
 		goto error;
 	}
 
-	if ((error = get_random(ehdr->salt, sizeof(ehdr->salt))) != 0) {
+	if ((error = get_random(ehdr->salt, sizeof(ehdr->salt), weak)) != 0) {
 		tc_log(1, "could not get salt\n");
 		goto error;
 	}
 
-	if ((error = get_random(ehdr_backup->salt, sizeof(ehdr_backup->salt)))
+	if ((error = get_random(ehdr_backup->salt, sizeof(ehdr_backup->salt), weak))
 	    != 0) {
 		tc_log(1, "could not get salt for backup header\n");
 		goto error;
@@ -198,7 +198,7 @@ create_hdr(unsigned char *pass, int passlen, struct pbkdf_prf_algo *prf_algo,
 
 	memset(dhdr, 0, sizeof(*dhdr));
 
-	if ((error = get_random(dhdr->keys, sizeof(dhdr->keys))) != 0) {
+	if ((error = get_random(dhdr->keys, sizeof(dhdr->keys), weak)) != 0) {
 		tc_log(1, "could not get key random bits\n");
 		goto error;
 	}
