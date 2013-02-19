@@ -27,6 +27,8 @@
  * SUCH DAMAGE.
  */
 
+#include <stddef.h>
+
 #define TC_OK	0
 #define TC_ERR	-1
 
