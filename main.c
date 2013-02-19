@@ -62,6 +62,7 @@ usage(void)
 	    "              [-s system_device]\n"
 	    "       tcplay -m mapping -d device [-e] [-f keyfile_hidden] [-k keyfile]\n"
 	    "              [-s system_device]\n"
+	    "       tcplay -u mapping\n"
 	    "       tcplay -h | -v\n"
 	    "\n"
 	    "Valid commands are:\n"
@@ -74,6 +75,8 @@ usage(void)
 	    " -m <mapping name>, --map=<mapping name>\n"
 	    "\t Creates a dm-crypt mapping with the given name for the device\n"
 	    "\t specified by -d or --device.\n"
+	    " -u <mapping name>, --unmap=<mapping name>\n"
+	    "\t Removes a dm-crypt mapping with the given name\n"
 	    " -v, --version\n"
 	    "\t Print version message and exit.\n"
 	    "\n"
@@ -138,6 +141,7 @@ static struct option longopts[] = {
 	{ "protect-hidden",	no_argument,		NULL, 'e' },
 	{ "device",		required_argument,	NULL, 'd' },
 	{ "system-encryption",	required_argument,	NULL, 's' },
+	{ "unmap",		required_argument,	NULL, 'u' },
 	{ "version",		no_argument,		NULL, 'v' },
 	{ "weak-keys",		no_argument,		NULL, 'w' },
 	{ "insecure-erase",	no_argument,		NULL, 'z' },
@@ -155,6 +159,7 @@ main(int argc, char *argv[])
 	int n_hkeyfiles;
 	int ch, error;
 	int sflag = 0, info_vol = 0, map_vol = 0, protect_hidden = 0,
+	    unmap_vol = 0,
 	    create_vol = 0, contain_hidden = 0, use_secure_erase = 1,
 	    use_weak_keys = 0;
 	struct pbkdf_prf_algo *prf = NULL;
@@ -228,6 +233,10 @@ main(int argc, char *argv[])
 			sflag = 1;
 			sys_dev = optarg;
 			break;
+		case 'u':
+			unmap_vol = 1;
+			map_name = optarg;
+			break;
 		case 'v':
 			printf("tcplay v%d.%d\n", MAJ_VER, MIN_VER);
 			exit(0);
@@ -275,13 +284,17 @@ main(int argc, char *argv[])
 	argv += optind;
 
 	/* Check arguments */
-	if (!((map_vol || info_vol || create_vol) && dev != NULL) ||
+	if (!(((map_vol || info_vol || create_vol) && dev != NULL) || unmap_vol) ||
 	    (map_vol && info_vol) ||
 	    (map_vol && create_vol) ||
+	    (unmap_vol && map_vol) ||
+	    (unmap_vol && info_vol) ||
+	    (unmap_vol && create_vol) ||
 	    (create_vol && info_vol) ||
 	    (contain_hidden && !create_vol) ||
 	    (sflag && (sys_dev == NULL)) ||
 	    (map_vol && (map_name == NULL)) ||
+	    (unmap_vol && (map_name == NULL)) ||
 	    (!(protect_hidden || create_vol) && n_hkeyfiles > 0)) {
 		usage();
 		/* NOT REACHED */
@@ -306,6 +319,8 @@ main(int argc, char *argv[])
 		    dev, sflag, sys_dev, protect_hidden,
 		    keyfiles, nkeyfiles, h_keyfiles, n_hkeyfiles, NULL, NULL,
 		    1 /* interactive */, DEFAULT_RETRIES, 0);
+	} else if (unmap_vol) {
+		error = dm_teardown(map_name, NULL);
 	}
 
 	return error;

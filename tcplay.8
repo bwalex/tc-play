@@ -63,6 +63,8 @@
 .Op Fl k Ar keyfile
 .Op Fl s Ar system_device
 .Nm
+.Fl u Ar mapping
+.Nm
 .Fl h | v
 .Sh DESCRIPTION
 The
@@ -88,6 +90,12 @@ as a
 .Xr dm 4
 mapping called
 .Ar mapping .
+.It Fl u Ar mapping , Fl -unmap Ns = Ns Ar mapping
+Removes (unmaps) the
+.Xr dm 4
+mapping specified by
+.Ar mapping
+as well as any related cascade mappings.
 .It Fl v, Fl -version
 Print version message and exit.
 .El
@@ -275,6 +283,11 @@ on both Linux and
 after unmounting:
 .Bd -ragged -offset indent
 .Sy dmsetup Cm remove Cm truecrypt2
+.Ed
+.Pp
+Or alternatively:
+.Bd -ragged -offset indent
+.Nm Fl -unmap Ns = Ns Cm truecrypt2
 .Ed
 .Sh SEE ALSO
 .Xr crypttab 5 ,
