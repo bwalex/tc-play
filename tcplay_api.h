@@ -27,6 +27,9 @@
  * SUCH DAMAGE.
  */
 
+#ifndef _TCPLAY_API_H
+#define _TCPLAY_API_H
+
 #include <stddef.h>
 
 #define TC_OK	0
@@ -34,25 +37,29 @@
 
 typedef struct tc_api_opts {
 	/* Common fields */
-	char		*tc_device;
-	char		*tc_passphrase;
+	const char	*tc_device;
+	const char	*tc_passphrase;
 	const char	**tc_keyfiles;
 
 	/* Fields for mapping */
-	char		*tc_map_name;
+	const char	*tc_map_name;
 	int		tc_password_retries;
 	int		tc_interactive_prompt;
 	unsigned long	tc_prompt_timeout;
 
 	/* Fields for creation */
-	char		*tc_cipher;
-	char		*tc_prf_hash;
-	char		*tc_cipher_hidden;
-	char		*tc_prf_hash_hidden;
+	const char	*tc_cipher;
+	const char	*tc_prf_hash;
+	const char	*tc_cipher_hidden;
+	const char	*tc_prf_hash_hidden;
 	size_t		tc_size_hidden_in_bytes;
-	char		*tc_passphrase_hidden;
+	const char	*tc_passphrase_hidden;
 	const char	**tc_keyfiles_hidden;
 } tc_api_opts;
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 int tc_api_init(int verbose);
 int tc_api_uninit(void);
@@ -64,3 +71,8 @@ int tc_api_check_prf_hash(tc_api_opts *api_opts);
 const char *tc_api_get_error_msg(void);
 const char *tc_api_get_summary(void);
 
+#ifdef __cplusplus
+}
+#endif
+
+#endif

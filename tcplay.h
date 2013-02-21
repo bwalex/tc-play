@@ -181,8 +181,8 @@ void _free_safe_mem(void *mem, const char *file, int line);
 void check_and_purge_safe_mem(void);
 
 struct tc_crypto_algo *check_cipher(const char *cipher, int quiet);
-struct tc_cipher_chain *check_cipher_chain(char *cipher_chain, int quiet);
-struct pbkdf_prf_algo *check_prf_algo(char *algo, int quiet);
+struct tc_cipher_chain *check_cipher_chain(const char *cipher_chain, int quiet);
+struct pbkdf_prf_algo *check_prf_algo(const char *algo, int quiet);
 
 int tc_play_init(void);
 void tc_log(int err, const char *fmt, ...);
@@ -194,18 +194,18 @@ int create_volume(const char *dev, int hidden, const char *keyfiles[],
     int nkeyfiles, const char *h_keyfiles[], int n_hkeyfiles,
     struct pbkdf_prf_algo *prf_algo, struct tc_cipher_chain *cipher_chain,
     struct pbkdf_prf_algo *h_prf_algo, struct tc_cipher_chain *h_cipher_chain,
-    char *passphrase, char *h_passphrase, size_t hidden_bytes_in,
+    const char *passphrase, const char *h_passphrase, size_t hidden_bytes_in,
     int interactive, int secure_erase, int weak_keys);
 int info_volume(const char *device, int sflag, const char *sys_dev,
     int protect_hidden, const char *keyfiles[], int nkeyfiles,
     const char *h_keyfiles[], int n_hkeyfiles,
-    char *passphrase, char *passphrase_hidden, int interactive, int retries,
-    time_t timeout);
+    const char *passphrase, const char *passphrase_hidden, int interactive,
+    int retries, time_t timeout);
 int map_volume(const char *map_name, const char *device, int sflag,
     const char *sys_dev, int protect_hidden, const char *keyfiles[],
     int nkeyfiles, const char *h_keyfiles[], int n_hkeyfiles,
-    char *passphrase, char *passphrase_hidden, int interactive, int retries,
-    time_t timeout);
+    const char *passphrase, const char *passphrase_hidden, int interactive,
+    int retries, time_t timeout);
 int dm_setup(const char *mapname, struct tcplay_info *info);
 int dm_teardown(const char *mapname, const char *device);
 

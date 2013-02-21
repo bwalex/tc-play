@@ -384,8 +384,8 @@ int
 create_volume(const char *dev, int hidden, const char *keyfiles[], int nkeyfiles,
     const char *h_keyfiles[], int n_hkeyfiles, struct pbkdf_prf_algo *prf_algo,
     struct tc_cipher_chain *cipher_chain, struct pbkdf_prf_algo *h_prf_algo,
-    struct tc_cipher_chain *h_cipher_chain, char *passphrase,
-    char *h_passphrase, size_t size_hidden_bytes_in, int interactive,
+    struct tc_cipher_chain *h_cipher_chain, const char *passphrase,
+    const char *h_passphrase, size_t size_hidden_bytes_in, int interactive,
     int use_secure_erase, int weak_keys)
 {
 	char *pass, *pass_again;
@@ -692,8 +692,9 @@ static
 struct tcplay_info *
 info_map_common(const char *dev, int sflag, const char *sys_dev,
     int protect_hidden, const char *keyfiles[], int nkeyfiles,
-    const char *h_keyfiles[], int n_hkeyfiles, char *passphrase,
-    char *passphrase_hidden, int interactive, int retries, time_t timeout)
+    const char *h_keyfiles[], int n_hkeyfiles, const char *passphrase,
+    const char *passphrase_hidden, int interactive, int retries,
+    time_t timeout)
 {
 	struct tchdr_enc *ehdr, *hehdr = NULL;
 	struct tcplay_info *info, *hinfo = NULL;
@@ -903,7 +904,8 @@ int
 info_volume(const char *device, int sflag, const char *sys_dev,
     int protect_hidden, const char *keyfiles[], int nkeyfiles,
     const char *h_keyfiles[], int n_hkeyfiles,
-    char *passphrase, char *passphrase_hidden, int interactive, int retries,
+    const char *passphrase, const char *passphrase_hidden,
+    int interactive, int retries,
     time_t timeout)
 {
 	struct tcplay_info *info;
@@ -930,7 +932,8 @@ int
 map_volume(const char *map_name, const char *device, int sflag,
     const char *sys_dev, int protect_hidden, const char *keyfiles[],
     int nkeyfiles, const char *h_keyfiles[], int n_hkeyfiles,
-    char *passphrase, char *passphrase_hidden, int interactive, int retries,
+    const char *passphrase, const char *passphrase_hidden,
+    int interactive, int retries,
     time_t timeout)
 
 {
@@ -1207,7 +1210,7 @@ check_cipher(const char *cipher, int quiet)
 }
 
 struct tc_cipher_chain *
-check_cipher_chain(char *cipher_chain, int quiet)
+check_cipher_chain(const char *cipher_chain, int quiet)
 {
 	struct tc_cipher_chain *cipher = NULL;
 	int i,k, nciphers = 0, mismatch = 0;
@@ -1276,7 +1279,7 @@ check_cipher_chain(char *cipher_chain, int quiet)
 }
 
 struct pbkdf_prf_algo *
-check_prf_algo(char *algo, int quiet)
+check_prf_algo(const char *algo, int quiet)
 {
 	int i, found = 0;
 

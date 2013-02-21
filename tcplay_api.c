@@ -111,8 +111,8 @@ tc_api_create_volume(tc_api_opts *api_opts)
 	    api_opts->tc_keyfiles_hidden, n_hkeyfiles,
 	    check_prf_algo(api_opts->tc_prf_hash, 1),
 	    check_cipher_chain(api_opts->tc_cipher, 1),
-	    check_prf_algo(api_opts->tc_prf_hash_hidden, 1),
-	    check_cipher_chain(api_opts->tc_cipher_hidden, 1),
+	    create_hidden ? check_prf_algo(api_opts->tc_prf_hash_hidden, 1) : NULL,
+	    create_hidden ? check_cipher_chain(api_opts->tc_cipher_hidden, 1) : NULL,
 	    api_opts->tc_passphrase, api_opts->tc_passphrase_hidden,
 	    api_opts->tc_size_hidden_in_bytes, 0 /* non-interactive */,
 	    0 /* non-secure erase */, 0 /* no weak keys */);
@@ -127,6 +127,7 @@ tc_api_map_volume(tc_api_opts *api_opts)
 	int err;
 
 	if ((api_opts == NULL) ||
+	    (api_opts->tc_map_name == NULL) ||
 	    (api_opts->tc_device == NULL)) {
 		errno = EFAULT;
 		return TC_ERR;
