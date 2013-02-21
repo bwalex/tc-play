@@ -35,6 +35,12 @@
 #define TC_OK	0
 #define TC_ERR	-1
 
+typedef enum tc_api_state {
+	TC_STATE_UNKNOWN,
+	TC_STATE_ERASE,
+	TC_STATE_GET_RANDOM
+} tc_api_state;
+
 typedef struct tc_api_opts {
 	/* Common fields */
 	const char	*tc_device;
@@ -55,6 +61,8 @@ typedef struct tc_api_opts {
 	size_t		tc_size_hidden_in_bytes;
 	const char	*tc_passphrase_hidden;
 	const char	**tc_keyfiles_hidden;
+	int		tc_no_secure_erase;
+	int		tc_use_weak_keys;
 } tc_api_opts;
 
 #ifdef __cplusplus
@@ -70,6 +78,7 @@ int tc_api_check_cipher(tc_api_opts *api_opts);
 int tc_api_check_prf_hash(tc_api_opts *api_opts);
 const char *tc_api_get_error_msg(void);
 const char *tc_api_get_summary(void);
+tc_api_state tc_api_get_state(float *progress_pct);
 
 #ifdef __cplusplus
 }

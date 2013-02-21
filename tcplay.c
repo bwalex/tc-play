@@ -64,6 +64,7 @@
 summary_fn_t summary_fn = NULL;
 int tc_internal_verbose = 1;
 char tc_internal_log_buffer[LOG_BUFFER_SZ];
+int tc_internal_state = STATE_UNKNOWN;
 
 void
 tc_log(int is_err, const char *fmt, ...)

@@ -144,6 +144,9 @@ int write_to_disk(const char *dev, off_t offset, size_t blksz, void *mem,
     size_t bytes);
 int read_passphrase(const char *prompt, char *pass, size_t passlen,
     time_t timeout);
+float get_random_read_progress(void);
+float get_secure_erase_progress(void);
+
 
 int tc_crypto_init(void);
 int tc_cipher_chain_populate_keys(struct tc_cipher_chain *cipher_chain,
@@ -214,6 +217,12 @@ typedef void(*summary_fn_t)(void);
 extern int tc_internal_verbose;
 extern char tc_internal_log_buffer[];
 extern summary_fn_t summary_fn;
+
+#define STATE_UNKNOWN		0
+#define STATE_GET_RANDOM	1
+#define STATE_ERASE		2
+
+extern int tc_internal_state;
 
 #define alloc_safe_mem(x) \
 	_alloc_safe_mem(x, __FILE__, __LINE__)

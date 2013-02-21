@@ -28,7 +28,7 @@
 .\" OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.Dd July 5, 2011
+.Dd February 21, 2013
 .Dt TCPLAY 3
 .Os
 .Sh NAME
@@ -84,23 +84,23 @@ data structure as only argument, which is defined as follows:
 .Bd -literal
 typedef struct tc_api_opts {
 	/* Common fields */
-	char		*tc_device;
-	char		*tc_passphrase;
+	const char	*tc_device;
+	const char	*tc_passphrase;
 	const char	**tc_keyfiles;
 
 	/* Fields for mapping */
-	char		*tc_map_name;
+	const char	*tc_map_name;
 	int		tc_password_retries;
 	int		tc_interactive_prompt;
 	unsigned long	tc_prompt_timeout;
 
 	/* Fields for creation */
-	char		*tc_cipher;
-	char		*tc_prf_hash;
-	char		*tc_cipher_hidden;
-	char		*tc_prf_hash_hidden;
+	const char	*tc_cipher;
+	const char	*tc_prf_hash;
+	const char	*tc_cipher_hidden;
+	const char	*tc_prf_hash_hidden;
 	size_t		tc_size_hidden_in_bytes;
-	char		*tc_passphrase_hidden;
+	const char	*tc_passphrase_hidden;
 	const char	**tc_keyfiles_hidden;
 } tc_api_opts;
 .Ed
@@ -231,6 +231,15 @@ The output otherwise is equivalent to that of a
 .Dv SIGINFO
 signal when using
 .Xr tcplay 8 .
+.Sh NOTES
+TrueCrypt limits passphrases to 64 characters (including the terminating
+null character).
+To be compatible with it,
+.Nm tcplay
+does the same.
+All passphrases (exlcuding keyfiles) are trimmed to 64 characters.
+Similarly, keyfiles are limited to a size of 1 MB, but up to 256
+keyfiles can be used.
 .Sh RETURN VALUES
 All functions except
 .Fn tc_api_get_error_msg

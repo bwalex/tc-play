@@ -89,14 +89,21 @@ m_err:
 static size_t get_random_total_bytes = 0;
 static size_t get_random_read_bytes = 0;
 
+
+float
+get_random_read_progress(void)
+{
+	return (get_random_total_bytes == 0) ? 0.0 :
+	    (1.0 * get_random_read_bytes) /
+	    (1.0 * get_random_total_bytes) * 100.0;
+}
+
 static
 void
 get_random_summary(void)
 {
-	float pct_done;
+	float pct_done = get_random_read_progress();
 
-	pct_done = (1.0 * get_random_read_bytes) /
-	    (1.0 * get_random_total_bytes) * 100.0;
 	tc_log(0, "Gathering true randomness, %.0f%% done.\n", pct_done);
 }
 
@@ -117,6 +124,7 @@ get_random(unsigned char *buf, size_t len, int weak)
 
 	summary_fn = get_random_summary;
 	get_random_total_bytes = len;
+	tc_internal_state = STATE_GET_RANDOM;
 
 	/* Get random data in 16-byte chunks */
 	sz = 16;
@@ -131,6 +139,7 @@ get_random(unsigned char *buf, size_t len, int weak)
 			    fd, strerror(errno));
 			close(fd);
 			summary_fn = NULL;
+			tc_internal_state = STATE_UNKNOWN;
 			return -1;
 		}
 		rd += r;
@@ -140,20 +149,26 @@ get_random(unsigned char *buf, size_t len, int weak)
 	close(fd);
 	summary_fn = NULL;
 
+	tc_internal_state = STATE_UNKNOWN;
 	return 0;
 }
 
 static size_t secure_erase_total_bytes = 0;
 static size_t secure_erase_erased_bytes = 0;
 
+float
+get_secure_erase_progress(void)
+{
+	return (secure_erase_total_bytes == 0) ? 0.0 :
+	    (1.0 * secure_erase_erased_bytes) /
+	    (1.0 * secure_erase_total_bytes) * 100.0;
+}
+
 static
 void
 secure_erase_summary(void)
 {
-	float pct_done;
-
-	pct_done = (1.0 * secure_erase_erased_bytes) /
-	    (1.0 * secure_erase_total_bytes) * 100.0;
+	float pct_done = get_secure_erase_progress();
 	tc_log(0, "Securely erasing, %.0f%% done.\n", pct_done);
 }
 
@@ -185,6 +200,8 @@ secure_erase(const char *dev, size_t bytes, size_t blksz)
 	summary_fn = secure_erase_summary;
 	secure_erase_total_bytes = bytes;
 
+	tc_internal_state = STATE_ERASE;
+
 	sz = ERASE_BUFFER_SIZE;
 	while (erased < bytes) {
 		secure_erase_erased_bytes = erased;
@@ -197,6 +214,7 @@ secure_erase(const char *dev, size_t bytes, size_t blksz)
 			close(fd);
 			close(fd_rand);
 			summary_fn = NULL;
+			tc_internal_state = STATE_UNKNOWN;
 			return -1;
 		}
 
@@ -208,6 +226,7 @@ secure_erase(const char *dev, size_t bytes, size_t blksz)
 			close(fd);
 			close(fd_rand);
 			summary_fn = NULL;
+			tc_internal_state = STATE_UNKNOWN;
 			return -1;
 		}
 
@@ -219,6 +238,7 @@ secure_erase(const char *dev, size_t bytes, size_t blksz)
 
 	summary_fn = NULL;
 
+	tc_internal_state = STATE_UNKNOWN;
 	return 0;
 }
 

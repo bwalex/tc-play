@@ -71,6 +71,29 @@ tc_api_get_summary(void)
 	return NULL;
 }
 
+tc_api_state
+tc_api_get_state(float *progress)
+{
+	switch (tc_internal_state) {
+	case STATE_UNKNOWN:
+		return TC_STATE_UNKNOWN;
+
+	case STATE_ERASE:
+		if (progress != NULL)
+			*progress = get_secure_erase_progress();
+		return TC_STATE_ERASE;
+
+	case STATE_GET_RANDOM:
+		if (progress != NULL)
+			*progress = get_random_read_progress();
+		return TC_STATE_GET_RANDOM;
+
+	default:
+		return TC_STATE_UNKNOWN;
+	}
+
+}
+
 int
 tc_api_create_volume(tc_api_opts *api_opts)
 {
@@ -111,11 +134,11 @@ tc_api_create_volume(tc_api_opts *api_opts)
 	    api_opts->tc_keyfiles_hidden, n_hkeyfiles,
 	    check_prf_algo(api_opts->tc_prf_hash, 1),
 	    check_cipher_chain(api_opts->tc_cipher, 1),
-	    create_hidden ? check_prf_algo(api_opts->tc_prf_hash_hidden, 1) : NULL,
-	    create_hidden ? check_cipher_chain(api_opts->tc_cipher_hidden, 1) : NULL,
+	    api_opts->tc_prf_hash_hidden ? check_prf_algo(api_opts->tc_prf_hash_hidden, 1)   : NULL,
+	    api_opts->tc_cipher_hidden   ? check_cipher_chain(api_opts->tc_cipher_hidden, 1) : NULL,
 	    api_opts->tc_passphrase, api_opts->tc_passphrase_hidden,
 	    api_opts->tc_size_hidden_in_bytes, 0 /* non-interactive */,
-	    0 /* non-secure erase */, 0 /* no weak keys */);
+	    !api_opts->tc_no_secure_erase, api_opts->tc_use_weak_keys);
 
 	return (err) ? TC_ERR : TC_OK;
 }
