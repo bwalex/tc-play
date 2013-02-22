@@ -46,12 +46,18 @@ typedef struct tc_api_opts {
 	const char	*tc_device;
 	const char	*tc_passphrase;
 	const char	**tc_keyfiles;
+	const char	*tc_passphrase_hidden;
+	const char	**tc_keyfiles_hidden;
 
-	/* Fields for mapping */
+	/* Fields for mapping / info */
 	const char	*tc_map_name;
+	int		tc_protect_hidden;
 	int		tc_password_retries;
 	int		tc_interactive_prompt;
 	unsigned long	tc_prompt_timeout;
+	int		tc_use_system_encryption;
+	const char	*tc_system_device;
+
 
 	/* Fields for creation */
 	const char	*tc_cipher;
@@ -59,8 +65,6 @@ typedef struct tc_api_opts {
 	const char	*tc_cipher_hidden;
 	const char	*tc_prf_hash_hidden;
 	size_t		tc_size_hidden_in_bytes;
-	const char	*tc_passphrase_hidden;
-	const char	**tc_keyfiles_hidden;
 	int		tc_no_secure_erase;
 	int		tc_use_weak_keys;
 } tc_api_opts;

@@ -148,7 +148,7 @@ tc_api_create_volume(tc_api_opts *api_opts)
 int
 tc_api_map_volume(tc_api_opts *api_opts)
 {
-	int nkeyfiles;
+	int nkeyfiles, n_hkeyfiles = 0;
 	int err;
 
 	if ((api_opts == NULL) ||
@@ -163,11 +163,19 @@ tc_api_map_volume(tc_api_opts *api_opts)
 	    (api_opts->tc_keyfiles[nkeyfiles] != NULL); nkeyfiles++)
 		;
 
+	if (api_opts->tc_protect_hidden) {
+		for (n_hkeyfiles = 0; (n_hkeyfiles < MAX_KEYFILES) &&
+		    (api_opts->tc_keyfiles_hidden != NULL) &&
+		    (api_opts->tc_keyfiles_hidden[n_hkeyfiles] != NULL);
+		    n_hkeyfiles++)
+			;
+	}
+
 	err = map_volume(api_opts->tc_map_name, api_opts->tc_device,
-	    /* sflag */ 0, /* sys_dev */ NULL,
-	    /* protect_hidden */ 0, api_opts->tc_keyfiles, nkeyfiles,
-	    /* h_keyfiles[] */ NULL, /* n_hkeyfiles */ 0,
-	    api_opts->tc_passphrase, /* passphrase_hidden */ NULL,
+	    api_opts->tc_use_system_encryption, api_opts->tc_system_device,
+	    api_opts->tc_protect_hidden, api_opts->tc_keyfiles, nkeyfiles,
+	    api_opts->tc_keyfiles_hidden, n_hkeyfiles,
+	    api_opts->tc_passphrase, api_opts->tc_passphrase_hidden,
 	    api_opts->tc_interactive_prompt, api_opts->tc_password_retries,
 	    (time_t)api_opts->tc_prompt_timeout);
 
@@ -179,7 +187,7 @@ tc_api_info_volume(tc_api_opts *api_opts, tc_api_volinfo *vol_info)
 {
 	struct tcplay_info *info;
 	struct tc_cipher_chain *cipher_chain;
-	int nkeyfiles;
+	int nkeyfiles, n_hkeyfiles = 0;
 	int klen;
 	int n;
 
@@ -195,11 +203,19 @@ tc_api_info_volume(tc_api_opts *api_opts, tc_api_volinfo *vol_info)
 	    (api_opts->tc_keyfiles[nkeyfiles] != NULL); nkeyfiles++)
 		;
 
+	if (api_opts->tc_protect_hidden) {
+		for (n_hkeyfiles = 0; (n_hkeyfiles < MAX_KEYFILES) &&
+		    (api_opts->tc_keyfiles_hidden != NULL) &&
+		    (api_opts->tc_keyfiles_hidden[n_hkeyfiles] != NULL);
+		    n_hkeyfiles++)
+			;
+	}
+
 	info = info_map_common(api_opts->tc_device,
-	    /* sflag */ 0, /* sys_dev */ NULL,
-	    /* protect_hidden */ 0, api_opts->tc_keyfiles, nkeyfiles,
-	    /* h_keyfiles[] */ NULL, /* n_hkeyfiles */ 0,
-	    api_opts->tc_passphrase, /* passphrase_hidden */ NULL,
+	    api_opts->tc_use_system_encryption, api_opts->tc_system_device,
+	    api_opts->tc_protect_hidden, api_opts->tc_keyfiles, nkeyfiles,
+	    api_opts->tc_keyfiles_hidden, n_hkeyfiles,
+	    api_opts->tc_passphrase, api_opts->tc_passphrase_hidden,
 	    api_opts->tc_interactive_prompt, api_opts->tc_password_retries,
 	    (time_t)api_opts->tc_prompt_timeout);
 
