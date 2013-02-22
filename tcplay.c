@@ -689,7 +689,6 @@ out:
 	return ret;
 }
 
-static
 struct tcplay_info *
 info_map_common(const char *dev, int sflag, const char *sys_dev,
     int protect_hidden, const char *keyfiles[], int nkeyfiles,

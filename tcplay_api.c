@@ -30,6 +30,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <errno.h>
+#include <string.h>
+#include <stdio.h>
 
 #include "tcplay.h"
 #include "tcplay_api.h"
@@ -170,6 +172,59 @@ tc_api_map_volume(tc_api_opts *api_opts)
 	    (time_t)api_opts->tc_prompt_timeout);
 
 	return (err) ? TC_ERR : TC_OK;
+}
+
+int
+tc_api_info_volume(tc_api_opts *api_opts, tc_api_volinfo *vol_info)
+{
+	struct tcplay_info *info;
+	struct tc_cipher_chain *cipher_chain;
+	int nkeyfiles;
+	int klen;
+	int n;
+
+	if ((api_opts == NULL) ||
+	    (vol_info == NULL) ||
+	    (api_opts->tc_device == NULL)) {
+		errno = EFAULT;
+		return TC_ERR;
+	}
+
+	for (nkeyfiles = 0; (nkeyfiles < MAX_KEYFILES) &&
+	    (api_opts->tc_keyfiles != NULL) &&
+	    (api_opts->tc_keyfiles[nkeyfiles] != NULL); nkeyfiles++)
+		;
+
+	info = info_map_common(api_opts->tc_device,
+	    /* sflag */ 0, /* sys_dev */ NULL,
+	    /* protect_hidden */ 0, api_opts->tc_keyfiles, nkeyfiles,
+	    /* h_keyfiles[] */ NULL, /* n_hkeyfiles */ 0,
+	    api_opts->tc_passphrase, /* passphrase_hidden */ NULL,
+	    api_opts->tc_interactive_prompt, api_opts->tc_password_retries,
+	    (time_t)api_opts->tc_prompt_timeout);
+
+	if (info == NULL || info->hdr == NULL)
+		return TC_ERR;
+
+	for (cipher_chain = info->cipher_chain, n = 0;
+	     cipher_chain != NULL;
+	     cipher_chain = cipher_chain->next) {
+		n += snprintf(vol_info->tc_cipher+n,
+			      sizeof(vol_info->tc_cipher)-n,
+			      "%s%s", cipher_chain->cipher->name,
+			      (cipher_chain->next != NULL) ? "," : "");
+		klen += cipher_chain->cipher->klen;
+	}
+	vol_info->tc_key_bits = 8*klen;
+	strncpy(vol_info->tc_prf, info->pbkdf_prf->name, sizeof(vol_info->tc_prf));
+	vol_info->tc_size = info->size * (off_t)info->hdr->sec_sz;
+	vol_info->tc_iv_offset = info->skip * (off_t)info->hdr->sec_sz;
+	vol_info->tc_block_offset = info->offset * (off_t)info->hdr->sec_sz;
+
+	free_safe_mem(info->hdr);
+	free_safe_mem(info);
+
+	return TC_OK;
 }
 
 int

@@ -65,12 +65,24 @@ typedef struct tc_api_opts {
 	int		tc_use_weak_keys;
 } tc_api_opts;
 
+typedef struct tc_api_volinfo {
+	char		tc_cipher[256];
+	char		tc_prf[64];
+
+	int		tc_key_bits;
+
+	size_t		tc_size;
+	off_t		tc_iv_offset;
+	off_t		tc_block_offset;
+} tc_api_volinfo;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 int tc_api_init(int verbose);
 int tc_api_uninit(void);
+int tc_api_info_volume(tc_api_opts *api_opts, tc_api_volinfo *vol_info);
 int tc_api_create_volume(tc_api_opts *api_opts);
 int tc_api_map_volume(tc_api_opts *api_opts);
 int tc_api_unmap_volume(tc_api_opts *api_opts);
