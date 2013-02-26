@@ -9,6 +9,8 @@ global:
 	tc_api_check_prf_hash;
 	tc_api_get_error_msg;
 	tc_api_get_summary;
+	tc_api_get_state;
+	tc_api_info_volume;
 local:
 	*;
 };
