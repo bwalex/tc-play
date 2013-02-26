@@ -35,7 +35,7 @@ endif
 
 ifeq (${SYSTEM}, linux)
   CFLAGS+=	-D_GNU_SOURCE
-  LIBS+=	-lgcrypt -ldevmapper -luuid
+  LIBS+=	-lgcrypt -lgpg-error -ldevmapper -luuid
   SRCS+=	crypto-gcrypt.c
   OBJS+=	crypto-gcrypt.o
   ifeq (${PBKDF_BACKEND}, gcrypt)
