@@ -28,8 +28,8 @@
  */
 
 /* Version of tcplay */
-#define MAJ_VER			0
-#define MIN_VER			10
+#define MAJ_VER			1
+#define MIN_VER			0
 
 
 #define MAX_BLKSZ		4096
