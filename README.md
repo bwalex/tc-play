@@ -33,20 +33,57 @@ July 2011 release (1.5.0), while OpenSSL has had pbkdf2 since around December
 The crypto options can be chosen with make/Makefile parameters. Building on Linux
 is as easy as doing
 
-    make SYSTEM=linux
+    make -f Makefile.classic SYSTEM=linux
 
 you can even skip the SYSTEM=linux, since that's the default. To choose the
 PBKDF backend, you can use either,
 
-    make PBKDF_BACKEND=openssl
+    make -f Makefile.classic PBKDF_BACKEND=openssl
 
 or
 
-    make PBKDF_BACKEND=gcrypt
+    make -f Makefile.classic PBKDF_BACKEND=gcrypt
 
 The interface to device mapper is libdevmapper on Linux and libdm on DragonFly.
 libdm is a BSD-licensed version of libdevmapper that I hacked together in a few
 hours.
+
+On Ubuntu, the following dev packages are needed to build tcplay:
+
+    apt-get install libdevmapper-dev libgcrypt11-dev uuid-dev
+
+
+cmake
+----------
+New in version 1.0 is a cmake build system. tcplay can now be built using:
+
+    cmake .
+    make
+
+This process will check for dependencies and automatically select whether to
+use OpenSSL or gcrypt as PBKDF backend.
+
+In addition, this process will also generate a .pc file (pkg-config) for the
+tcplay library.
+
+The classic single-file Makefile can still be used for building, however, using
+
+    make -f Makefile.classic
+
+Running cmake generates a fair amount of files that a
+
+    make clean
+
+does not clean up. For this case, the classic Makefile has a target to clean
+up behind cmake:
+
+    make -f Makefile.classic clean_cmake_mess
+
+
+
+Documentation
+==========
+Please refer to the man pages bundled with tcplay.
 
 
 
