@@ -1,3 +1,24 @@
+2013-05-?? Version 1.0  - Alex Hornung <alex@alexhornung.com>
+
+ * Fixed bug in hidden volume protection (issue #28).
+
+ * Added cmake build infrastructure (old single-Makefile option
+   is also still available, using Makefile.classic).
+
+ * Changed IV gen in mapped devices to plain64 from plain.
+
+ * Fixed bug in passphrase logic - Truecrypt limits passphrases
+   to 64 bytes (issue #24).
+
+ * Added unmap option to command line tool (issue #17).
+
+ * Added option to use /dev/urandom for key material, although
+   this should only ever be used for testing purposes (issue
+   #19).
+
+ * Complete API overhaul. See man page for details.
+
+
 2012-11-16 Version 0.11 - Alex Hornung <alex@alexhornung.com>
 
 Special thanks to Cody Schafer(jmesmon) for providing some of the

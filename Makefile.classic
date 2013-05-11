@@ -9,8 +9,14 @@ CC?=gcc
 
 RM?=rm -f
 
+LN?=ln
+
 # whether to enable debugging or not
 DEBUG?=no
+
+MAJ_VER=1
+MIN_VER=0
+
 
 # I've given up on -Werror for now; many Linux distros have warnings even in
 # their standard header files.
@@ -20,12 +26,14 @@ WARNFLAGS= -Wsystem-headers -Wall -W -Wno-unused-parameter \
 	-Wswitch -Wshadow -Wcast-align -Wunused-parameter -Wchar-subscripts \
 	-Winline -Wnested-externs
 
+VER_FLAGS= -DMAJ_VER=$(MAJ_VER) -DMIN_VER=$(MIN_VER)
+
 SRCS=	tcplay.c crc32.c safe_mem.c io.c hdr.c humanize.c
 SRCS+=	crypto.c generic_xts.c
 OBJS=	tcplay.o crc32.o safe_mem.o io.o hdr.o humanize.o
 OBJS+=	crypto.o generic_xts.o
 
-CFLAGS+= $(WARNFLAGS)
+CFLAGS+= $(WARNFLAGS) -fPIC $(VER_FLAGS)
 
 ifeq (${DEBUG}, yes)
   CFLAGS+= -O0 -g -DDEBUG
@@ -57,14 +65,36 @@ ifeq (${SYSTEM}, dragonfly)
   OBJS+=	pbkdf2-openssl.o
 endif
 
-program:
-	$(CC) $(CFLAGS) -o tcplay main.c $(SRCS) $(LIBS)
-lib:
-	$(CC) $(CFLAGS) -c -fPIC tcplay_api.c $(SRCS)
-	$(CC) -shared -Wl,-version-script=tcplay.map -o libtcplay.so tcplay_api.o $(OBJS)
+OBJS_PROG= $(OBJS) main.o
+OBJS_LIB= $(OBJS) tcplay_api.o
+
+all: program lib lib_static
+
+program: $(OBJS_PROG)
+	$(CC) $(CFLAGS) -o tcplay $(OBJS_PROG) $(LIBS)
+
+lib: $(OBJS_LIB)
+	$(CC) -shared -Wl,-version-script=tcplay.map -o libtcplay.so.$(MAJ_VER).$(MIN_VER) $(OBJS_LIB) $(LIBS)
+	$(LN) -s libtcplay.so.$(MAJ_VER).$(MIN_VER) libtcplay.so
+
+lib_static: $(OBJS_LIB)
+	$(AR) -rs libtcplay.a $(OBJS_LIB)
+
 
 test:
 	$(CC) -O0 -g -L. -I. tcplay_api_test.c -ltcplay -lcrypto -ldm -lprop
-clean:
-	$(RM) tcplay libtcplay.so tcplay.core *.o ktrace.out
+
+clean_cmake_mess:
+	$(RM) CMakeCache.txt
+	$(RM) -r CMakeFiles
+	$(RM) CPackConfig.cmake
+	$(RM) CPackSourceConfig.cmake
+	$(RM) Makefile
+	$(RM) cmake_install.cmake
+	$(RM) tcplay.pc
+
+clean: clean_cmake_mess
+	$(RM) $(OBJS_PROG)
+	$(RM) $(OBJS_LIB)
+	$(RM) tcplay libtcplay.so* libtcplay.a tcplay.core ktrace.out
 

@@ -27,9 +27,7 @@
  * SUCH DAMAGE.
  */
 
-/* Version of tcplay */
-#define MAJ_VER			1
-#define MIN_VER			0
+/* Version of tcplay specified during build (CMakeLists.txt, Makefile.classic) */
 
 
 #define MAX_BLKSZ		4096
