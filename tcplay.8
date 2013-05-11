@@ -217,6 +217,21 @@ does the same.
 All passphrases (excluding keyfiles) are trimmed to 64 characters.
 Similarly, keyfiles are limited to a size of 1 MB, but up to
 256 keyfiles can be used.
+.Sh PLAUSIBLE DENIABILITY
+.Nm
+offers plausible deniability. Hidden volumes are created within an outer
+volume.
+Which volume is accessed solely depends on the passphrase and keyfile(s)
+used.
+If the passphrase and keyfiles for the outer volume are specified,
+no information about the existance of the hidden volume is exposed.
+Without knowledge of the passphrase and keyfile(s) of the hidden volume
+its existence remains unexposed.
+The hidden volume can be protected when mapping the outer volume by
+using the
+.Fl -protect-hidden
+option and specifying the passphrase and keyfiles for both the outer
+and hidden volumes.
 .Sh EXAMPLES
 Create a new TrueCrypt volume on
 .Pa /dev/vn0
@@ -301,6 +316,40 @@ Or alternatively:
 .Bd -ragged -offset indent
 .Nm Fl -unmap Ns = Ns Cm truecrypt2
 .Ed
+.Pp
+A hidden volume whose existance can be plausibly denied and its outer volume
+can for example be created with
+.Bd -ragged -offset indent
+.Nm Fl -create
+.Fl -hidden
+.Fl -device Ns = Ns Cm /dev/loop0
+.Fl -cipher Ns = Ns Cm AES-256-XTS,TWOFISH-256-XTS
+.Fl -pbkdf-prf Ns = Ns Cm whirlpool
+.Fl -keyfile Ns = Ns Cm one.key
+.Fl -cipher-hidden Ns = Ns Cm AES-256-XTS
+.Fl -pbkdf-prf-hidden Ns = Ns Cm whirlpool
+.Fl -keyfile-hidden Ns = Ns Cm hidden.key
+.Ed
+.Nm
+will prompt the user for the passphrase for both the outer and hidden volume
+as well as the size of the hidden volume inside the outer volume.
+The hidden volume will be created inside the area spanned by the outer volume.
+The hidden volume can optionally use a different cipher and prf function
+as specified by the
+.Fl -cipher-hidden
+and
+.Fl -pbkdf-prf-hidden
+options.
+Which volume is later accessed depends only on which passphrase and keyfile(s)
+are being used,
+so that the existance of the hidden volume remains unknown without knowledge
+of the passphrase and keyfile it is protected by since it is located within
+the outer volume.
+To map the outer volume without potentially damaging the hidden volume,
+the passphrase and keyfile(s) of the hidden volume must be known and provided
+alongside the
+.Fl -protect-hidden
+option.
 .Sh SEE ALSO
 .Xr crypttab 5 ,
 .Xr cryptsetup 8
