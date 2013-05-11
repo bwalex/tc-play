@@ -28,7 +28,7 @@
 .\" OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.Dd February 21, 2013
+.Dd May 11, 2013
 .Dt TCPLAY 3
 .Os
 .Sh NAME
@@ -40,7 +40,8 @@
 .Nm tc_api_check_cipher ,
 .Nm tc_api_check_prf_hash ,
 .Nm tc_api_get_error_msg ,
-.Nm tc_api_get_summary
+.Nm tc_api_get_summary ,
+.Nm tc_api_get_state
 .Nd TrueCrypt volume management
 .Sh LIBRARY
 .Lb libtcplay
@@ -64,6 +65,8 @@
 .Fn tc_api_get_error_msg "void"
 .Ft const char *
 .Fn tc_api_get_summary "void"
+.Ft tc_api_state
+.Fn tc_api_get_state "float *progress_pct"
 .Sh DESCRIPTION
 The
 .Nm tcplay
@@ -87,12 +90,17 @@ typedef struct tc_api_opts {
 	const char	*tc_device;
 	const char	*tc_passphrase;
 	const char	**tc_keyfiles;
+	const char	**tc_passphrase_hidden;
+	const char	**tc_keyfiles_hidden;
 
 	/* Fields for mapping */
 	const char	*tc_map_name;
+	int		tc_protect_hidden;
 	int		tc_password_retries;
 	int		tc_interactive_prompt;
 	unsigned long	tc_prompt_timeout;
+	int		tc_use_system_encryption;
+	const char	*tc_system_device;
 
 	/* Fields for creation */
 	const char	*tc_cipher;
@@ -100,8 +108,8 @@ typedef struct tc_api_opts {
 	const char	*tc_cipher_hidden;
 	const char	*tc_prf_hash_hidden;
 	size_t		tc_size_hidden_in_bytes;
-	const char	*tc_passphrase_hidden;
-	const char	**tc_keyfiles_hidden;
+	int		tc_no_secure_erase;
+	int		tc_use_weak_keys;
 } tc_api_opts;
 .Ed
 .Pp
@@ -163,6 +171,16 @@ The passphrase and keyfiles used are specified by
 and
 .Fa tc_keyfiles_hidden
 respectively.
+If
+.Fa tc_no_secure_erase
+is specified, no erase will be performed.
+If
+.Fa tc_use_weak_keys
+is specified, the key material for the master key will be taken from
+.Pa /dev/urandom
+instead of
+.Pa /dev/random .
+This option should never be used other than for testing.
 .Pp
 The
 .Fn tc_api_map_volume
@@ -185,12 +203,29 @@ seconds.
 A value of 0 indicates that no timeout will occur.
 The number of passphrase entry retries is defined by
 .Fa tc_password_retries .
-Note that the
-.Fn tc_api_map_volume
-function does not support accessing an outer volume while
-protecting the hidden volume.
 Depending on the passphrase/keyfiles used
 either the outer or the hidden volume will be mapped.
+If
+.Fa tc_protect_hidden
+is specified, the outer volume will be mapped, but its size will be
+adjusted so that it does not map over the hidden volume - the hidden
+volume will hence be protected from any accidental overwriting.
+If
+.Fa tc_protect_hidden
+is specified, the passphrase and keyfiles for the hidden volume
+must be specified in
+.Fa tc_passphrase_hidden
+and
+.Fa tc_keyfiles_hidden .
+If
+.Fa tc_use_system_encryption
+is specified, a device using system encryption can be accessed.
+The
+.Fa tc_system_device
+should point to the parent device (i.e. underlying physical disk),
+while the
+.Fa tc_device
+argument should point to the actual encrypted partition.
 .Pp
 The
 .Fn tc_api_unmap_volume
@@ -231,6 +266,34 @@ The output otherwise is equivalent to that of a
 .Dv SIGINFO
 signal when using
 .Xr tcplay 8 .
+.Pp
+The
+.Fn tc_api_get_state
+function returns information on the current state of
+.Nm tcplay .
+Three states are currently reported:
+.Bl -tag -width indent
+.It Dv TC_STATE_GET_RANDOM
+is reported when
+.Nm tcplay
+is gathering entropy for key material.
+.It Dv TC_STATE_ERASE
+is reported when the volume is being erased.
+.It Dv TC_STATE_UNKNOWN
+is reported in all other cases.
+.El
+.Pp
+The two states
+.Dv TC_STATE_GET_RANDOM
+and
+.Dv TC_STATE_ERASE
+are reported separately, as they are the only lengthy steps
+during the use of tcplay.
+The
+.Fa progress_pct
+parameter, if not
+.Dv NULL ,
+will be set to the percentage completed so far of these operations.
 .Sh NOTES
 TrueCrypt limits passphrases to 64 characters (including the terminating
 null character).
@@ -255,7 +318,16 @@ The
 .Fn tc_api_get_error_msg
 and
 .Fn tc_api_get_summary
-always return a valid, but possibly empty, string.
+functions always return a valid, but possibly empty, string.
+.Pp
+The
+.Fn tc_api_get_state
+function always returns one of:
+.Dv TC_STATE_UNKNOWN ,
+.Dv TC_STATE_ERASE
+or
+.Dv TC_STATE_GET_RANDOM .
+
 .Sh COMPATIBILITY
 The
 .Nm tcplay
