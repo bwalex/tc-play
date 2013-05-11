@@ -103,9 +103,9 @@ struct tc_crypto_algo tc_crypto_algos[] = {
 	{ "TWOFISH-128-XTS",	"twofish-xts-plain",	32,	8 },
 	{ "SERPENT-128-XTS",	"serpent-xts-plain",	32,	8 },
 #endif
-	{ "AES-256-XTS",	"aes-xts-plain",	64,	8 },
-	{ "TWOFISH-256-XTS",	"twofish-xts-plain",	64,	8 },
-	{ "SERPENT-256-XTS",	"serpent-xts-plain",	64,	8 },
+	{ "AES-256-XTS",	"aes-xts-plain64",	64,	8 },
+	{ "TWOFISH-256-XTS",	"twofish-xts-plain64",	64,	8 },
+	{ "SERPENT-256-XTS",	"serpent-xts-plain64",	64,	8 },
 	{ NULL,			NULL,			0,	0 }
 };
 
@@ -191,6 +191,64 @@ tc_build_cipher_chains(void)
 
 	return 0;
 }
+
+static
+struct tc_cipher_chain *
+tc_dup_cipher_chain(struct tc_cipher_chain *src)
+{
+	struct tc_cipher_chain *first = NULL, *prev = NULL, *elem;
+
+	for (; src != NULL; src = src->next) {
+		if ((elem = alloc_safe_mem(sizeof(*elem))) == NULL) {
+			tc_log(1, "Error allocating memory for "
+			    "duplicate cipher chain\n");
+			return NULL;
+		}
+
+		memcpy(elem, src, sizeof(*elem));
+
+		if (src->key != NULL) {
+			if ((elem->key = alloc_safe_mem(src->cipher->klen)) == NULL) {
+				tc_log(1, "Error allocating memory for "
+				    "duplicate key in cipher chain\n");
+				return NULL;
+			}
+
+			memcpy(elem->key, src->key, src->cipher->klen);
+		}
+
+		if (first == NULL)
+			first = elem;
+
+		elem->next = NULL;
+		elem->prev = prev;
+
+		if (prev != NULL)
+			prev->next = elem;
+		
+		prev = elem;
+	}
+
+	return first;
+}
+
+static
+int
+tc_free_cipher_chain(struct tc_cipher_chain *chain)
+{
+	struct tc_cipher_chain *next = chain;
+
+	while ((chain = next) != NULL) {
+		next = chain->next;
+
+		if (chain->key != NULL)
+			free_safe_mem(chain->key);
+		free_safe_mem(chain);
+	}
+
+	return 0;
+}
+
 
 #ifdef DEBUG
 static void
@@ -283,6 +341,20 @@ new_info(const char *dev, int sflag, struct tc_cipher_chain *cipher_chain,
 	return info;
 }
 
+static
+int
+free_info(struct tcplay_info *info)
+{
+	if (info->cipher_chain)
+		tc_free_cipher_chain(info->cipher_chain);
+	if (info->hdr)
+		free_safe_mem(info->hdr);
+
+	free_safe_mem(info);
+
+	return 0;
+}
+
 int
 adjust_info(struct tcplay_info *info, struct tcplay_info *hinfo)
 {
@@ -299,6 +371,7 @@ process_hdr(const char *dev, int sflag, unsigned char *pass, int passlen,
 {
 	struct tchdr_dec *dhdr;
 	struct tcplay_info *info;
+	struct tc_cipher_chain *cipher_chain = NULL;
 	unsigned char *key;
 	int i, j, found, error;
 
@@ -335,11 +408,12 @@ process_hdr(const char *dev, int sflag, unsigned char *pass, int passlen,
 #endif
 
 		for (j = 0; !found && tc_cipher_chains[j] != NULL; j++) {
+			cipher_chain = tc_dup_cipher_chain(tc_cipher_chains[j]);
 #ifdef DEBUG
 			printf("\nTrying cipher chain %d\n", j);
 #endif
 
-			dhdr = decrypt_hdr(ehdr, tc_cipher_chains[j], key);
+			dhdr = decrypt_hdr(ehdr, cipher_chain, key);
 			if (dhdr == NULL) {
 				tc_log(1, "hdr decryption failed for cipher "
 				    "chain %d\n", j);
@@ -361,6 +435,7 @@ process_hdr(const char *dev, int sflag, unsigned char *pass, int passlen,
 				found = 1;
 			} else {
 				free_safe_mem(dhdr);
+				tc_free_cipher_chain(cipher_chain);
 			}
 		}
 	}
@@ -370,7 +445,7 @@ process_hdr(const char *dev, int sflag, unsigned char *pass, int passlen,
 	if (!found)
 		return EINVAL;
 
-	if ((info = new_info(dev, sflag, tc_cipher_chains[j-1],
+	if ((info = new_info(dev, sflag, cipher_chain,
 	    &pbkdf_prf_algos[i-1], dhdr, 0)) == NULL) {
 		free_safe_mem(dhdr);
 		return ENOMEM;
@@ -830,15 +905,11 @@ info_map_common(const char *dev, int sflag, const char *sys_dev,
 			tc_log(1, "Incorrect password or not a TrueCrypt volume\n");
 
 			if (info) {
-				if (info->hdr)
-					free_safe_mem(info->hdr);
-				free_safe_mem(info);
+				free_info(info);
 				info = NULL;
 			}
 			if (hinfo) {
-				if (hinfo->hdr)
-					free_safe_mem(hinfo->hdr);
-				free_safe_mem(hinfo);
+				free_info(hinfo);
 				hinfo = NULL;
 			}
 
@@ -864,30 +935,27 @@ info_map_common(const char *dev, int sflag, const char *sys_dev,
 		if (protect_hidden) {
 			if (adjust_info(info, hinfo) != 0) {
 				tc_log(1, "Could not protect hidden volume\n");
-				if (info) {
-					if (info->hdr)
-						free_safe_mem(info->hdr);
-					free_safe_mem(info);
-				}
+				if (info)
+					free_info(info);
 				info = NULL;
 
-				if (hinfo->hdr)
-					free_safe_mem(hinfo->hdr);
-				free_safe_mem(hinfo);
+				if (hinfo)
+					free_info(hinfo);
 				hinfo = NULL;
+
 				goto out;
 			}
 
-			if (hinfo->hdr)
-				free_safe_mem(hinfo->hdr);
-			free_safe_mem(hinfo);
-			hinfo = NULL;
+			if (hinfo) {
+				free_info(hinfo);
+				hinfo = NULL;
+			}
 		}
         }
 
 out:
 	if (hinfo)
-		free_safe_mem(hinfo);
+		free_info(hinfo);
 	if (pass)
 		free_safe_mem(pass);
 	if (h_pass)
@@ -917,9 +985,8 @@ info_volume(const char *device, int sflag, const char *sys_dev,
 	if (info != NULL) {
 		if (interactive)
 			print_info(info);
-		if (info->hdr)
-			free_safe_mem(info->hdr);
-		free_safe_mem(info);
+
+		free_info(info);
 
 		return 0;
 		/* NOT REACHED */
@@ -949,16 +1016,14 @@ map_volume(const char *map_name, const char *device, int sflag,
 
 	if ((error = dm_setup(map_name, info)) != 0) {
 		tc_log(1, "Could not set up mapping %s\n", map_name);
-		if (info->hdr)
-			free_safe_mem(info->hdr);
-		free_safe_mem(info);
+		free_info(info);
 		return -1;
 	}
 
 	if (interactive)
 		printf("All ok!\n");
 
-	free_safe_mem(info);
+	free_info(info);
 
 	return 0;
 }
