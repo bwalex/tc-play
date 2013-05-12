@@ -1,0 +1,101 @@
+1 % Main/truecrypt -t -c
+Volume type:
+ 1) Normal
+ 2) Hidden
+Select [1]: 1
+
+Enter volume path: test2.tc
+
+Enter volume size (sizeK/size[M]/sizeG): 5M
+
+Encryption algorithm:
+ 1) AES
+ 2) Serpent
+ 3) Twofish
+ 4) AES-Twofish
+ 5) AES-Twofish-Serpent
+ 6) Serpent-AES
+ 7) Serpent-Twofish-AES
+ 8) Twofish-Serpent
+Select [1]: 5
+
+Hash algorithm:
+ 1) RIPEMD-160
+ 2) SHA-512
+ 3) Whirlpool
+Select [1]: 1
+
+Filesystem:
+ 1) None
+ 2) FAT
+ 3) Linux Ext2
+ 4) Linux Ext3
+ 5) Linux Ext4
+Select [2]: 1
+
+Enter password: 
+WARNING: Short passwords are easy to crack using brute force techniques!
+
+We recommend choosing a password consisting of more than 20 characters. Are you sure you want to use a short password? (y=Yes/n=No) [No]: y
+
+Re-enter password: 
+
+Enter keyfile path [none]: 
+
+Please type at least 320 randomly chosen characters and then press Enter:
+Characters remaining: 172
+Characters remaining: 33
+
+
+Done: 100.000%  Speed:   11 MB/s  Left: 0 s         
+
+The TrueCrypt volume has been successfully created.
+21:21:29 alex-laptop:~/src/truecrypt-7.1a-source 
+% Main/truecrypt -t -c
+Volume type:
+ 1) Normal
+ 2) Hidden
+Select [1]: 2
+
+IMPORTANT: Inexperienced users should use the graphical user interface to create a hidden volume. When using the text interface, the procedure described in the command line help must be followed to create a hidden volume.
+
+Enter volume path: test2.tc
+
+Enter hidden volume size (sizeK/size[M]/sizeG): 1M
+
+Encryption algorithm:
+ 1) AES
+ 2) Serpent
+ 3) Twofish
+ 4) AES-Twofish
+ 5) AES-Twofish-Serpent
+ 6) Serpent-AES
+ 7) Serpent-Twofish-AES
+ 8) Twofish-Serpent
+Select [1]: 8
+
+Hash algorithm:
+ 1) RIPEMD-160
+ 2) SHA-512
+ 3) Whirlpool
+Select [1]: 2
+
+Filesystem:
+ 1) None
+ 2) FAT
+ 3) Linux Ext2
+ 4) Linux Ext3
+ 5) Linux Ext4
+Select [2]: 1
+
+Enter password: 
+WARNING: Short passwords are easy to crack using brute force techniques!
+
+We recommend choosing a password consisting of more than 20 characters. Are you sure you want to use a short password? (y=Yes/n=No) [No]: yes
+
+Re-enter password: 
+
+Enter keyfile path [none]: /home/alex/src/tc-play/test/key.1
+Enter keyfile path [finish]: /home/alex/src/tc-play/test/key.2
+Enter keyfile path [finish]: 
+
