@@ -52,6 +52,8 @@
 .Ft int
 .Fn tc_api_uninit "void"
 .Ft int
+.Fn tc_api_info_volume "tc_api_opts *api_opts" "tc_api_volinfo *info"
+.Ft int
 .Fn tc_api_create_volume "tc_api_opts *api_opts"
 .Ft int
 .Fn tc_api_map_volume "tc_api_opts *api_opts"
@@ -122,6 +124,24 @@ are
 terminated arrays of key file strings.
 .Pp
 The
+.Fn tc_api_info_volume
+function takes a
+.Vt tc_api_volinfo
+data structure as second argument, which is defined as follows:
+.Bd -literal
+typedef struct tc_api_volinfo {
+	char		tc_cipher[256];
+	char		tc_prf[64];
+
+	int		tc_key_bits;
+
+	size_t		tc_size;		/* in bytes */
+	off_t		tc_iv_offset;		/* in bytes */
+	off_t		tc_block_offset;	/* in bytes */
+} tc_api_volinfo;
+.Ed
+.Pp
+The
 .Fn tc_api_init
 function initializes the library internals and prepares it for use via
 the API.
@@ -135,6 +155,38 @@ The
 .Fn tc_api_uninit
 function clears up all internal secure memory, such as memory used for
 decrypted headers, passphrases, keyfiles, etc.
+.Pp
+The
+.Fn tc_api_info_volume
+function retrieves information about a volume using the parameters
+specified in the
+.Fa api_opts
+argument.
+All fields except
+.Fa tc_map_name
+are used in the same way as for
+.Fn tc_api_map_volume .
+The retrieved information is placed into the
+.Fa info
+argument.
+The
+.Fa tc_cipher
+and
+.Fa tc_prf
+fields will contain a string describing the block cipher (chain)
+and PBKDF2 PRF algorithm respectively.
+The
+.Fa tc_key_bits
+field gives the total key size used for the block cipher(s).
+The
+.Fa tc_size
+field gives the size of the volume in bytes.
+The
+.Fa tc_iv_offset
+and
+.Fa tc_block_offset
+fields give the IV and block offset in bytes of the volume,
+respectively.
 .Pp
 The
 .Fn tc_api_create_volume
