@@ -46,6 +46,8 @@
 #include "tcplay.h"
 
 
+static int gcrypt_inited = 0;
+
 static int
 gcrypt_encrypt(void *ctx, size_t blk_len, const uint8_t *src, uint8_t *dst)
 {
@@ -195,6 +197,11 @@ syscrypt(struct tc_crypto_algo *cipher, unsigned char *key, size_t klen, unsigne
 int
 tc_crypto_init(void)
 {
+	if (gcrypt_inited)
+		return 0;
+
+	gcrypt_inited = 1;
+
 	gcry_control(GCRYCTL_SUSPEND_SECMEM_WARN);
 	gcry_control(GCRYCTL_INIT_SECMEM, 16384, 0);
 	gcry_control(GCRYCTL_RESUME_SECMEM_WARN);
