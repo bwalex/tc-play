@@ -1,0 +1,84 @@
+Introduction
+============
+The tcplay tests use cucumber as test driver. Test cases are known as Scenarios
+and are grouped by Feature.
+
+The .feature files in features/ contain the Scenarios. What each step in a
+scenario does is defined in the step_definitions files.
+
+
+Steps
+============
+The tcplay tests have the following step definitions:
+
+* "Given I map volume <volume_name> as <map_name> using the following settings:"
+
+Where <volume_name> is a file name containing a volume and <map_name> is the
+name of the mapped device.
+The settings are specified in a table - the following are all possible settings:
+passphrase              | Any passphrase
+keyfiles                | path_to_kf1, path_to_kf2, ...
+protect_hidden          | yes/no
+passphrase_hidden       | Any passphrase
+keyfiles_hidden         | path_to_kf1, path_to_kf2, ...
+
+
+
+* "Given I request information about volume <volume_name> using the following settings:"
+
+Where <volume_name> is a file name containing a volume.
+The settings are specified in a table - the following are all possible settings:
+passphrase              | Any passphrase
+keyfiles                | path_to_kf1, path_to_kf2, ...
+protect_hidden          | yes/no
+passphrase_hidden       | Any passphrase
+keyfiles_hidden         | path_to_kf1, path_to_kf2, ...
+
+
+
+* "Given I create a volume <volume_name> of size <size_mb>M with the following parameters:"
+
+Where <volume_name> is a file name that will be created to contain the newly
+created volume. Its size will be <size_mb> MB.
+The parameters are specified in a table - the following are all possible parameters:
+passphrase              | Any passphrase
+keyfiles                | path_to_kf1, path_to_kf2, ...
+pbkdf_prf               | Any valid tcplay PBKDF PRF
+cipher                  | Any valid tcplay cipher chain
+create_hidden           | yes/no
+hidden_mb               | A numeric size, e.g. 5.5 (meaning 5.5 MB)
+passphrase_hidden       | Any passphrase
+keyfiles_hidden         | path_to_kf1, path_to_kf2, ...
+pbkdf_prf_hidden        | Any valid tcplay PBKDF PRF
+cipher_hidden           | Any valid tcplay cipher chain
+
+
+
+* "Then I expect dmsetup to have the following tables:"
+
+The tables that should have been created by a previous "Given I map..." are
+specified as a table with the following headers:
+name                    | Name of the mapped volume
+begin                   | First sector of the table
+end                     | Last sector of the table
+algo                    | Algorithm used for dm-crypt
+key                     | The master key, in hexadecimal
+offset                  | The offset on the raw device at which the volume starts
+iv_offset               | The IV offset
+
+
+
+* "Then I expect tcplay to report the following:"
+
+The information tcplay should report after a previous "Given I request
+information" is specified as a table with the following headers (which
+are the same as the keys output by the --info command to tcplay):
+PBKDF2 PRF              | Any valid tcplay PBKDF PRF
+PBKDF2 iterations       | A numeric value
+Cipher                  | Any valid tcplay cipher chain
+Key Length              | A string such as "512 bits"
+CRC Key Data            | A hexadecimal value such as "0xdeadc0de"
+Sector size             | A numeric value such as 512
+Volume size             | A string such as "40448 sectors"
+IV offset               | A numeric value (in blocks)
+Block offset            | A numeric value (in blocks)
