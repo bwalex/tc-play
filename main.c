@@ -179,7 +179,7 @@ main(int argc, char *argv[])
 	nkeyfiles = 0;
 	n_hkeyfiles = 0;
 
-	while ((ch = getopt_long(argc, argv, "a:b:cd:ef:ghik:m:s:vx:y:z",
+	while ((ch = getopt_long(argc, argv, "a:b:cd:ef:ghik:m:s:u:vx:y:z",
 	    longopts, NULL)) != -1) {
 		switch(ch) {
 		case 'a':
