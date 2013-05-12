@@ -188,7 +188,7 @@ tc_api_info_volume(tc_api_opts *api_opts, tc_api_volinfo *vol_info)
 	struct tcplay_info *info;
 	struct tc_cipher_chain *cipher_chain;
 	int nkeyfiles, n_hkeyfiles = 0;
-	int klen;
+	int klen = 0;
 	int n;
 
 	if ((api_opts == NULL) ||
