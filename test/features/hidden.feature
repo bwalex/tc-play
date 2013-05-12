@@ -1,3 +1,4 @@
+@cmdline
 Feature: Hidden volume mapping
 
   Scenario: Map outer volume

@@ -29,7 +29,7 @@ Given /^I map volume ([^\s]+) as ([^\s]+) using the following settings:$/ do |vo
 
   @clean_loopdev = true
 
-  IO.popen("losetup #{@loop_dev} volumes/#{vol}")
+  IO.popen("losetup #{@loop_dev} volumes/#{vol}") { |io| Process.wait(io.pid) }
   IO.popen("#{@tcplay} #{@args.join(' ')}", mode='r+') do |tcplay_io|
     tcplay_io.expect /Passphrase/, 10 do
       tcplay_io.write("#{s['passphrase']}\n")
@@ -104,8 +104,8 @@ Given /^I create a volume ([^\s]+) of size (\d+)M with the following parameters:
   s['passphrase'] ||= ''
   s['passphrase_hidden'] ||= ''
 
-  IO.popen("dd if=/dev/zero of=\"volumes/#{vol}\" bs=1M count=#{size_mb.to_i}")
-  IO.popen("losetup #{@loop_dev} volumes/#{vol}")
+  IO.popen("dd if=/dev/zero of=\"volumes/#{vol}\" bs=1M count=#{size_mb.to_i}") { |io| Process.wait(io.pid) }
+  IO.popen("losetup #{@loop_dev} volumes/#{vol}") { |io| Process.wait(io.pid) }
 
   IO.popen("#{@tcplay} #{@args.join(' ')}", mode='r+') do |tcplay_io|
     tcplay_io.expect /Passphrase/, 10 do
@@ -157,7 +157,7 @@ Given /^I request information about volume ([^\s]+) using the following settings
 
   @info = {}
 
-  IO.popen("losetup #{@loop_dev} volumes/#{vol}")
+  IO.popen("losetup #{@loop_dev} volumes/#{vol}") { |io| Process.wait(io.pid) }
   IO.popen("#{@tcplay} #{@args.join(' ')}", mode='r+') do |tcplay_io|
     tcplay_io.expect /Passphrase:/, 10 do
       tcplay_io.write("#{s['passphrase']}\n")
@@ -202,8 +202,8 @@ Before do
 end
 
 
-After do
-  IO.popen("#{@tcplay} -u tcplay_test") unless @maps.empty?
-  IO.popen("losetup -d #{@loop_dev}") if @clean_loopdev
+After('@cmdline') do
+  IO.popen("#{@tcplay} -u tcplay_test") { |io| Process.wait(io.pid) } unless @maps.empty?
+  IO.popen("losetup -d #{@loop_dev}") { |io| Process.wait(io.pid) } if @clean_loopdev
 end
 
