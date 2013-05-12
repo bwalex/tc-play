@@ -18,6 +18,8 @@
 
  * Complete API overhaul. See man page for details.
 
+ * Added test framework and tests.
+
 
 2012-11-16 Version 0.11 - Alex Hornung <alex@alexhornung.com>
 
