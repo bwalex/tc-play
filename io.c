@@ -383,12 +383,12 @@ read_passphrase(const char *prompt, char *pass, size_t passlen, time_t timeout)
 
 	memset(pass, 0, passlen);
 
+	printf("%s", prompt);
+	fflush(stdout);
+
 	/* If input is being provided by something which is not a terminal, don't
 	 * change the settings. */
 	if (is_tty) {
-		printf("%s", prompt);
-		fflush(stdout);
-
 		tcgetattr(fd, &termios_old);
 		memcpy(&termios_new, &termios_old, sizeof(termios_new));
 		termios_new.c_lflag &= ~ECHO;
