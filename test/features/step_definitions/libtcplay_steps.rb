@@ -177,6 +177,7 @@ Given /^I request information about volume ([^\s]+) with the API using the follo
 
   @info = {}
 
+  @clean_loopdev = false
   IO.popen("losetup #{@loop_dev} volumes/#{vol}") { |io| Process.wait(io.pid) }
 
   api_info = TCplayLib::TCApiVolinfo.new
@@ -188,13 +189,12 @@ Given /^I request information about volume ([^\s]+) with the API using the follo
   end
   r.should == TCplayLib::TC_OK
 
-  @info['pbkdf2 prf'] = api_info[:tc_prf].to_ptr.get_string(0)
-  @info['cipher'] = api_info[:tc_cipher].to_ptr.get_string(0)
-  @info['key length'] = api_info[:tc_key_bits]
-  @info['sector size'] = 512
-  @info['volume size'] = api_info[:tc_size]
-  @info['iv offset'] =  api_info[:tc_iv_offset]
-  @info['block offset'] = api_info[:tc_block_offset]
+  @info['pbkdf2 prf'] = api_info[:tc_prf].to_ptr.get_string(0).downcase
+  @info['cipher'] = api_info[:tc_cipher].to_ptr.get_string(0).downcase
+  @info['key length'] = "#{api_info[:tc_key_bits].to_i} bits"
+  @info['volume size'] = "#{api_info[:tc_size]} bytes"
+  @info['iv offset'] =  "#{api_info[:tc_iv_offset]} bytes"
+  @info['block offset'] = "#{api_info[:tc_block_offset]} bytes"
   
   IO.popen("losetup -d #{@loop_dev}") { |io| Process.wait(io.pid) }
 end
@@ -209,9 +209,11 @@ end
 After('@api') do
   opts = TCplayLib::TCApiOpts.new
 
-  opts[:tc_map_name] = FFI::MemoryPointer.from_string("tcplay_test")
-  r = TCplayLib.tc_api_unmap_volume(opts)
-  r.should == TCplayLib::TC_OK
+  unless @maps.empty?
+    opts[:tc_map_name] = FFI::MemoryPointer.from_string("tcplay_test")
+    r = TCplayLib.tc_api_unmap_volume(opts)
+    r.should == TCplayLib::TC_OK
+  end
 
   IO.popen("losetup -d #{@loop_dev}") { |io| Process.wait(io.pid) } if @clean_loopdev
   

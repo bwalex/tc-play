@@ -104,7 +104,11 @@ Volume size             | A string such as "40448 sectors"
 IV offset               | A numeric value (in blocks)
 Block offset            | A numeric value (in blocks)
 
-The output of the API information request lacks the following of these
-fields:
- - PBKDF2 iterations
- - CRC Key Data
+The output of the API information request has the following fields
+instead:
+PBKDF2 PRF              | Any valid tcplay PBKDF PRF
+Cipher                  | Any valid tcplay cipher chain
+Key Length              | A string such as "512 bits"
+Volume size             | A string such as "20709376 bytes"
+IV offset               | A string such as "131072 bytes"
+Block offset            | A string such as "131072 bytes"
