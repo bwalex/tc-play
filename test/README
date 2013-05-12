@@ -7,6 +7,23 @@ The .feature files in features/ contain the Scenarios. What each step in a
 scenario does is defined in the step_definitions files.
 
 
+
+Running the tests
+============
+To run the tests, you first need to bootstrap the environment. Running the
+following will install all required ruby gems:
+
+    make bootstrap
+
+You only have to do that once. After that, you can run tests using:
+
+    make test
+
+The tests must run as root, so sudo will prompt you for your password before
+running the actual tests.
+
+
+
 Steps
 ============
 The tcplay tests have the following step definitions:
