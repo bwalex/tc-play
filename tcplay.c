@@ -1030,6 +1030,35 @@ map_volume(const char *map_name, const char *device, int sflag,
 
 static
 int
+dm_exists_device(const char *name)
+{
+	struct dm_task *dmt = NULL;
+	struct dm_info dmi;
+	int exists = 0;
+
+	if ((dmt = dm_task_create(DM_DEVICE_INFO)) == NULL)
+		goto out;
+
+	if ((dm_task_set_name(dmt, name)) == 0)
+		goto out;
+
+	if ((dm_task_run(dmt)) == 0)
+		goto out;
+
+	if ((dm_task_get_info(dmt, &dmi)) == 0)
+		goto out;
+
+	exists = dmi.exists;
+
+out:
+	if (dmt)
+		dm_task_destroy(dmt);
+
+	return exists;
+}
+
+static
+int
 dm_remove_device(const char *name)
 {
 	struct dm_task *dmt = NULL;
@@ -1245,7 +1274,8 @@ dm_teardown(const char *mapname, const char *device __unused)
 	/* Try to remove other cascade devices */
 	for (i = 2; i >= 0; i--) {
 		sprintf(map, "%s.%d", mapname, i);
-		dm_remove_device(map);
+		if (dm_exists_device(map))
+			dm_remove_device(map);
 	}
 
 	return 0;
