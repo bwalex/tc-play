@@ -26,9 +26,11 @@ running the actual tests.
 
 Steps
 ============
-The tcplay tests have the following step definitions:
+The tcplay tests have the following step definitions, some of which use the command line
+tool and some of which use the library (API):
 
 * "Given I map volume <volume_name> as <map_name> using the following settings:"
+* "Given I map volume <volume_name> as <map_name> with the API using the following settings:"
 
 Where <volume_name> is a file name containing a volume and <map_name> is the
 name of the mapped device.
@@ -42,6 +44,7 @@ keyfiles_hidden         | path_to_kf1, path_to_kf2, ...
 
 
 * "Given I request information about volume <volume_name> using the following settings:"
+* "Given I request information about volume <volume_name> with the API using the following settings:"
 
 Where <volume_name> is a file name containing a volume.
 The settings are specified in a table - the following are all possible settings:
@@ -54,6 +57,7 @@ keyfiles_hidden         | path_to_kf1, path_to_kf2, ...
 
 
 * "Given I create a volume <volume_name> of size <size_mb>M with the following parameters:"
+* "Given I create a volume <volume_name> of size <size_mb>M using the API with the following parameters:"
 
 Where <volume_name> is a file name that will be created to contain the newly
 created volume. Its size will be <size_mb> MB.
@@ -99,3 +103,8 @@ Sector size             | A numeric value such as 512
 Volume size             | A string such as "40448 sectors"
 IV offset               | A numeric value (in blocks)
 Block offset            | A numeric value (in blocks)
+
+The output of the API information request lacks the following of these
+fields:
+ - PBKDF2 iterations
+ - CRC Key Data

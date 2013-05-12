@@ -104,6 +104,8 @@ Given /^I create a volume ([^\s]+) of size (\d+)M with the following parameters:
   s['passphrase'] ||= ''
   s['passphrase_hidden'] ||= ''
 
+  @files_to_delete << "volumes/#{vol}"
+
   IO.popen("dd if=/dev/zero of=\"volumes/#{vol}\" bs=1M count=#{size_mb.to_i}") { |io| Process.wait(io.pid) }
   IO.popen("losetup #{@loop_dev} volumes/#{vol}") { |io| Process.wait(io.pid) }
 
@@ -205,5 +207,7 @@ end
 After('@cmdline') do
   IO.popen("#{@tcplay} -u tcplay_test") { |io| Process.wait(io.pid) } unless @maps.empty?
   IO.popen("losetup -d #{@loop_dev}") { |io| Process.wait(io.pid) } if @clean_loopdev
+
+  @files_to_delete.each { |f| File.unlink(f) }
 end
 
