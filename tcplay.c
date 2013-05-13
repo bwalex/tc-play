@@ -249,6 +249,17 @@ tc_free_cipher_chain(struct tc_cipher_chain *chain)
 	return 0;
 }
 
+static
+int
+tc_cipher_chain_length(struct tc_cipher_chain *chain)
+{
+	int len = 0;
+
+	for (; chain != NULL; chain = chain->next)
+		++len;
+
+	return len;
+}
 
 #ifdef DEBUG
 static void
@@ -1095,7 +1106,7 @@ dm_setup(const char *mapname, struct tcplay_info *info)
 	uint32_t status;
 #endif
 	int r, ret = 0;
-	int j;
+	int j, len;
 	off_t start, offset;
 	char dev[PATH_MAX];
 	char map[PATH_MAX];
@@ -1113,13 +1124,23 @@ dm_setup(const char *mapname, struct tcplay_info *info)
 	offset = info->offset;
 	uu_stack_idx = 0;
 
+	/*
+         * Find length of cipher chain. Could use the for below, but doesn't
+         * really matter.
+         */
+	len = tc_cipher_chain_length(info->cipher_chain);
+
 	/* Get to the end of the chain */
 	for (cipher_chain = info->cipher_chain; cipher_chain->next != NULL;
 	    cipher_chain = cipher_chain->next)
 		;
 
-	for (j= 0; cipher_chain != NULL;
-	    cipher_chain = cipher_chain->prev, j++) {
+	/*
+         * Start j at len-2, as we want to use .0, and the final one has no
+         * suffix.
+         */
+	for (j = len-2; cipher_chain != NULL;
+	    cipher_chain = cipher_chain->prev, j--) {
 
 		cookie = 0;
 
@@ -1272,7 +1293,7 @@ dm_teardown(const char *mapname, const char *device __unused)
 	}
 
 	/* Try to remove other cascade devices */
-	for (i = 2; i >= 0; i--) {
+	for (i = 0; i < 2; i++) {
 		sprintf(map, "%s.%d", mapname, i);
 		if (dm_exists_device(map))
 			dm_remove_device(map);
