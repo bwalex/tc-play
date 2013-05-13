@@ -12,11 +12,11 @@ Given /^I map volume ([^\s]+) as ([^\s]+) using the following settings:$/ do |vo
   ]
 
   if not s['keyfiles'].nil?
-    s['keyfiles'].split(%r{\s*,\s*}).each { |kf| @args << "-k \"#{kf.strip}\"" }
+    s['keyfiles'].split(%r{\s*,\s*}).each { |kf| @args << "-k \"keyfiles/#{kf.strip}\"" }
   end
 
   if not s['keyfiles_hidden'].nil?
-    s['keyfiles_hidden'].split(%r{\s*,\s*}).each { |kf| @args << "-f \"#{kf.strip}\"" }
+    s['keyfiles_hidden'].split(%r{\s*,\s*}).each { |kf| @args << "-f \"keyfiles/#{kf.strip}\"" }
   end
 
   if (not s['protect_hidden'].nil?) and s['protect_hidden'].casecmp("yes")
@@ -44,9 +44,9 @@ Given /^I map volume ([^\s]+) as ([^\s]+) using the following settings:$/ do |vo
   @maps = []
   IO.popen("dmsetup table --showkeys") do |dmsetup_io|
     dmsetup_io.each do |line|
-      line.match(/^(#{map}.*):\s+(\d+)\s+(\d+)\s+crypt\s+([^\s]+)\s+([a-fA-F0-9]+)\s+(\d+)\s+[^\s]+\s+(\d+)/) do |m|
+      line.match(/^(#{map.strip}.*):\s+(\d+)\s+(\d+)\s+crypt\s+([^\s]+)\s+([a-fA-F0-9]+)\s+(\d+)\s+[^\s]+\s+(\d+)/) do |m|
         c = m.captures
-        map = {
+        mapping = {
           :name       => c[0],
           :begin      => c[1],
           :end        => c[2],
@@ -55,9 +55,10 @@ Given /^I map volume ([^\s]+) as ([^\s]+) using the following settings:$/ do |vo
           :offset     => c[5],
           :iv_offset  => c[6]
         }
-        @maps << map
+        @maps << mapping
       end
     end
+    @maps.sort! { |x,y| y[:name] <=> x[:name] }
   end
 end
 
@@ -73,11 +74,11 @@ Given /^I create a volume ([^\s]+) of size (\d+)M with the following parameters:
   ]
 
   if not s['keyfiles'].nil?
-    s['keyfiles'].split(%r{\s*,\s*}).each { |kf| @args << "-k \"#{kf.strip}\"" }
+    s['keyfiles'].split(%r{\s*,\s*}).each { |kf| @args << "-k \"keyfiles/#{kf.strip}\"" }
   end
 
   if not s['keyfiles_hidden'].nil?
-    s['keyfiles_hidden'].split(%r{\s*,\s*}).each { |kf| @args << "-f \"#{kf.strip}\"" }
+    s['keyfiles_hidden'].split(%r{\s*,\s*}).each { |kf| @args << "-f \"keyfiles/#{kf.strip}\"" }
   end
 
   if (not s['create_hidden'].nil?) and s['create_hidden'].casecmp("yes")
@@ -142,11 +143,11 @@ Given /^I request information about volume ([^\s]+) using the following settings
   ]
 
   if not s['keyfiles'].nil?
-    s['keyfiles'].split(%r{\s*,\s*}).each { |kf| @args << "-k \"#{kf.strip}\"" }
+    s['keyfiles'].split(%r{\s*,\s*}).each { |kf| @args << "-k \"keyfiles/#{kf.strip}\"" }
   end
 
   if not s['keyfiles_hidden'].nil?
-    s['keyfiles_hidden'].split(%r{\s*,\s*}).each { |kf| @args << "-f \"#{kf.strip}\"" }
+    s['keyfiles_hidden'].split(%r{\s*,\s*}).each { |kf| @args << "-f \"keyfiles/#{kf.strip}\"" }
   end
 
   if (not s['protect_hidden'].nil?) and s['protect_hidden'].casecmp("yes")

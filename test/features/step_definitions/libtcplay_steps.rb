@@ -13,18 +13,24 @@ Given /^I map volume ([^\s]+) as ([^\s]+) with the API using the following setti
 
   if not s['keyfiles'].nil?
     keyfiles = []
-    s['keyfiles'].split(%r{\s*,\s*}).each { |kf| keyfiles << FFI::MemoryPointer.from_string(kf.strip) }
+    s['keyfiles'].split(%r{\s*,\s*}).each { |kf| keyfiles << FFI::MemoryPointer.from_string("keyfiles/#{kf.strip}") }
     keyfiles << nil
-    opts[:tc_keyfiles] = FFI::MemoryPointer.new(:pointer, keyfiles.length)
-    keyfiles.each_with_index { |p,i| opts[:tc_keyfiles][i].put_pointer(0, p) }
+
+    kfp = FFI::MemoryPointer.new(:pointer, keyfiles.length)
+    keyfiles.each_with_index { |p,i| kfp[i].write_pointer(p) }
+
+    opts[:tc_keyfiles] = kfp
   end
 
   if not s['keyfiles_hidden'].nil?
     keyfiles_hidden = []
-    s['keyfiles_hidden'].split(%r{\s*,\s*}).each { |kf| keyfiles_hidden << FFI::MemoryPointer.from_string(kf.strip) }
+    s['keyfiles_hidden'].split(%r{\s*,\s*}).each { |kf| keyfiles_hidden << FFI::MemoryPointer.from_string("keyfiles/#{kf.strip}") }
     keyfiles_hidden << nil
-    opts[:tc_keyfiles_hidden] = FFI::MemoryPointer.new(:pointer, keyfiles_hidden.length)
-    keyfiles_hidden.each_with_index { |p,i| opts[:tc_keyfiles_hidden][i].put_pointer(0, p) }
+
+    kfp = FFI::MemoryPointer.new(:pointer, keyfiles_hidden.length)
+    keyfiles_hidden.each_with_index { |p,i| kfp[i].write_pointer(p) }
+
+    opts[:tc_keyfiles_hidden] = kfp
   end
 
   if (not s['protect_hidden'].nil?) and s['protect_hidden'].casecmp("yes")
@@ -53,7 +59,7 @@ Given /^I map volume ([^\s]+) as ([^\s]+) with the API using the following setti
     dmsetup_io.each do |line|
       line.match(/^(#{map}.*):\s+(\d+)\s+(\d+)\s+crypt\s+([^\s]+)\s+([a-fA-F0-9]+)\s+(\d+)\s+[^\s]+\s+(\d+)/) do |m|
         c = m.captures
-        map = {
+        mapping = {
           :name       => c[0],
           :begin      => c[1],
           :end        => c[2],
@@ -62,9 +68,10 @@ Given /^I map volume ([^\s]+) as ([^\s]+) with the API using the following setti
           :offset     => c[5],
           :iv_offset  => c[6]
         }
-        @maps << map
+        @maps << mapping
       end
     end
+    @maps.sort! { |x,y| y[:name] <=> x[:name] }
   end
 end
 
@@ -79,18 +86,24 @@ Given /^I create a volume ([^\s]+) of size (\d+)M using the API with the followi
 
   if not s['keyfiles'].nil?
     keyfiles = []
-    s['keyfiles'].split(%r{\s*,\s*}).each { |kf| keyfiles << FFI::MemoryPointer.from_string(kf.strip) }
+    s['keyfiles'].split(%r{\s*,\s*}).each { |kf| keyfiles << FFI::MemoryPointer.from_string("keyfiles/#{kf.strip}") }
     keyfiles << nil
-    opts[:tc_keyfiles] = FFI::MemoryPointer.new(:pointer, keyfiles.length)
-    keyfiles.each_with_index { |p,i| opts[:tc_keyfiles][i].put_pointer(0, p) }
+
+    kfp = FFI::MemoryPointer.new(:pointer, keyfiles.length)
+    keyfiles.each_with_index { |p,i| kfp[i].write_pointer(p) }
+
+    opts[:tc_keyfiles] = kfp
   end
 
   if not s['keyfiles_hidden'].nil?
     keyfiles_hidden = []
-    s['keyfiles_hidden'].split(%r{\s*,\s*}).each { |kf| keyfiles_hidden << FFI::MemoryPointer.from_string(kf.strip) }
+    s['keyfiles_hidden'].split(%r{\s*,\s*}).each { |kf| keyfiles_hidden << FFI::MemoryPointer.from_string("keyfiles/#{kf.strip}") }
     keyfiles_hidden << nil
-    opts[:tc_keyfiles_hidden] = FFI::MemoryPointer.new(:pointer, keyfiles_hidden.length)
-    keyfiles_hidden.each_with_index { |p,i| opts[:tc_keyfiles_hidden][i].put_pointer(0, p) }
+
+    kfp = FFI::MemoryPointer.new(:pointer, keyfiles_hidden.length)
+    keyfiles_hidden.each_with_index { |p,i| kfp[i].write_pointer(p) }
+
+    opts[:tc_keyfiles_hidden] = kfp
   end
 
   if (not s['create_hidden'].nil?) and s['create_hidden'].casecmp("yes")
@@ -151,18 +164,24 @@ Given /^I request information about volume ([^\s]+) with the API using the follo
 
   if not s['keyfiles'].nil?
     keyfiles = []
-    s['keyfiles'].split(%r{\s*,\s*}).each { |kf| keyfiles << FFI::MemoryPointer.from_string(kf.strip) }
+    s['keyfiles'].split(%r{\s*,\s*}).each { |kf| keyfiles << FFI::MemoryPointer.from_string("keyfiles/#{kf.strip}") }
     keyfiles << nil
-    opts[:tc_keyfiles] = FFI::MemoryPointer.new(:pointer, keyfiles.length)
-    keyfiles.each_with_index { |p,i| opts[:tc_keyfiles][i].put_pointer(0, p) }
+
+    kfp = FFI::MemoryPointer.new(:pointer, keyfiles.length)
+    keyfiles.each_with_index { |p,i| kfp[i].write_pointer(p) }
+
+    opts[:tc_keyfiles] = kfp
   end
 
   if not s['keyfiles_hidden'].nil?
     keyfiles_hidden = []
-    s['keyfiles_hidden'].split(%r{\s*,\s*}).each { |kf| keyfiles_hidden << FFI::MemoryPointer.from_string(kf.strip) }
+    s['keyfiles_hidden'].split(%r{\s*,\s*}).each { |kf| keyfiles_hidden << FFI::MemoryPointer.from_string("keyfiles/#{kf.strip}") }
     keyfiles_hidden << nil
-    opts[:tc_keyfiles_hidden] = FFI::MemoryPointer.new(:pointer, keyfiles_hidden.length)
-    keyfiles_hidden.each_with_index { |p,i| opts[:tc_keyfiles_hidden][i].put_pointer(0, p) }
+
+    kfp = FFI::MemoryPointer.new(:pointer, keyfiles_hidden.length)
+    keyfiles_hidden.each_with_index { |p,i| kfp[i].write_pointer(p) }
+
+    opts[:tc_keyfiles_hidden] = kfp
   end
 
   if (not s['protect_hidden'].nil?) and s['protect_hidden'].casecmp("yes")
