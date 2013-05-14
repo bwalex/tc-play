@@ -3,7 +3,7 @@ require 'ffi'
 module TCplayLib
   extend FFI::Library
 
-  ffi_lib [ "../libtcplay.so.1.0" ]
+  ffi_lib [ "../libtcplay.so" ]
 
   TC_OK  = 0
   TC_ERR = -1
