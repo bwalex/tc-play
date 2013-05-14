@@ -139,7 +139,7 @@ Given /^I create a volume ([^\s]+) of size (\d+)M using the API with the followi
 
   @files_to_delete << "volumes/#{vol}"
 
-  IO.popen("dd if=/dev/zero of=\"volumes/#{vol}\" bs=1M count=#{size_mb.to_i}") { |io| Process.wait(io.pid) }
+  IO.popen("dd if=/dev/zero of=\"volumes/#{vol}\" bs=1M count=#{size_mb.to_i} status=none") { |io| Process.wait(io.pid) }
   IO.popen("losetup #{@loop_dev} volumes/#{vol}") { |io| Process.wait(io.pid) }
 
   r = TCplayLib.tc_api_create_volume(opts)

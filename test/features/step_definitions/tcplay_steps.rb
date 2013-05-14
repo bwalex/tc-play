@@ -107,15 +107,24 @@ Given /^I create a volume ([^\s]+) of size (\d+)M with the following parameters:
 
   @files_to_delete << "volumes/#{vol}"
 
-  IO.popen("dd if=/dev/zero of=\"volumes/#{vol}\" bs=1M count=#{size_mb.to_i}") { |io| Process.wait(io.pid) }
+  IO.popen("dd if=/dev/zero of=\"volumes/#{vol}\" bs=1M count=#{size_mb.to_i} status=none") { |io| Process.wait(io.pid) }
   IO.popen("losetup #{@loop_dev} volumes/#{vol}") { |io| Process.wait(io.pid) }
 
   IO.popen("#{@tcplay} #{@args.join(' ')}", mode='r+') do |tcplay_io|
     tcplay_io.expect /Passphrase/, 10 do
       tcplay_io.write("#{s['passphrase']}\n")
     end
+
+    tcplay_io.expect /Repeat/, 10 do
+      tcplay_io.write("#{s['passphrase']}\n")
+    end
+
     if create_hidden == true
       tcplay_io.expect /Passphrase for hidden volume/, 10 do
+        tcplay_io.write("#{s['passphrase_hidden']}\n")
+      end
+
+      tcplay_io.expect /Repeat/, 10 do
         tcplay_io.write("#{s['passphrase_hidden']}\n")
       end
 
