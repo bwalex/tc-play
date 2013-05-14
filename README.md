@@ -90,6 +90,21 @@ Please refer to the man pages bundled with tcplay.
 
 
 
+Bugs
+==========
+Please report all bugs on the github issue tracker. If appropriate, please
+attach a small test volume which you think tcplay isn't handling correctly.
+The reduce_test_vol.sh script in test/ can significantly reduce the size
+of a volume when compressed by stripping out all the unnecessary data,
+leaving only the headers. After that, just bzip2 it and it should be fairly
+tiny.
+
+What would be even better is if you could write a small test case to
+reproduce the issue. The README in the test/ directory has information on
+how to write tests for tcplay.
+
+
+
 OS Support
 ==========
 tcplay is now available for both DragonFly BSD and Linux. It is a core part of
