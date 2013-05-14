@@ -1,4 +1,4 @@
-2013-05-?? Version 1.0  - Alex Hornung <alex@alexhornung.com>
+2013-05-15 Version 1.0  - Alex Hornung <alex@alexhornung.com>
 
  * Fixed bug in hidden volume protection (issue #28).
 
@@ -19,6 +19,8 @@
  * Complete API overhaul. See man page for details.
 
  * Added test framework and tests.
+
+ * Other minor bugfixes and tweaks.
 
 
 2012-11-16 Version 0.11 - Alex Hornung <alex@alexhornung.com>
