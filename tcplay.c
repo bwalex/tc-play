@@ -510,15 +510,16 @@ create_volume(const char *dev, int hidden, const char *keyfiles[], int nkeyfiles
 	}
 
 	if (interactive) {
-		if (((pass = alloc_safe_mem(MAX_PASSSZ)) == NULL) ||
-		   ((pass_again = alloc_safe_mem(MAX_PASSSZ)) == NULL)) {
+		if (((pass = alloc_safe_mem(PASS_BUFSZ)) == NULL) ||
+		   ((pass_again = alloc_safe_mem(PASS_BUFSZ)) == NULL)) {
 			tc_log(1, "could not allocate safe passphrase memory\n");
 			goto out;
 		}
 
-		if ((error = read_passphrase("Passphrase: ", pass, MAX_PASSSZ, 0) ||
-		   (read_passphrase("Repeat passphrase: ", pass_again,
-		   MAX_PASSSZ, 0)))) {
+		if ((error = read_passphrase("Passphrase: ", pass, MAX_PASSSZ,
+		    PASS_BUFSZ, 0) ||
+		    (read_passphrase("Repeat passphrase: ", pass_again,
+		    MAX_PASSSZ, PASS_BUFSZ, 0)))) {
 			tc_log(1, "could not read passphrase\n");
 			goto out;
 		}
@@ -532,19 +533,21 @@ create_volume(const char *dev, int hidden, const char *keyfiles[], int nkeyfiles
 		pass_again = NULL;
 	} else {
 		/* In batch mode, use provided passphrase */
-		if ((pass = alloc_safe_mem(MAX_PASSSZ)) == NULL) {
+		if ((pass = alloc_safe_mem(PASS_BUFSZ)) == NULL) {
 			tc_log(1, "could not allocate safe "
 			    "passphrase memory");
 			goto out;
 		}
 
-		if (passphrase != NULL)
+		if (passphrase != NULL) {
 			strncpy(pass, passphrase, MAX_PASSSZ);
+			pass[MAX_PASSSZ] = '\0';
+		}
 	}
 
 	if (nkeyfiles > 0) {
 		/* Apply keyfiles to 'pass' */
-		if ((error = apply_keyfiles((unsigned char *)pass, MAX_PASSSZ,
+		if ((error = apply_keyfiles((unsigned char *)pass, PASS_BUFSZ,
 		    keyfiles, nkeyfiles))) {
 			tc_log(1, "could not apply keyfiles\n");
 			goto out;
@@ -553,17 +556,17 @@ create_volume(const char *dev, int hidden, const char *keyfiles[], int nkeyfiles
 
 	if (hidden) {
 		if (interactive) {
-			if (((h_pass = alloc_safe_mem(MAX_PASSSZ)) == NULL) ||
-			   ((pass_again = alloc_safe_mem(MAX_PASSSZ)) == NULL)) {
+			if (((h_pass = alloc_safe_mem(PASS_BUFSZ)) == NULL) ||
+			   ((pass_again = alloc_safe_mem(PASS_BUFSZ)) == NULL)) {
 				tc_log(1, "could not allocate safe "
 				    "passphrase memory\n");
 				goto out;
 			}
 
 			if ((error = read_passphrase("Passphrase for hidden volume: ",
-			   h_pass, MAX_PASSSZ, 0) ||
+			   h_pass, MAX_PASSSZ, PASS_BUFSZ, 0) ||
 			   (read_passphrase("Repeat passphrase: ", pass_again,
-			   MAX_PASSSZ, 0)))) {
+			   MAX_PASSSZ, PASS_BUFSZ, 0)))) {
 				tc_log(1, "could not read passphrase\n");
 				goto out;
 			}
@@ -578,20 +581,22 @@ create_volume(const char *dev, int hidden, const char *keyfiles[], int nkeyfiles
 			pass_again = NULL;
 		} else {
 			/* In batch mode, use provided passphrase */
-			if ((h_pass = alloc_safe_mem(MAX_PASSSZ)) == NULL) {
+			if ((h_pass = alloc_safe_mem(PASS_BUFSZ)) == NULL) {
 				tc_log(1, "could not allocate safe "
 				    "passphrase memory");
 				goto out;
 			}
 
-			if (h_passphrase != NULL)
+			if (h_passphrase != NULL) {
 				strncpy(h_pass, h_passphrase, MAX_PASSSZ);
+				h_pass[MAX_PASSSZ] = '\0';
+			}
 		}
 
 		if (n_hkeyfiles > 0) {
 			/* Apply keyfiles to 'h_pass' */
 			if ((error = apply_keyfiles((unsigned char *)h_pass,
-			    MAX_PASSSZ, h_keyfiles, n_hkeyfiles))) {
+			    PASS_BUFSZ, h_keyfiles, n_hkeyfiles))) {
 				tc_log(1, "could not apply keyfiles\n");
 				goto out;
 			}
@@ -809,27 +814,30 @@ info_map_common(const char *dev, int sflag, const char *sys_dev,
 		ehdr = hehdr = NULL;
 		info = hinfo = NULL;
 
-		if ((pass = alloc_safe_mem(MAX_PASSSZ)) == NULL) {
+		if ((pass = alloc_safe_mem(PASS_BUFSZ)) == NULL) {
 			tc_log(1, "could not allocate safe passphrase memory\n");
 			goto out;
 		}
 
 		if (interactive) {
 		        if ((error = read_passphrase("Passphrase: ", pass,
-			    MAX_PASSSZ, timeout))) {
+			    MAX_PASSSZ, PASS_BUFSZ, timeout))) {
 				tc_log(1, "could not read passphrase\n");
 				/* XXX: handle timeout differently? */
 				goto out;
 			}
+			pass[MAX_PASSSZ] = '\0';
 		} else {
 			/* In batch mode, use provided passphrase */
-			if (passphrase != NULL)
+			if (passphrase != NULL) {
 				strncpy(pass, passphrase, MAX_PASSSZ);
+				pass[MAX_PASSSZ] = '\0';
+			}
 		}
 
 		if (nkeyfiles > 0) {
 			/* Apply keyfiles to 'pass' */
-			if ((error = apply_keyfiles((unsigned char *)pass, MAX_PASSSZ,
+			if ((error = apply_keyfiles((unsigned char *)pass, PASS_BUFSZ,
 			    keyfiles, nkeyfiles))) {
 				tc_log(1, "could not apply keyfiles");
 				goto out;
@@ -837,7 +845,7 @@ info_map_common(const char *dev, int sflag, const char *sys_dev,
 		}
 
 		if (protect_hidden) {
-			if ((h_pass = alloc_safe_mem(MAX_PASSSZ)) == NULL) {
+			if ((h_pass = alloc_safe_mem(PASS_BUFSZ)) == NULL) {
 				tc_log(1, "could not allocate safe passphrase memory\n");
 				goto out;
 			}
@@ -845,19 +853,22 @@ info_map_common(const char *dev, int sflag, const char *sys_dev,
 			if (interactive) {
 			        if ((error = read_passphrase(
 				    "Passphrase for hidden volume: ", h_pass,
-				    MAX_PASSSZ, timeout))) {
+				    MAX_PASSSZ, PASS_BUFSZ, timeout))) {
 					tc_log(1, "could not read passphrase\n");
 					goto out;
 				}
+				h_pass[MAX_PASSSZ] = '\0';
 			} else {
 				/* In batch mode, use provided passphrase */
-				if (passphrase_hidden != NULL)
+				if (passphrase_hidden != NULL) {
 					strncpy(h_pass, passphrase_hidden, MAX_PASSSZ);
+					h_pass[MAX_PASSSZ] = '\0';
+				}
 			}
 
 			if (n_hkeyfiles > 0) {
 				/* Apply keyfiles to 'pass' */
-				if ((error = apply_keyfiles((unsigned char *)h_pass, MAX_PASSSZ,
+				if ((error = apply_keyfiles((unsigned char *)h_pass, PASS_BUFSZ,
 				    h_keyfiles, n_hkeyfiles))) {
 					tc_log(1, "could not apply keyfiles");
 					goto out;

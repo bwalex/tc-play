@@ -368,7 +368,7 @@ static void sigint_termios(int sa)
 }
 
 int
-read_passphrase(const char *prompt, char *pass, size_t passlen, time_t timeout)
+read_passphrase(const char *prompt, char *pass, size_t passlen, size_t bufsz, time_t timeout)
 {
 	struct termios termios_new;
 	struct timeval to;
@@ -381,7 +381,7 @@ read_passphrase(const char *prompt, char *pass, size_t passlen, time_t timeout)
 	if (is_tty == 0)
 		errno = 0;
 
-	memset(pass, 0, passlen);
+	memset(pass, 0, bufsz);
 
 	printf("%s", prompt);
 	fflush(stdout);
@@ -416,13 +416,20 @@ read_passphrase(const char *prompt, char *pass, size_t passlen, time_t timeout)
 		}
 	}
 
-	n = read(fd, pass, passlen-1);
+	n = read(fd, pass, bufsz-1);
 	if (n > 0) {
 		pass[n-1] = '\0'; /* Strip trailing \n */
 	} else {
 		r = EIO;
 	}
 
+	/* Warn about passphrase trimming */
+	if (strlen(pass) > MAX_PASSSZ)
+		tc_log(0, "WARNING: Passphrase is being trimmed to %ju "
+		    "characters, discarding rest.\n", passlen);
+
+	/* Cut off after passlen characters */
+	pass[passlen] = '\0';
 
 out:
 	if (is_tty) {

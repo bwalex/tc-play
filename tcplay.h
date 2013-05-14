@@ -36,6 +36,7 @@
 #define HDR_OFFSET_SYS		31744	/* 512 * (63 -1) */
 #define TC_SIG			"TRUE"
 #define MAX_PASSSZ		64
+#define PASS_BUFSZ		256
 #define KPOOL_SZ		64
 #define MAX_KFILE_SZ		1048576	/* 1 MB */
 #define MAX_KEYFILES		256
@@ -141,7 +142,7 @@ int get_disk_info(const char *dev, size_t *blocks, size_t *bsize);
 int write_to_disk(const char *dev, off_t offset, size_t blksz, void *mem,
     size_t bytes);
 int read_passphrase(const char *prompt, char *pass, size_t passlen,
-    time_t timeout);
+    size_t bufsz, time_t timeout);
 float get_random_read_progress(void);
 float get_secure_erase_progress(void);
 
