@@ -34,6 +34,7 @@ Given /^I map volume ([^\s]+) as ([^\s]+) using the following settings:$/ do |vo
     end
   end
 
+  @mappings << map
   @maps = DMSetupHelper.get_crypt_mappings("#{map}")
 end
 
@@ -156,6 +157,7 @@ end
 Before do
   @tcplay = "../tcplay"
   @maps = []
+  @mappings = []
   @info = {}
   @files_to_delete = []
   @losetup = LOSetupHelper.new
@@ -163,7 +165,7 @@ end
 
 
 After('@cmdline') do
-  IO.popen("#{@tcplay} -u tcplay_test") { |io| Process.wait(io.pid) } unless @maps.empty?
+  @mappings.each { |m| IO.popen("#{@tcplay} -u #{m}") { |io| Process.wait(io.pid) } }
   @losetup.detach_all
 
   @files_to_delete.each { |f| File.unlink(f) }

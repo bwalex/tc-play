@@ -40,6 +40,7 @@ Given /^I map volume ([^\s]+) as ([^\s]+) with the API using the following setti
   end
   r.should == TCplayLib::TC_OK
 
+  @mappings << map
   @maps = DMSetupHelper.get_crypt_mappings("#{map}")
 end
 
@@ -156,8 +157,8 @@ end
 After('@api') do
   opts = TCplayLib::TCApiOpts.new
 
-  unless @maps.empty?
-    opts[:tc_map_name] = FFI::MemoryPointer.from_string("tcplay_test")
+  @mappings.each do |m|
+    opts[:tc_map_name] = FFI::MemoryPointer.from_string("#{m}")
     r = TCplayLib.tc_api_unmap_volume(opts)
     r.should == TCplayLib::TC_OK
   end
