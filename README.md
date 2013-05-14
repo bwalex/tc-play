@@ -57,8 +57,16 @@ cmake
 ----------
 New in version 1.0 is a cmake build system. tcplay can now be built using:
 
-    cmake .
+    mkdir objdir
+    cd objdir
+    cmake ..
     make
+
+NOTE: building inside the source directory is discouraged, so please do
+build inside an "objdir" directory. If you happen to do it anyway, you can
+clean up behind cmake using:
+
+    make -f Makefile.classic clean_cmake_mess
 
 This process will check for dependencies and automatically select whether to
 use OpenSSL or gcrypt as PBKDF backend.
@@ -70,14 +78,9 @@ The classic single-file Makefile can still be used for building, however, using
 
     make -f Makefile.classic
 
-Running cmake generates a fair amount of files that a
+Or, if you only want the command line tool:
 
-    make clean
-
-does not clean up. For this case, the classic Makefile has a target to clean
-up behind cmake:
-
-    make -f Makefile.classic clean_cmake_mess
+    make -f Makefile.classic program
 
 
 

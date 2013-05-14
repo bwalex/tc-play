@@ -22,6 +22,10 @@ You only have to do that once. After that, you can run tests using:
 The tests must run as root, so sudo will prompt you for your password before
 running the actual tests.
 
+To be able to run the tests, you need to have 'libtcplay.so' and 'tcplay' in
+the source directory. To get them, just change to the source directory and run
+
+    make -f Makefile.classic clean all
 
 
 Steps
