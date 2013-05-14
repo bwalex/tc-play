@@ -6,20 +6,16 @@ Given /^I map volume ([^\s]+) as ([^\s]+) using the following settings:$/ do |vo
   protect_hidden = false
   s = settings.rows_hash
 
+  loop_dev = @losetup.get_device("volumes/#{vol}")
   @args = [
     "-m #{map}",
-    "-d #{@loop_dev}"
+    "-d #{loop_dev}"
   ]
 
-  if not s['keyfiles'].nil?
-    s['keyfiles'].split(%r{\s*,\s*}).each { |kf| @args << "-k \"keyfiles/#{kf.strip}\"" }
-  end
+  ParseHelper.csv_parse(s['keyfiles']) { |kf| @args << "-k \"keyfiles/#{kf}\"" } unless s['keyfiles'].nil?
+  ParseHelper.csv_parse(s['keyfiles_hidden']) { |kf| @args << "-f \"keyfiles/#{kf}\"" } unless s['keyfiles_hidden'].nil?
 
-  if not s['keyfiles_hidden'].nil?
-    s['keyfiles_hidden'].split(%r{\s*,\s*}).each { |kf| @args << "-f \"keyfiles/#{kf.strip}\"" }
-  end
-
-  if (not s['protect_hidden'].nil?) and s['protect_hidden'].casecmp("yes")
+  if ParseHelper.is_yes(s['protect_hidden'])
     @args << "-e"
     protect_hidden = true
   end
@@ -27,9 +23,6 @@ Given /^I map volume ([^\s]+) as ([^\s]+) using the following settings:$/ do |vo
   s['passphrase'] ||= ''
   s['passphrase_hidden'] ||= ''
 
-  @clean_loopdev = true
-
-  IO.popen("losetup #{@loop_dev} volumes/#{vol}") { |io| Process.wait(io.pid) }
   IO.popen("#{@tcplay} #{@args.join(' ')}", mode='r+') do |tcplay_io|
     tcplay_io.expect /Passphrase/, 10 do
       tcplay_io.write("#{s['passphrase']}\n")
@@ -41,25 +34,7 @@ Given /^I map volume ([^\s]+) as ([^\s]+) using the following settings:$/ do |vo
     end
   end
 
-  @maps = []
-  IO.popen("dmsetup table --showkeys") do |dmsetup_io|
-    dmsetup_io.each do |line|
-      line.match(/^(#{map.strip}.*):\s+(\d+)\s+(\d+)\s+crypt\s+([^\s]+)\s+([a-fA-F0-9]+)\s+(\d+)\s+[^\s]+\s+(\d+)/) do |m|
-        c = m.captures
-        mapping = {
-          :name       => c[0],
-          :begin      => c[1],
-          :end        => c[2],
-          :algo       => c[3],
-          :key        => c[4],
-          :offset     => c[5],
-          :iv_offset  => c[6]
-        }
-        @maps << mapping
-      end
-    end
-    @maps.sort! { |x,y| y[:name] <=> x[:name] }
-  end
+  @maps = DMSetupHelper.get_crypt_mappings("#{map}")
 end
 
 
@@ -67,48 +42,31 @@ Given /^I create a volume ([^\s]+) of size (\d+)M with the following parameters:
   create_hidden = false
   s = params.rows_hash
 
+  IO.popen("dd if=/dev/zero of=\"volumes/#{vol}\" bs=1M count=#{size_mb.to_i} status=none") { |io| Process.wait(io.pid) }
+  loop_dev = @losetup.get_device("volumes/#{vol}")
   @args = [
     "-c",
-    "-d #{@loop_dev}",
+    "-d #{loop_dev}",
     "-w", # We don't want to wait for /dev/random to have enough entropy
   ]
 
-  if not s['keyfiles'].nil?
-    s['keyfiles'].split(%r{\s*,\s*}).each { |kf| @args << "-k \"keyfiles/#{kf.strip}\"" }
-  end
+  ParseHelper.csv_parse(s['keyfiles']) { |kf| @args << "-k \"keyfiles/#{kf}\"" } unless s['keyfiles'].nil?
+  ParseHelper.csv_parse(s['keyfiles_hidden']) { |kf| @args << "-f \"keyfiles/#{kf}\"" } unless s['keyfiles_hidden'].nil?
 
-  if not s['keyfiles_hidden'].nil?
-    s['keyfiles_hidden'].split(%r{\s*,\s*}).each { |kf| @args << "-f \"keyfiles/#{kf.strip}\"" }
-  end
-
-  if (not s['create_hidden'].nil?) and s['create_hidden'].casecmp("yes")
+  if ParseHelper.is_yes(s['create_hidden'])
     @args << "-g"
     create_hidden = true
   end
 
-  if not s['pbkdf_prf'].nil?
-    @args << "-a #{s['pbkdf_prf'].strip}"
-  end
-
-  if not s['cipher'].nil?
-    @args << "-b #{s['cipher'].strip}"
-  end
-  
-  if not s['pbkdf_prf_hidden'].nil?
-    @args << "-x #{s['pbkdf_prf_hidden'].strip}"
-  end
-  
-  if not s['cipher_hidden'].nil?
-    @args << "-y #{s['cipher_hidden'].strip}"
-  end
+  @args << "-a #{s['pbkdf_prf'].strip}" unless s['pbkdf_prf'].nil?
+  @args << "-b #{s['cipher'].strip}" unless s['cipher'].nil?
+  @args << "-x #{s['pbkdf_prf_hidden'].strip}" unless s['pbkdf_prf_hidden'].nil?
+  @args << "-y #{s['cipher_hidden'].strip}" unless s['cipher_hidden'].nil?
   
   s['passphrase'] ||= ''
   s['passphrase_hidden'] ||= ''
 
   @files_to_delete << "volumes/#{vol}"
-
-  IO.popen("dd if=/dev/zero of=\"volumes/#{vol}\" bs=1M count=#{size_mb.to_i} status=none") { |io| Process.wait(io.pid) }
-  IO.popen("losetup #{@loop_dev} volumes/#{vol}") { |io| Process.wait(io.pid) }
 
   IO.popen("#{@tcplay} #{@args.join(' ')}", mode='r+') do |tcplay_io|
     tcplay_io.expect /Passphrase/, 10 do
@@ -136,8 +94,6 @@ Given /^I create a volume ([^\s]+) of size (\d+)M with the following parameters:
       tcplay_io.write("y\n")
     end
   end
-
-  IO.popen("losetup -d #{@loop_dev}")
 end
 
 
@@ -146,20 +102,16 @@ Given /^I request information about volume ([^\s]+) using the following settings
   protect_hidden = false
   s = settings.rows_hash
 
+  loop_dev = @losetup.get_device("volumes/#{vol}")
   @args = [
     "-i",
-    "-d #{@loop_dev}"
+    "-d #{loop_dev}"
   ]
 
-  if not s['keyfiles'].nil?
-    s['keyfiles'].split(%r{\s*,\s*}).each { |kf| @args << "-k \"keyfiles/#{kf.strip}\"" }
-  end
+  ParseHelper.csv_parse(s['keyfiles']) { |kf| @args << "-k \"keyfiles/#{kf}\"" } unless s['keyfiles'].nil?
+  ParseHelper.csv_parse(s['keyfiles_hidden']) { |kf| @args << "-f \"keyfiles/#{kf}\"" } unless s['keyfiles_hidden'].nil?
 
-  if not s['keyfiles_hidden'].nil?
-    s['keyfiles_hidden'].split(%r{\s*,\s*}).each { |kf| @args << "-f \"keyfiles/#{kf.strip}\"" }
-  end
-
-  if (not s['protect_hidden'].nil?) and s['protect_hidden'].casecmp("yes")
+  if ParseHelper.is_yes(s['protect_hidden'])
     @args << "-e"
     protect_hidden = true
   end
@@ -169,7 +121,6 @@ Given /^I request information about volume ([^\s]+) using the following settings
 
   @info = {}
 
-  IO.popen("losetup #{@loop_dev} volumes/#{vol}") { |io| Process.wait(io.pid) }
   IO.popen("#{@tcplay} #{@args.join(' ')}", mode='r+') do |tcplay_io|
     tcplay_io.expect /Passphrase:/, 10 do
       tcplay_io.write("#{s['passphrase']}\n")
@@ -186,8 +137,6 @@ Given /^I request information about volume ([^\s]+) using the following settings
       end
     end
   end
-  
-  IO.popen("losetup -d #{@loop_dev}")
 end
 
 
@@ -209,14 +158,13 @@ Before do
   @maps = []
   @info = {}
   @files_to_delete = []
-  @clean_loopdev = false
-  IO.popen("losetup -f") { |losetup_io| @loop_dev = losetup_io.read.chomp }
+  @losetup = LOSetupHelper.new
 end
 
 
 After('@cmdline') do
   IO.popen("#{@tcplay} -u tcplay_test") { |io| Process.wait(io.pid) } unless @maps.empty?
-  IO.popen("losetup -d #{@loop_dev}") { |io| Process.wait(io.pid) } if @clean_loopdev
+  @losetup.detach_all
 
   @files_to_delete.each { |f| File.unlink(f) }
 end

@@ -6,34 +6,24 @@ Given /^I map volume ([^\s]+) as ([^\s]+) with the API using the following setti
   protect_hidden = false
   s = settings.rows_hash
 
+  loop_dev = @losetup.get_device("volumes/#{vol}")
+
   opts = TCplayLib::TCApiOpts.new
 
   opts[:tc_map_name] = FFI::MemoryPointer.from_string(map)
-  opts[:tc_device] = FFI::MemoryPointer.from_string(@loop_dev)
+  opts[:tc_device] = FFI::MemoryPointer.from_string(loop_dev)
 
-  if not s['keyfiles'].nil?
-    keyfiles = []
-    s['keyfiles'].split(%r{\s*,\s*}).each { |kf| keyfiles << FFI::MemoryPointer.from_string("keyfiles/#{kf.strip}") }
-    keyfiles << nil
-
-    kfp = FFI::MemoryPointer.new(:pointer, keyfiles.length)
-    keyfiles.each_with_index { |p,i| kfp[i].write_pointer(p) }
-
-    opts[:tc_keyfiles] = kfp
+  unless s['keyfiles'].nil?
+    keyfiles = ParseHelper.csv_parse(s['keyfiles']) { |kf| "keyfiles/#{kf}" }
+    opts[:tc_keyfiles] = FFIHelper.str_array_to_p(keyfiles)
   end
 
-  if not s['keyfiles_hidden'].nil?
-    keyfiles_hidden = []
-    s['keyfiles_hidden'].split(%r{\s*,\s*}).each { |kf| keyfiles_hidden << FFI::MemoryPointer.from_string("keyfiles/#{kf.strip}") }
-    keyfiles_hidden << nil
-
-    kfp = FFI::MemoryPointer.new(:pointer, keyfiles_hidden.length)
-    keyfiles_hidden.each_with_index { |p,i| kfp[i].write_pointer(p) }
-
-    opts[:tc_keyfiles_hidden] = kfp
+  unless s['keyfiles_hidden'].nil?
+    keyfiles = ParseHelper.csv_parse(s['keyfiles_hidden']) { |kf| "keyfiles/#{kf}" }
+    opts[:tc_keyfiles_hidden] = FFIHelper.str_array_to_p(keyfiles)
   end
 
-  if (not s['protect_hidden'].nil?) and s['protect_hidden'].casecmp("yes")
+  if ParseHelper.is_yes(s['protect_hidden'])
     opts[:tc_protect_hidden] = 1
     protect_hidden = true
   end
@@ -43,10 +33,6 @@ Given /^I map volume ([^\s]+) as ([^\s]+) with the API using the following setti
   opts[:tc_interactive_prompt] = 0
   opts[:tc_use_system_encryption] = 0
 
-  @clean_loopdev = true
-
-  IO.popen("losetup #{@loop_dev} volumes/#{vol}") { |io| Process.wait(io.pid) }
-
   r = TCplayLib.tc_api_map_volume(opts)
   if (r == TCplayLib::TC_ERR)
     err_str = TCplayLib.tc_api_get_error_msg()
@@ -54,25 +40,7 @@ Given /^I map volume ([^\s]+) as ([^\s]+) with the API using the following setti
   end
   r.should == TCplayLib::TC_OK
 
-  @maps = []
-  IO.popen("dmsetup table --showkeys") do |dmsetup_io|
-    dmsetup_io.each do |line|
-      line.match(/^(#{map}.*):\s+(\d+)\s+(\d+)\s+crypt\s+([^\s]+)\s+([a-fA-F0-9]+)\s+(\d+)\s+[^\s]+\s+(\d+)/) do |m|
-        c = m.captures
-        mapping = {
-          :name       => c[0],
-          :begin      => c[1],
-          :end        => c[2],
-          :algo       => c[3],
-          :key        => c[4],
-          :offset     => c[5],
-          :iv_offset  => c[6]
-        }
-        @maps << mapping
-      end
-    end
-    @maps.sort! { |x,y| y[:name] <=> x[:name] }
-  end
+  @maps = DMSetupHelper.get_crypt_mappings("#{map}")
 end
 
 
@@ -80,33 +48,24 @@ Given /^I create a volume ([^\s]+) of size (\d+)M using the API with the followi
   create_hidden = false
   s = params.rows_hash
 
+  IO.popen("dd if=/dev/zero of=\"volumes/#{vol}\" bs=1M count=#{size_mb.to_i} status=none") { |io| Process.wait(io.pid) }
+  loop_dev = @losetup.get_device("volumes/#{vol}")
+
   opts = TCplayLib::TCApiOpts.new
 
-  opts[:tc_device] = FFI::MemoryPointer.from_string(@loop_dev)
+  opts[:tc_device] = FFI::MemoryPointer.from_string(loop_dev)
 
-  if not s['keyfiles'].nil?
-    keyfiles = []
-    s['keyfiles'].split(%r{\s*,\s*}).each { |kf| keyfiles << FFI::MemoryPointer.from_string("keyfiles/#{kf.strip}") }
-    keyfiles << nil
-
-    kfp = FFI::MemoryPointer.new(:pointer, keyfiles.length)
-    keyfiles.each_with_index { |p,i| kfp[i].write_pointer(p) }
-
-    opts[:tc_keyfiles] = kfp
+  unless s['keyfiles'].nil?
+    keyfiles = ParseHelper.csv_parse(s['keyfiles']) { |kf| "keyfiles/#{kf}" }
+    opts[:tc_keyfiles] = FFIHelper.str_array_to_p(keyfiles)
   end
 
-  if not s['keyfiles_hidden'].nil?
-    keyfiles_hidden = []
-    s['keyfiles_hidden'].split(%r{\s*,\s*}).each { |kf| keyfiles_hidden << FFI::MemoryPointer.from_string("keyfiles/#{kf.strip}") }
-    keyfiles_hidden << nil
-
-    kfp = FFI::MemoryPointer.new(:pointer, keyfiles_hidden.length)
-    keyfiles_hidden.each_with_index { |p,i| kfp[i].write_pointer(p) }
-
-    opts[:tc_keyfiles_hidden] = kfp
+  unless s['keyfiles_hidden'].nil?
+    keyfiles = ParseHelper.csv_parse(s['keyfiles_hidden']) { |kf| "keyfiles/#{kf}" }
+    opts[:tc_keyfiles_hidden] = FFIHelper.str_array_to_p(keyfiles)
   end
 
-  if (not s['create_hidden'].nil?) and s['create_hidden'].casecmp("yes")
+  if ParseHelper.is_yes(s['create_hidden'])
     opts[:tc_size_hidden_in_bytes] = 1024*1024*s['hidden_mb'].to_i
     create_hidden = true
   end
@@ -118,29 +77,15 @@ Given /^I create a volume ([^\s]+) of size (\d+)M using the API with the followi
   opts[:tc_no_secure_erase] = 1
   opts[:tc_use_weak_keys] = 1
 
-  if not s['pbkdf_prf'].nil?
-    opts[:tc_prf_hash] = FFI::MemoryPointer.from_string(s['pbkdf_prf'].strip)
-  end
-
-  if not s['cipher'].nil?
-    opts[:tc_cipher] = FFI::MemoryPointer.from_string(s['cipher'].strip)
-  end
-  
-  if not s['pbkdf_prf_hidden'].nil?
-    opts[:tc_prf_hash_hidden] = FFI::MemoryPointer.from_string(s['pbkdf_prf_hidden'].strip)
-  end
-  
-  if not s['cipher_hidden'].nil?
-    opts[:tc_cipher_hidden] = FFI::MemoryPointer.from_string(s['cipher_hidden'].strip)
-  end
+  opts[:tc_prf_hash] = FFI::MemoryPointer.from_string(s['pbkdf_prf'].strip) unless s['pbkdf_prf'].nil?
+  opts[:tc_cipher] = FFI::MemoryPointer.from_string(s['cipher'].strip) unless s['cipher'].nil?
+  opts[:tc_prf_hash_hidden] = FFI::MemoryPointer.from_string(s['pbkdf_prf_hidden'].strip) unless s['pbkdf_prf_hidden'].nil?
+  opts[:tc_cipher_hidden] = FFI::MemoryPointer.from_string(s['cipher_hidden'].strip) unless s['cipher_hidden'].nil?
   
   s['passphrase'] ||= ''
   s['passphrase_hidden'] ||= ''
 
   @files_to_delete << "volumes/#{vol}"
-
-  IO.popen("dd if=/dev/zero of=\"volumes/#{vol}\" bs=1M count=#{size_mb.to_i} status=none") { |io| Process.wait(io.pid) }
-  IO.popen("losetup #{@loop_dev} volumes/#{vol}") { |io| Process.wait(io.pid) }
 
   r = TCplayLib.tc_api_create_volume(opts)
   if (r == TCplayLib::TC_ERR)
@@ -148,8 +93,6 @@ Given /^I create a volume ([^\s]+) of size (\d+)M using the API with the followi
     puts "Error from tc_api_create_volume: #{err_str}"
   end
   r.should == TCplayLib::TC_OK
-
-  IO.popen("losetup -d #{@loop_dev}") { |io| Process.wait(io.pid) }
 end
 
 
@@ -158,33 +101,23 @@ Given /^I request information about volume ([^\s]+) with the API using the follo
   protect_hidden = false
   s = settings.rows_hash
 
+  loop_dev = @losetup.get_device("volumes/#{vol}")
+
   opts = TCplayLib::TCApiOpts.new
 
-  opts[:tc_device] = FFI::MemoryPointer.from_string(@loop_dev)
+  opts[:tc_device] = FFI::MemoryPointer.from_string(loop_dev)
 
-  if not s['keyfiles'].nil?
-    keyfiles = []
-    s['keyfiles'].split(%r{\s*,\s*}).each { |kf| keyfiles << FFI::MemoryPointer.from_string("keyfiles/#{kf.strip}") }
-    keyfiles << nil
-
-    kfp = FFI::MemoryPointer.new(:pointer, keyfiles.length)
-    keyfiles.each_with_index { |p,i| kfp[i].write_pointer(p) }
-
-    opts[:tc_keyfiles] = kfp
+  unless s['keyfiles'].nil?
+    keyfiles = ParseHelper.csv_parse(s['keyfiles']) { |kf| "keyfiles/#{kf}" }
+    opts[:tc_keyfiles] = FFIHelper.str_array_to_p(keyfiles)
   end
 
-  if not s['keyfiles_hidden'].nil?
-    keyfiles_hidden = []
-    s['keyfiles_hidden'].split(%r{\s*,\s*}).each { |kf| keyfiles_hidden << FFI::MemoryPointer.from_string("keyfiles/#{kf.strip}") }
-    keyfiles_hidden << nil
-
-    kfp = FFI::MemoryPointer.new(:pointer, keyfiles_hidden.length)
-    keyfiles_hidden.each_with_index { |p,i| kfp[i].write_pointer(p) }
-
-    opts[:tc_keyfiles_hidden] = kfp
+  unless s['keyfiles_hidden'].nil?
+    keyfiles = ParseHelper.csv_parse(s['keyfiles_hidden']) { |kf| "keyfiles/#{kf}" }
+    opts[:tc_keyfiles_hidden] = FFIHelper.str_array_to_p(keyfiles)
   end
 
-  if (not s['protect_hidden'].nil?) and s['protect_hidden'].casecmp("yes")
+  if ParseHelper.is_yes(s['protect_hidden'])
     opts[:tc_protect_hidden] = 1
     protect_hidden = true
   end
@@ -195,9 +128,6 @@ Given /^I request information about volume ([^\s]+) with the API using the follo
   opts[:tc_use_system_encryption] = 0
 
   @info = {}
-
-  @clean_loopdev = false
-  IO.popen("losetup #{@loop_dev} volumes/#{vol}") { |io| Process.wait(io.pid) }
 
   api_info = TCplayLib::TCApiVolinfo.new
 
@@ -214,8 +144,6 @@ Given /^I request information about volume ([^\s]+) with the API using the follo
   @info['volume size'] = "#{api_info[:tc_size]} bytes"
   @info['iv offset'] =  "#{api_info[:tc_iv_offset]} bytes"
   @info['block offset'] = "#{api_info[:tc_block_offset]} bytes"
-  
-  IO.popen("losetup -d #{@loop_dev}") { |io| Process.wait(io.pid) }
 end
 
 
@@ -234,11 +162,10 @@ After('@api') do
     r.should == TCplayLib::TC_OK
   end
 
-  IO.popen("losetup -d #{@loop_dev}") { |io| Process.wait(io.pid) } if @clean_loopdev
-  
+  @losetup.detach_all
+
   r = TCplayLib.tc_api_uninit()
   r.should == TCplayLib::TC_OK
 
   @files_to_delete.each { |f| File.unlink(f) }
 end
-
