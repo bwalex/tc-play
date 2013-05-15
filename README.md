@@ -90,6 +90,14 @@ Please refer to the man pages bundled with tcplay.
 
 
 
+Download for packaging
+==========
+Latest release can be found as a (source) zip at:
+
+https://github.com/bwalex/tc-play/archive/v1.0.zip
+
+
+
 Bugs
 ==========
 Please report all bugs on the github issue tracker. If appropriate, please
