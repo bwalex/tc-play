@@ -253,9 +253,9 @@ tc_api_info_mapped_volume(tc_api_opts *api_opts, tc_api_volinfo *vol_info)
 	    info->cipher_chain);
 	vol_info->tc_key_bits = 8*tc_cipher_chain_klen(info->cipher_chain);
 	strncpy(vol_info->tc_prf, "(unknown)", sizeof(vol_info->tc_prf));
-	vol_info->tc_size = info->size * (off_t)info->hdr->sec_sz;
-	vol_info->tc_iv_offset = info->skip * (off_t)info->hdr->sec_sz;
-	vol_info->tc_block_offset = info->offset * (off_t)info->hdr->sec_sz;
+	vol_info->tc_size = info->size * (off_t)512;
+	vol_info->tc_iv_offset = info->skip * (off_t)512;
+	vol_info->tc_block_offset = info->offset * (off_t)512;
 
 	free_safe_mem(info);
 
