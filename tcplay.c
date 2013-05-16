@@ -1351,7 +1351,7 @@ dm_info_map(const char *map_name)
 	 */
 	/* First find which cipher chain we are using */
 	ciphers[0] = '\0';
-	for (i = 2; i >= 0; i--) {
+	for (i = 0; i < 3; i++) {
 		if (dm_table[i] == NULL)
 			continue;
 
