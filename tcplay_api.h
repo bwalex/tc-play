@@ -87,6 +87,7 @@ extern "C" {
 int tc_api_init(int verbose);
 int tc_api_uninit(void);
 int tc_api_info_volume(tc_api_opts *api_opts, tc_api_volinfo *vol_info);
+int tc_api_info_mapped_volume(tc_api_opts *api_opts, tc_api_volinfo *vol_info);
 int tc_api_create_volume(tc_api_opts *api_opts);
 int tc_api_map_volume(tc_api_opts *api_opts);
 int tc_api_unmap_volume(tc_api_opts *api_opts);

@@ -11,6 +11,7 @@ global:
 	tc_api_get_summary;
 	tc_api_get_state;
 	tc_api_info_volume;
+	tc_api_info_mapped_volume;
 local:
 	*;
 };
