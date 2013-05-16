@@ -62,6 +62,7 @@ usage(void)
 	    "              [-s system_device]\n"
 	    "       tcplay -m mapping -d device [-e] [-f keyfile_hidden] [-k keyfile]\n"
 	    "              [-s system_device]\n"
+	    "       tcplay -j mapping\n"
 	    "       tcplay -u mapping\n"
 	    "       tcplay -h | -v\n"
 	    "\n"
@@ -72,11 +73,13 @@ usage(void)
 	    "\t Print help message and exit.\n"
 	    " -i, --info\n"
 	    "\t Gives information about the TC volume specified by -d or --device.\n"
+	    " -j <mapping name>, --info-mapped=<mapping name>\n"
+	    "\t Gives information about the mapped TC volume under the given mapping.\n"
 	    " -m <mapping name>, --map=<mapping name>\n"
 	    "\t Creates a dm-crypt mapping with the given name for the device\n"
 	    "\t specified by -d or --device.\n"
 	    " -u <mapping name>, --unmap=<mapping name>\n"
-	    "\t Removes a dm-crypt mapping with the given name\n"
+	    "\t Removes a dm-crypt mapping with the given name.\n"
 	    " -v, --version\n"
 	    "\t Print version message and exit.\n"
 	    "\n"
@@ -135,6 +138,7 @@ static struct option longopts[] = {
 	{ "pbkdf-prf",		required_argument,	NULL, 'a' },
 	{ "pbkdf-prf-hidden",	required_argument,	NULL, 'x' },
 	{ "info",		no_argument,		NULL, 'i' },
+	{ "info-mapped",	required_argument,	NULL, 'j' },
 	{ "map",		required_argument,	NULL, 'm' },
 	{ "keyfile",		required_argument,	NULL, 'k' },
 	{ "keyfile-hidden",	required_argument,	NULL, 'f' },
@@ -159,7 +163,7 @@ main(int argc, char *argv[])
 	int n_hkeyfiles;
 	int ch, error;
 	int sflag = 0, info_vol = 0, map_vol = 0, protect_hidden = 0,
-	    unmap_vol = 0,
+	    unmap_vol = 0, info_map = 0,
 	    create_vol = 0, contain_hidden = 0, use_secure_erase = 1,
 	    use_weak_keys = 0;
 	struct pbkdf_prf_algo *prf = NULL;
@@ -179,7 +183,7 @@ main(int argc, char *argv[])
 	nkeyfiles = 0;
 	n_hkeyfiles = 0;
 
-	while ((ch = getopt_long(argc, argv, "a:b:cd:ef:ghik:m:s:u:vwx:y:z",
+	while ((ch = getopt_long(argc, argv, "a:b:cd:ef:ghij:k:m:s:u:vwx:y:z",
 	    longopts, NULL)) != -1) {
 		switch(ch) {
 		case 'a':
@@ -221,6 +225,10 @@ main(int argc, char *argv[])
 			break;
 		case 'i':
 			info_vol = 1;
+			break;
+		case 'j':
+			info_map = 1;
+			map_name = optarg;
 			break;
 		case 'k':
 			keyfiles[nkeyfiles++] = optarg;
@@ -284,7 +292,8 @@ main(int argc, char *argv[])
 	argv += optind;
 
 	/* Check arguments */
-	if (!(((map_vol || info_vol || create_vol) && dev != NULL) || unmap_vol) ||
+	if (!(((map_vol || info_vol || create_vol) && dev != NULL) ||
+	    ((unmap_vol || info_map) && map_name != NULL)) ||
 	    (map_vol && info_vol) ||
 	    (map_vol && create_vol) ||
 	    (unmap_vol && map_vol) ||
@@ -310,6 +319,8 @@ main(int argc, char *argv[])
 		if (error) {
 			tc_log(1, "could not create new volume on %s\n", dev);
 		}
+	} else if (info_map) {
+		error = info_mapped_volume(map_name, 1 /* interactive */);
 	} else if (info_vol) {
 		error = info_volume(dev, sflag, sys_dev, protect_hidden,
 		    keyfiles, nkeyfiles, h_keyfiles, n_hkeyfiles, NULL, NULL,

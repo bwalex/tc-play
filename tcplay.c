@@ -27,7 +27,9 @@
  * SUCH DAMAGE.
  */
 
+#define _BSD_SOURCE
 #include <sys/types.h>
+#include <sys/stat.h>
 
 #if defined(__DragonFly__)
 #include <sys/param.h>
@@ -49,6 +51,8 @@
 #include <libdm.h>
 #include <uuid.h>
 #endif
+
+#include <dirent.h>
 
 #include "crc32.h"
 #include "tcplay.h"
@@ -225,7 +229,7 @@ tc_dup_cipher_chain(struct tc_cipher_chain *src)
 
 		if (prev != NULL)
 			prev->next = elem;
-		
+
 		prev = elem;
 	}
 
@@ -261,6 +265,37 @@ tc_cipher_chain_length(struct tc_cipher_chain *chain)
 	return len;
 }
 
+int
+tc_cipher_chain_klen(struct tc_cipher_chain *chain)
+{
+	int klen_bytes = 0;
+
+	for (; chain != NULL; chain = chain->next) {
+		klen_bytes += chain->cipher->klen;
+	}
+
+	return klen_bytes;
+}
+
+char *
+tc_cipher_chain_sprint(char *buf, size_t bufsz, struct tc_cipher_chain *chain)
+{
+	static char sbuf[256];
+	int n = 0;
+
+	if (buf == NULL) {
+		buf = sbuf;
+		bufsz = sizeof(sbuf);
+	}
+
+	for (; chain != NULL; chain = chain->next) {
+		n += snprintf(buf+n, bufsz-n, "%s%s", chain->cipher->name,
+		    (chain->next != NULL) ? "," : "\0");
+	}
+
+	return buf;
+}
+
 #ifdef DEBUG
 static void
 print_hex(unsigned char *buf, off_t start, size_t len)
@@ -277,24 +312,24 @@ print_hex(unsigned char *buf, off_t start, size_t len)
 void
 print_info(struct tcplay_info *info)
 {
-	struct tc_cipher_chain *cipher_chain;
-	int klen = 0;
-
-	printf("PBKDF2 PRF:\t\t%s\n", info->pbkdf_prf->name);
-	printf("PBKDF2 iterations:\t%d\n", info->pbkdf_prf->iteration_count);
-
-	printf("Cipher:\t\t\t");
-	for (cipher_chain = info->cipher_chain;
-	    cipher_chain != NULL;
-	    cipher_chain = cipher_chain->next) {
-		printf("%s%c", cipher_chain->cipher->name,
-		    (cipher_chain->next != NULL) ? ',' : '\n');
-		klen += cipher_chain->cipher->klen;
+	if (info->pbkdf_prf != NULL) {
+		printf("PBKDF2 PRF:\t\t%s\n", info->pbkdf_prf->name);
+		printf("PBKDF2 iterations:\t%d\n",
+		    info->pbkdf_prf->iteration_count);
 	}
 
-	printf("Key Length:\t\t%d bits\n", klen*8);
-	printf("CRC Key Data:\t\t%#x\n", info->hdr->crc_keys);
-	printf("Sector size:\t\t%d\n", info->hdr->sec_sz);
+	printf("Cipher:\t\t\t%s\n",
+	    tc_cipher_chain_sprint(NULL, 0, info->cipher_chain));
+
+	printf("Key Length:\t\t%d bits\n",
+	    8*tc_cipher_chain_klen(info->cipher_chain));
+
+	if (info->hdr != NULL) {
+		printf("CRC Key Data:\t\t%#x\n", info->hdr->crc_keys);
+		printf("Sector size:\t\t%d\n", info->hdr->sec_sz);
+	} else {
+		printf("Sector size:\t\t512\n");
+	}
 	printf("Volume size:\t\t%zu sectors\n", info->size);
 #if 0
 	/* Don't print this; it's always 0 and is rather confusing */
@@ -321,7 +356,7 @@ new_info(const char *dev, int sflag, struct tc_cipher_chain *cipher_chain,
 		return NULL;
 	}
 
-	info->dev = dev;
+	strncpy(info->dev, dev, sizeof(info->dev));
 	info->cipher_chain = cipher_chain;
 	info->pbkdf_prf = prf;
 	info->start = start;
@@ -991,6 +1026,28 @@ out:
 }
 
 int
+info_mapped_volume(const char *map_name, int interactive)
+{
+	struct tcplay_info *info;
+
+	info = dm_info_map(map_name);
+	if (info != NULL) {
+		if (interactive)
+			print_info(info);
+
+		free_info(info);
+
+		return 0;
+		/* NOT REACHED */
+	} else if (interactive) {
+		tc_log(1, "Could not retrieve information about mapped "
+		    "volume %s. Does it exist?\n", map_name);
+	}
+
+	return -1;
+}
+
+int
 info_volume(const char *device, int sflag, const char *sys_dev,
     int protect_hidden, const char *keyfiles[], int nkeyfiles,
     const char *h_keyfiles[], int n_hkeyfiles,
@@ -1052,11 +1109,10 @@ map_volume(const char *map_name, const char *device, int sflag,
 
 static
 int
-dm_exists_device(const char *name)
+dm_get_info(const char *name, struct dm_info *dmi)
 {
 	struct dm_task *dmt = NULL;
-	struct dm_info dmi;
-	int exists = 0;
+	int error = -1;
 
 	if ((dmt = dm_task_create(DM_DEVICE_INFO)) == NULL)
 		goto out;
@@ -1067,15 +1123,298 @@ dm_exists_device(const char *name)
 	if ((dm_task_run(dmt)) == 0)
 		goto out;
 
-	if ((dm_task_get_info(dmt, &dmi)) == 0)
+	if ((dm_task_get_info(dmt, dmi)) == 0)
 		goto out;
 
-	exists = dmi.exists;
+	error = 0;
 
 out:
 	if (dmt)
 		dm_task_destroy(dmt);
 
+	return error;
+}
+
+#if defined(__DragonFly__)
+static
+int
+xlate_maj_min(char *start_path __unused, int max_depth __unused,
+    char *buf, size_t bufsz, uint32_t maj, uint32_t min)
+{
+	dev_t dev = makedev(maj, min);
+
+	snprintf(buf, bufsz, "/dev/%s", devname(dev, S_IFCHR));
+	return 1;
+}
+#else
+static
+int
+xlate_maj_min(const char *start_path, int max_depth, char *buf, size_t bufsz,
+    uint32_t maj, uint32_t min)
+{
+	dev_t dev = makedev(maj, min);
+	char path[PATH_MAX];
+	struct stat sb;
+	struct dirent *ent;
+	DIR *dirp;
+	int found = 0;
+
+	if (max_depth <= 0)
+		return -1;
+
+	if ((dirp = opendir(start_path)) == NULL)
+		return -1;
+
+	while ((ent = readdir(dirp)) != NULL) {
+		/* d_name, d_type, DT_BLK, DT_CHR, DT_DIR, DT_LNK */
+		if (ent->d_name[0] == '.')
+			continue;
+
+		/* Linux' /dev is littered with junk, so skip over it */
+		/*
+		 * The dm-<number> devices seem to be the raw DM devices
+		 * things in mapper/ link to.
+		 */
+		if (((strcmp(ent->d_name, "block")) == 0) ||
+		    ((strcmp(ent->d_name, "fd")) == 0) ||
+                    (((strncmp(ent->d_name, "dm-", 3) == 0) && strlen(ent->d_name) <= 5)))
+			continue;
+
+		snprintf(path, PATH_MAX, "%s/%s", start_path, ent->d_name);
+
+		if ((stat(path, &sb)) < 0)
+			continue;
+
+		if (S_ISDIR(sb.st_mode)) {
+			found = !xlate_maj_min(path, max_depth-1, buf, bufsz, maj, min);
+			if (found)
+				break;
+		}
+
+		if (!S_ISBLK(sb.st_mode))
+			continue;
+
+		if (sb.st_rdev != dev)
+			continue;
+
+		snprintf(buf, bufsz, "%s", path);
+		found = 1;
+		break;
+	}
+
+	if (dirp)
+		closedir(dirp);
+
+	return found ? 0 : -ENOENT;
+}
+#endif
+
+static
+struct tcplay_dm_table *
+dm_get_table(const char *name)
+{
+	struct tcplay_dm_table *tc_table;
+	struct dm_task *dmt = NULL;
+	void *next = NULL;
+	uint64_t start, length;
+	char *target_type;
+	char *params;
+	char *p1;
+	int c = 0;
+	uint32_t maj, min;
+
+	if ((tc_table = (struct tcplay_dm_table *)alloc_safe_mem(sizeof(*tc_table))) == NULL) {
+		tc_log(1, "could not allocate safe tc_table memory\n");
+		return NULL;
+	}
+
+	if ((dmt = dm_task_create(DM_DEVICE_TABLE)) == NULL)
+		goto error;
+
+	if ((dm_task_set_name(dmt, name)) == 0)
+		goto error;
+
+	if ((dm_task_run(dmt)) == 0)
+		goto error;
+
+	next = dm_get_next_target(dmt, next, &start, &length, &target_type,
+	    &params);
+
+	tc_table->start = (off_t)start;
+	tc_table->size = (size_t)length;
+	strncpy(tc_table->target, target_type, sizeof(tc_table->target));
+
+	/* Skip any leading whitespace */
+	while (params && *params == ' ')
+		params++;
+
+	if (strcmp(target_type, "crypt") == 0) {
+		while ((p1 = strsep(&params, " ")) != NULL) {
+			/* Skip any whitespace before the next strsep */
+			while (params && *params == ' ')
+				params++;
+
+			/* Process p1 */
+			if (c == 0) {
+				/* cipher */
+				strncpy(tc_table->cipher, p1,
+				    sizeof(tc_table->cipher));
+			} else if (c == 2) {
+				/* iv offset */
+				tc_table->skip = (off_t)strtoll(p1, NULL, 10);
+			} else if (c == 3) {
+				/* major:minor */
+				maj = strtoul(p1, NULL, 10);
+				while (*p1 != ':' && *p1 != '\0')
+					p1++;
+				min = strtoul(++p1, NULL, 10);
+				if ((xlate_maj_min("/dev", 2, tc_table->device,
+				    sizeof(tc_table->device), maj, min)) != 0)
+					snprintf(tc_table->device,
+					    sizeof(tc_table->device), "%u:%u",
+					    maj, min);
+			} else if (c == 4) {
+				/* block offset */
+				tc_table->offset = (off_t)strtoll(p1, NULL, 10);
+			}
+			++c;
+		}
+
+		if (c != 5) {
+			tc_log(1, "could not get all the info required from "
+			    "the table\n");
+			goto error;
+		}
+	}
+
+	if (dmt)
+		dm_task_destroy(dmt);
+
+#ifdef DEBUG
+	printf("device: %s\n", tc_table->device);
+	printf("target: %s\n", tc_table->target);
+	printf("cipher: %s\n", tc_table->cipher);
+	printf("size:   %ju\n", tc_table->size);
+	printf("offset: %"PRId64"\n", tc_table->offset);
+	printf("skip:   %"PRId64"\n", tc_table->skip);
+#endif
+
+	return tc_table;
+
+error:
+	if (dmt)
+		dm_task_destroy(dmt);
+	if (tc_table)
+		free_safe_mem(tc_table);
+
+	return NULL;
+}
+
+struct tcplay_info *
+dm_info_map(const char *map_name)
+{
+	struct dm_task *dmt = NULL;
+	struct dm_info dmi[3];
+	struct tcplay_dm_table *dm_table[3];
+	struct tc_crypto_algo *crypto_algo;
+	struct tcplay_info *info;
+	char map[PATH_MAX];
+	char ciphers[512];
+	int i, outermost = -1;
+
+	memset(dm_table, 0, sizeof(dm_table));
+
+	if ((info = (struct tcplay_info *)alloc_safe_mem(sizeof(*info))) == NULL) {
+		tc_log(1, "could not allocate safe info memory\n");
+		return NULL;
+	}
+
+	strncpy(map, map_name, PATH_MAX);
+	for (i = 0; i < 3; i++) {
+		if ((dm_get_info(map, &dmi[i])) != 0)
+			goto error;
+
+		if (dmi[i].exists)
+			dm_table[i] = dm_get_table(map);
+
+		snprintf(map, PATH_MAX, "%s.%d", map_name, i);
+	}
+
+	if (dmt)
+		dm_task_destroy(dmt);
+
+	if (dm_table[0] == NULL)
+		goto error;
+
+	/*
+	 * Process our dmi, dm_table fun into the info structure.
+	 */
+	/* First find which cipher chain we are using */
+	ciphers[0] = '\0';
+	for (i = 2; i >= 0; i--) {
+		if (dm_table[i] == NULL)
+			continue;
+
+		if (outermost < i)
+			outermost = i;
+
+		crypto_algo = &tc_crypto_algos[0];
+		while ((crypto_algo != NULL) &&
+		    (strcmp(dm_table[i]->cipher, crypto_algo->dm_crypt_str) != 0))
+			++crypto_algo;
+		if (crypto_algo == NULL) {
+			tc_log(1, "could not find corresponding cipher\n");
+			goto error;
+		}
+		strcat(ciphers, crypto_algo->name);
+		strcat(ciphers, ",");
+	}
+	ciphers[strlen(ciphers)-1] = '\0';
+
+	info->cipher_chain = check_cipher_chain(ciphers, 1);
+	if (info->cipher_chain == NULL) {
+		tc_log(1, "could not find cipher chain\n");
+		goto error;
+	}
+
+	/* Copy over the name */
+	strncpy(info->dev, dm_table[outermost]->device, sizeof(info->dev));
+
+	/* Other fields */
+	info->hdr = NULL;
+	info->pbkdf_prf = NULL;
+	info->start = dm_table[outermost]->start;
+	info->size = dm_table[0]->size;
+	info->skip = dm_table[outermost]->skip;
+	info->offset = dm_table[outermost]->offset;
+
+	return info;
+
+error:
+	if (dmt)
+		dm_task_destroy(dmt);
+	if (info)
+		free_safe_mem(info);
+	for (i = 0; i < 3; i++)
+		if (dm_table[i] != NULL)
+			free_safe_mem(dm_table[i]);
+
+	return NULL;
+}
+
+static
+int
+dm_exists_device(const char *name)
+{
+	struct dm_info dmi;
+	int exists = 0;
+
+	if (dm_get_info(name, &dmi) != 0)
+		goto out;
+
+	exists = dmi.exists;
+
+out:
 	return exists;
 }
 

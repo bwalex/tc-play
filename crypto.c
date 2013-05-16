@@ -50,12 +50,7 @@ tc_cipher_chain_populate_keys(struct tc_cipher_chain *cipher_chain,
 	 * We need to determine the total key bytes as the key locations
 	 * depend on it.
 	 */
-	total_key_bytes = 0;
-	for (dummy_chain = cipher_chain;
-	    dummy_chain != NULL;
-	    dummy_chain = dummy_chain->next) {
-		total_key_bytes += dummy_chain->cipher->klen;
-	}
+	total_key_bytes = tc_cipher_chain_klen(cipher_chain);
 
 	/*
 	 * Now we need to get prepare the keys, as the keys are in

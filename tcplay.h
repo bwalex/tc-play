@@ -61,6 +61,7 @@
 #define DEBUG 1
 #endif
 
+#include <limits.h>
 #include <inttypes.h>
 
 #if defined(__DragonFly__)
@@ -120,7 +121,7 @@ struct tchdr_dec {
 } __attribute__((__packed__));
 
 struct tcplay_info {
-	const char *dev;
+	char dev[PATH_MAX];
 	struct tchdr_dec *hdr;
 	struct tc_cipher_chain *cipher_chain;
 	struct pbkdf_prf_algo *pbkdf_prf;
@@ -133,6 +134,17 @@ struct tcplay_info {
 
 	/* Populated by dm_setup */
 	uuid_t uuid;
+};
+
+struct tcplay_dm_table {
+	char device[PATH_MAX];	/* Underlying device */
+	char target[256];	/* DM Target type */
+	off_t start;		/* Logical volume offset in table */
+	size_t size;		/* Volume size */
+
+	char cipher[256];	/* Cipher */
+	off_t skip;		/* IV offset */
+	off_t offset;		/* Block offset */
 };
 
 void *read_to_safe_mem(const char *file, off_t offset, size_t *sz);
@@ -188,6 +200,9 @@ struct pbkdf_prf_algo *check_prf_algo(const char *algo, int quiet);
 
 int tc_play_init(void);
 void tc_log(int err, const char *fmt, ...);
+int tc_cipher_chain_klen(struct tc_cipher_chain *chain);
+char *tc_cipher_chain_sprint(char *buf, size_t bufsz,
+    struct tc_cipher_chain *chain);
 void print_info(struct tcplay_info *info);
 int adjust_info(struct tcplay_info *info, struct tcplay_info *hinfo);
 int process_hdr(const char *dev, int sflag, unsigned char *pass, int passlen,
@@ -203,6 +218,7 @@ struct tcplay_info *info_map_common(const char *dev, int sflag,
     int nkeyfiles, const char *h_keyfiles[], int n_hkeyfiles,
     const char *passphrase, const char *passphrase_hidden, int interactive,
     int retries, time_t timeout);
+int info_mapped_volume(const char *map_name, int interactive);
 int info_volume(const char *device, int sflag, const char *sys_dev,
     int protect_hidden, const char *keyfiles[], int nkeyfiles,
     const char *h_keyfiles[], int n_hkeyfiles,
@@ -215,6 +231,7 @@ int map_volume(const char *map_name, const char *device, int sflag,
     int retries, time_t timeout);
 int dm_setup(const char *mapname, struct tcplay_info *info);
 int dm_teardown(const char *mapname, const char *device);
+struct tcplay_info *dm_info_map(const char *map_name);
 
 typedef void(*summary_fn_t)(void);
 

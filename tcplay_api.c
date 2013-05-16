@@ -186,10 +186,7 @@ int
 tc_api_info_volume(tc_api_opts *api_opts, tc_api_volinfo *vol_info)
 {
 	struct tcplay_info *info;
-	struct tc_cipher_chain *cipher_chain;
 	int nkeyfiles, n_hkeyfiles = 0;
-	int klen = 0;
-	int n;
 
 	if ((api_opts == NULL) ||
 	    (vol_info == NULL) ||
@@ -222,16 +219,9 @@ tc_api_info_volume(tc_api_opts *api_opts, tc_api_volinfo *vol_info)
 	if (info == NULL || info->hdr == NULL)
 		return TC_ERR;
 
-	for (cipher_chain = info->cipher_chain, n = 0;
-	     cipher_chain != NULL;
-	     cipher_chain = cipher_chain->next) {
-		n += snprintf(vol_info->tc_cipher+n,
-			      sizeof(vol_info->tc_cipher)-n,
-			      "%s%s", cipher_chain->cipher->name,
-			      (cipher_chain->next != NULL) ? "," : "");
-		klen += cipher_chain->cipher->klen;
-	}
-	vol_info->tc_key_bits = 8*klen;
+	tc_cipher_chain_sprint(vol_info->tc_cipher, sizeof(vol_info->tc_cipher),
+	    info->cipher_chain);
+	vol_info->tc_key_bits = 8*tc_cipher_chain_klen(info->cipher_chain);
 	strncpy(vol_info->tc_prf, info->pbkdf_prf->name, sizeof(vol_info->tc_prf));
 	vol_info->tc_size = info->size * (off_t)info->hdr->sec_sz;
 	vol_info->tc_iv_offset = info->skip * (off_t)info->hdr->sec_sz;

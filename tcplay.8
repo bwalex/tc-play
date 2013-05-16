@@ -29,7 +29,7 @@
 .\" OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.Dd July 5, 2011
+.Dd May 16, 2013
 .Dt TCPLAY 8
 .Os
 .Sh NAME
@@ -55,6 +55,8 @@
 .Op Fl f Ar keyfile_hidden
 .Op Fl k Ar keyfile
 .Op Fl s Ar system_device
+.Nm
+.Fl j Ar mapping
 .Nm
 .Fl m Ar mapping
 .Fl d Ar device
@@ -83,6 +85,12 @@ Print help message and exit.
 .It Fl i , Fl -info
 Print out information about the encrypted device specified by
 .Fl -device .
+.It Fl j Ar mapping , Fl -info-mapped Ns = Ns Ar mapping
+Print out information about the mapped tcplay volume specified
+by
+.Ar mapping .
+Information such as key CRC and the PBKDF2 PRF is not available
+via this command.
 .It Fl m Ar mapping , Fl -map Ns = Ns Ar mapping
 Map the encrypted TrueCrypt volume on the device specified by
 .Fl -device
