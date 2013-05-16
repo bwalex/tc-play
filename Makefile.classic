@@ -15,7 +15,7 @@ LN?=ln
 DEBUG?=no
 
 MAJ_VER=1
-MIN_VER=0
+MIN_VER=1
 
 
 # I've given up on -Werror for now; many Linux distros have warnings even in
