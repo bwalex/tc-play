@@ -141,6 +141,24 @@ Given /^I request information about volume ([^\s]+) using the following settings
 end
 
 
+Given /^I request information about mapped volume ([^\s]+)$/ do |map|
+  @args = [
+    "-j #{map}"
+  ]
+
+  @info = {}
+
+  IO.popen("#{@tcplay} #{@args.join(' ')}", mode='r+') do |tcplay_io|
+    tcplay_io.each do |line|
+      line.match(/^(.*):\s+(.*)$/) do |m|
+        c = m.captures
+        @info[c[0].downcase.strip] = c[1].downcase
+      end
+    end
+  end
+end
+
+
 Then /^I expect dmsetup to have the following tables:$/ do |tables|
   tables.map_headers! { |h| h.to_sym }
   tables.diff!(@maps)

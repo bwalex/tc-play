@@ -60,6 +60,13 @@ keyfiles_hidden         | path_to_kf1, path_to_kf2, ...
 
 
 
+* "Given I request information about mapped volume <map_name>"
+* "Given I request information about mapped volume <map_name> with the API"
+
+Where <map_name> is the mapped name of a volume previously mapped.
+
+
+
 * "Given I create a volume <volume_name> of size <size_mb>M with the following parameters:"
 * "Given I create a volume <volume_name> of size <size_mb>M using the API with the following parameters:"
 
@@ -116,3 +123,7 @@ Key Length              | A string such as "512 bits"
 Volume size             | A string such as "20709376 bytes"
 IV offset               | A string such as "131072 bytes"
 Block offset            | A string such as "131072 bytes"
+
+The "Given I request information about mapped volume" steps will
+generate the same information, except the PBKDF2 and CRC Key Data
+fields will be missing.

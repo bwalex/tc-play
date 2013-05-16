@@ -135,7 +135,32 @@ Given /^I request information about volume ([^\s]+) with the API using the follo
   r = TCplayLib.tc_api_info_volume(opts, api_info)
   if (r == TCplayLib::TC_ERR)
     err_str = TCplayLib.tc_api_get_error_msg()
-    puts "Error from tc_api_map_volume: #{err_str}"
+    puts "Error from tc_api_info_volume: #{err_str}"
+  end
+  r.should == TCplayLib::TC_OK
+
+  @info['pbkdf2 prf'] = api_info[:tc_prf].to_ptr.get_string(0).downcase
+  @info['cipher'] = api_info[:tc_cipher].to_ptr.get_string(0).downcase
+  @info['key length'] = "#{api_info[:tc_key_bits].to_i} bits"
+  @info['volume size'] = "#{api_info[:tc_size]} bytes"
+  @info['iv offset'] =  "#{api_info[:tc_iv_offset]} bytes"
+  @info['block offset'] = "#{api_info[:tc_block_offset]} bytes"
+end
+
+
+Given /^I request information about mapped volume ([^\s]+) with the API$/ do |map|
+  opts = TCplayLib::TCApiOpts.new
+
+  opts[:tc_map_name] = FFI::MemoryPointer.from_string(map)
+
+  @info = {}
+
+  api_info = TCplayLib::TCApiVolinfo.new
+
+  r = TCplayLib.tc_api_info_mapped_volume(opts, api_info)
+  if (r == TCplayLib::TC_ERR)
+    err_str = TCplayLib.tc_api_get_error_msg()
+    puts "Error from tc_api_info_mapped_volume: #{err_str}"
   end
   r.should == TCplayLib::TC_OK
 

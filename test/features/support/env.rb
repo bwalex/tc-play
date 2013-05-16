@@ -47,6 +47,7 @@ module TCplayLib
   attach_function :tc_api_init, [ :int ], :int
   attach_function :tc_api_uninit, [ ], :int
   attach_function :tc_api_info_volume, [ TCApiOpts.by_ref, TCApiVolinfo.by_ref ], :int
+  attach_function :tc_api_info_mapped_volume, [ TCApiOpts.by_ref, TCApiVolinfo.by_ref ], :int
   attach_function :tc_api_create_volume, [ TCApiOpts.by_ref ], :int
   attach_function :tc_api_map_volume, [ TCApiOpts.by_ref ], :int
   attach_function :tc_api_unmap_volume, [ TCApiOpts.by_ref ], :int
