@@ -56,10 +56,17 @@
 #define TC_VOLFLAG_SYSTEM	0x01	/* system encryption */
 #define TC_VOLFLAG_INPLACE	0x02	/* non-system in-place-encrypted volume */
 
+#define TC_VOLFLAG_SET(f, x)	((f & TC_VOLFLAG_##x) == TC_VOLFLAG_##x)
+
 #define LOG_BUFFER_SZ		1024
 #if 0
 #define DEBUG 1
 #endif
+
+#define TC_FLAG_SYS		0x0001
+#define TC_FLAG_FDE		0x0002
+
+#define TC_FLAG_SET(f, x)	((f & TC_FLAG_##x) == TC_FLAG_##x)
 
 #include <limits.h>
 #include <inttypes.h>
@@ -103,18 +110,18 @@ struct tchdr_dec {
 	uint32_t	crc_keys;	/* CRC32 of the key section */
 	uint64_t	vol_ctime;	/* Volume creation time */
 	uint64_t	hdr_ctime;	/* Header creation time */
-	uint64_t	sz_hidvol;	/*  Size of hidden volume (set to zero
-					    in non-hidden volumes) */
-	uint64_t	sz_vol;		/*  Size of volume */
-	uint64_t	off_mk_scope;	/*  Byte offset of the start of the
-					    master key scope */
-	uint64_t	sz_mk_scope;	/*  Size of the encrypted area within
-					    the master key scope */
-	uint32_t	flags;		/*  Flag bits
-					    (bit 0: system encryption;
-					    bit 1: non-system in-place-encrypted volume;
-					    bits 2–31 are reserved) */
-	uint32_t	sec_sz;		/*  Sector size (in bytes) */
+	uint64_t	sz_hidvol;	/* Size of hidden volume (set to zero
+					   in non-hidden volumes) */
+	uint64_t	sz_vol;		/* Size of volume */
+	uint64_t	off_mk_scope;	/* Byte offset of the start of the
+					   master key scope */
+	uint64_t	sz_mk_scope;	/* Size of the encrypted area within
+					   the master key scope */
+	uint32_t	flags;		/* Flag bits
+					   (bit 0: system encryption;
+					   bit 1: non-system in-place-encrypted volume;
+					   bits 2–31 are reserved) */
+	uint32_t	sec_sz;		/* Sector size (in bytes) */
 	unsigned char	unused3[120];
 	uint32_t	crc_dhdr;	/* CRC32 of dec. header (except keys) */
 	unsigned char	keys[256];
@@ -126,6 +133,10 @@ struct tcplay_info {
 	struct tc_cipher_chain *cipher_chain;
 	struct pbkdf_prf_algo *pbkdf_prf;
 	char key[MAX_KEYSZ*2 + 1];
+
+	int flags;
+	int volflags;
+
 	off_t start;	/* Logical volume offset in table */
 	size_t size;	/* Volume size */
 
@@ -205,7 +216,7 @@ char *tc_cipher_chain_sprint(char *buf, size_t bufsz,
     struct tc_cipher_chain *chain);
 void print_info(struct tcplay_info *info);
 int adjust_info(struct tcplay_info *info, struct tcplay_info *hinfo);
-int process_hdr(const char *dev, int sflag, unsigned char *pass, int passlen,
+int process_hdr(const char *dev, int flags, unsigned char *pass, int passlen,
     struct tchdr_enc *ehdr, struct tcplay_info **pinfo);
 int create_volume(const char *dev, int hidden, const char *keyfiles[],
     int nkeyfiles, const char *h_keyfiles[], int n_hkeyfiles,
@@ -213,18 +224,18 @@ int create_volume(const char *dev, int hidden, const char *keyfiles[],
     struct pbkdf_prf_algo *h_prf_algo, struct tc_cipher_chain *h_cipher_chain,
     const char *passphrase, const char *h_passphrase, size_t hidden_bytes_in,
     int interactive, int secure_erase, int weak_keys);
-struct tcplay_info *info_map_common(const char *dev, int sflag,
+struct tcplay_info *info_map_common(const char *dev, int flags,
     const char *sys_dev, int protect_hidden, const char *keyfiles[],
     int nkeyfiles, const char *h_keyfiles[], int n_hkeyfiles,
     const char *passphrase, const char *passphrase_hidden, int interactive,
     int retries, time_t timeout);
 int info_mapped_volume(const char *map_name, int interactive);
-int info_volume(const char *device, int sflag, const char *sys_dev,
+int info_volume(const char *device, int flags, const char *sys_dev,
     int protect_hidden, const char *keyfiles[], int nkeyfiles,
     const char *h_keyfiles[], int n_hkeyfiles,
     const char *passphrase, const char *passphrase_hidden, int interactive,
     int retries, time_t timeout);
-int map_volume(const char *map_name, const char *device, int sflag,
+int map_volume(const char *map_name, const char *device, int flags,
     const char *sys_dev, int protect_hidden, const char *keyfiles[],
     int nkeyfiles, const char *h_keyfiles[], int n_hkeyfiles,
     const char *passphrase, const char *passphrase_hidden, int interactive,

@@ -43,6 +43,9 @@
 #define SIGINFO SIGUSR1
 #endif
 
+#define FLAG_LONG_FDE 0xff01
+
+
 static
 void
 sig_handler(int sig)
@@ -59,9 +62,9 @@ usage(void)
 	    "usage: tcplay -c -d device [-g] [-z] [-w] [-a pbkdb_hash] [-b cipher]\n"
 	    "              [-f keyfile_hidden] [-k keyfile] [-x pbkdf_hash] [-y cipher]\n"
 	    "       tcplay -i -d device [-e] [-f keyfile_hidden] [-k keyfile]\n"
-	    "              [-s system_device]\n"
+	    "              [-s system_device] [--fde]\n"
 	    "       tcplay -m mapping -d device [-e] [-f keyfile_hidden] [-k keyfile]\n"
-	    "              [-s system_device]\n"
+	    "              [-s system_device] [--fde]\n"
 	    "       tcplay -j mapping\n"
 	    "       tcplay -u mapping\n"
 	    "       tcplay -h | -v\n"
@@ -114,6 +117,8 @@ usage(void)
 	    "\t Protect a hidden volume when mounting the outer volume.\n"
 	    " -s <disk path>, --system-encryption=<disk path>\n"
 	    "\t Specifies that the disk (e.g. /dev/da0) is using system encryption.\n"
+	    "\t --fde\n"
+	    "\t Specifies that the disk (e.g. /dev/da0) is using full disk encryption.\n"
 	    "\n"
 	    "Valid options common to all commands are:\n"
 	    " -d <device path>, --device=<device path>\n"
@@ -145,6 +150,7 @@ static struct option longopts[] = {
 	{ "protect-hidden",	no_argument,		NULL, 'e' },
 	{ "device",		required_argument,	NULL, 'd' },
 	{ "system-encryption",	required_argument,	NULL, 's' },
+	{ "fde",		no_argument,		NULL, FLAG_LONG_FDE },
 	{ "unmap",		required_argument,	NULL, 'u' },
 	{ "version",		no_argument,		NULL, 'v' },
 	{ "weak-keys",		no_argument,		NULL, 'w' },
@@ -162,7 +168,8 @@ main(int argc, char *argv[])
 	int nkeyfiles;
 	int n_hkeyfiles;
 	int ch, error;
-	int sflag = 0, info_vol = 0, map_vol = 0, protect_hidden = 0,
+	int flags = 0;
+	int info_vol = 0, map_vol = 0, protect_hidden = 0,
 	    unmap_vol = 0, info_map = 0,
 	    create_vol = 0, contain_hidden = 0, use_secure_erase = 1,
 	    use_weak_keys = 0;
@@ -238,7 +245,7 @@ main(int argc, char *argv[])
 			map_name = optarg;
 			break;
 		case 's':
-			sflag = 1;
+			flags |= TC_FLAG_SYS;
 			sys_dev = optarg;
 			break;
 		case 'u':
@@ -276,9 +283,11 @@ main(int argc, char *argv[])
 				/* NOT REACHED */
 			}
 			break;
-
 		case 'z':
 			use_secure_erase = 0;
+			break;
+		case FLAG_LONG_FDE:
+			flags |= TC_FLAG_FDE;
 			break;
 		case 'h':
 		case '?':
@@ -294,6 +303,7 @@ main(int argc, char *argv[])
 	/* Check arguments */
 	if (!(((map_vol || info_vol || create_vol) && dev != NULL) ||
 	    ((unmap_vol || info_map) && map_name != NULL)) ||
+	    (TC_FLAG_SET(flags, SYS) && TC_FLAG_SET(flags, FDE)) ||
 	    (map_vol && info_vol) ||
 	    (map_vol && create_vol) ||
 	    (unmap_vol && map_vol) ||
@@ -301,7 +311,7 @@ main(int argc, char *argv[])
 	    (unmap_vol && create_vol) ||
 	    (create_vol && info_vol) ||
 	    (contain_hidden && !create_vol) ||
-	    (sflag && (sys_dev == NULL)) ||
+	    (TC_FLAG_SET(flags, SYS) && (sys_dev == NULL)) ||
 	    (map_vol && (map_name == NULL)) ||
 	    (unmap_vol && (map_name == NULL)) ||
 	    (!(protect_hidden || create_vol) && n_hkeyfiles > 0)) {
@@ -322,12 +332,12 @@ main(int argc, char *argv[])
 	} else if (info_map) {
 		error = info_mapped_volume(map_name, 1 /* interactive */);
 	} else if (info_vol) {
-		error = info_volume(dev, sflag, sys_dev, protect_hidden,
+		error = info_volume(dev, flags, sys_dev, protect_hidden,
 		    keyfiles, nkeyfiles, h_keyfiles, n_hkeyfiles, NULL, NULL,
 		    1 /* interactive */, DEFAULT_RETRIES, 0);
 	} else if (map_vol) {
 		error = map_volume(map_name,
-		    dev, sflag, sys_dev, protect_hidden,
+		    dev, flags, sys_dev, protect_hidden,
 		    keyfiles, nkeyfiles, h_keyfiles, n_hkeyfiles, NULL, NULL,
 		    1 /* interactive */, DEFAULT_RETRIES, 0);
 	} else if (unmap_vol) {

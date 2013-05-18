@@ -150,6 +150,7 @@ tc_api_map_volume(tc_api_opts *api_opts)
 {
 	int nkeyfiles, n_hkeyfiles = 0;
 	int err;
+	int flags = 0;
 
 	if ((api_opts == NULL) ||
 	    (api_opts->tc_map_name == NULL) ||
@@ -171,8 +172,13 @@ tc_api_map_volume(tc_api_opts *api_opts)
 			;
 	}
 
+	if (api_opts->tc_use_system_encryption)
+		flags |= TC_FLAG_SYS;
+	if (api_opts->tc_use_fde)
+		flags |= TC_FLAG_FDE;
+
 	err = map_volume(api_opts->tc_map_name, api_opts->tc_device,
-	    api_opts->tc_use_system_encryption, api_opts->tc_system_device,
+	    flags, api_opts->tc_system_device,
 	    api_opts->tc_protect_hidden, api_opts->tc_keyfiles, nkeyfiles,
 	    api_opts->tc_keyfiles_hidden, n_hkeyfiles,
 	    api_opts->tc_passphrase, api_opts->tc_passphrase_hidden,
@@ -187,6 +193,7 @@ tc_api_info_volume(tc_api_opts *api_opts, tc_api_volinfo *vol_info)
 {
 	struct tcplay_info *info;
 	int nkeyfiles, n_hkeyfiles = 0;
+	int flags = 0;
 
 	if ((api_opts == NULL) ||
 	    (vol_info == NULL) ||
@@ -208,8 +215,13 @@ tc_api_info_volume(tc_api_opts *api_opts, tc_api_volinfo *vol_info)
 			;
 	}
 
+	if (api_opts->tc_use_system_encryption)
+		flags |= TC_FLAG_SYS;
+	if (api_opts->tc_use_fde)
+		flags |= TC_FLAG_FDE;
+
 	info = info_map_common(api_opts->tc_device,
-	    api_opts->tc_use_system_encryption, api_opts->tc_system_device,
+	    flags, api_opts->tc_system_device,
 	    api_opts->tc_protect_hidden, api_opts->tc_keyfiles, nkeyfiles,
 	    api_opts->tc_keyfiles_hidden, n_hkeyfiles,
 	    api_opts->tc_passphrase, api_opts->tc_passphrase_hidden,
@@ -253,7 +265,7 @@ tc_api_info_mapped_volume(tc_api_opts *api_opts, tc_api_volinfo *vol_info)
 	    info->cipher_chain);
 	vol_info->tc_key_bits = 8*tc_cipher_chain_klen(info->cipher_chain);
 	strncpy(vol_info->tc_prf, "(unknown)", sizeof(vol_info->tc_prf));
-	vol_info->tc_size = info->size * (off_t)512;
+	vol_info->tc_size = info->size * (size_t)512;
 	vol_info->tc_iv_offset = info->skip * (off_t)512;
 	vol_info->tc_block_offset = info->offset * (off_t)512;
 

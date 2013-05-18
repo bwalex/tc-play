@@ -24,6 +24,7 @@ module TCplayLib
            :tc_prompt_timeout,        :ulong,
            :tc_use_system_encryption, :int,
            :tc_system_device,         :pointer,
+           :tc_use_fde,               :int,
 
     # Fields for creation
            :tc_cipher,                :pointer,

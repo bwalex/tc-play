@@ -335,13 +335,18 @@ print_info(struct tcplay_info *info)
 	/* Don't print this; it's always 0 and is rather confusing */
 	printf("Volume offset:\t\t%"PRIu64"\n", (uint64_t)info->start);
 #endif
+
+#ifdef DEBUG
+	printf("Vol Flags:\t\t%d\n", info->volflags);
+#endif
+
 	printf("IV offset:\t\t%"PRIu64"\n", (uint64_t)info->skip);
 	printf("Block offset:\t\t%"PRIu64"\n", (uint64_t)info->offset);
 }
 
 static
 struct tcplay_info *
-new_info(const char *dev, int sflag, struct tc_cipher_chain *cipher_chain,
+new_info(const char *dev, int flags, struct tc_cipher_chain *cipher_chain,
     struct pbkdf_prf_algo *prf, struct tchdr_dec *hdr, off_t start)
 {
 	struct tc_cipher_chain *chain_start;
@@ -364,7 +369,10 @@ new_info(const char *dev, int sflag, struct tc_cipher_chain *cipher_chain,
 	info->size = hdr->sz_mk_scope / hdr->sec_sz;	/* volume size */
 	info->skip = hdr->off_mk_scope / hdr->sec_sz;	/* iv skip */
 
-	if (sflag)
+	info->volflags = hdr->flags;
+	info->flags = flags;
+
+	if (TC_FLAG_SET(flags, SYS))
 		info->offset = 0; /* offset is 0 for system volumes */
 	else
 		info->offset = hdr->off_mk_scope / hdr->sec_sz;	/* block offset */
@@ -412,7 +420,7 @@ adjust_info(struct tcplay_info *info, struct tcplay_info *hinfo)
 }
 
 int
-process_hdr(const char *dev, int sflag, unsigned char *pass, int passlen,
+process_hdr(const char *dev, int flags, unsigned char *pass, int passlen,
     struct tchdr_enc *ehdr, struct tcplay_info **pinfo)
 {
 	struct tchdr_dec *dhdr;
@@ -491,7 +499,7 @@ process_hdr(const char *dev, int sflag, unsigned char *pass, int passlen,
 	if (!found)
 		return EINVAL;
 
-	if ((info = new_info(dev, sflag, cipher_chain,
+	if ((info = new_info(dev, flags, cipher_chain,
 	    &pbkdf_prf_algos[i-1], dhdr, 0)) == NULL) {
 		free_safe_mem(dhdr);
 		return ENOMEM;
@@ -816,7 +824,7 @@ out:
 }
 
 struct tcplay_info *
-info_map_common(const char *dev, int sflag, const char *sys_dev,
+info_map_common(const char *dev, int flags, const char *sys_dev,
     int protect_hidden, const char *keyfiles[], int nkeyfiles,
     const char *h_keyfiles[], int n_hkeyfiles, const char *passphrase,
     const char *passphrase_hidden, int interactive, int retries,
@@ -914,14 +922,16 @@ info_map_common(const char *dev, int sflag, const char *sys_dev,
 		/* Always read blksz-sized chunks */
 		sz = blksz;
 
-		ehdr = (struct tchdr_enc *)read_to_safe_mem((sflag) ? sys_dev : dev,
-		    (sflag) ? HDR_OFFSET_SYS : 0, &sz);
+		ehdr = (struct tchdr_enc *)read_to_safe_mem(
+		    (TC_FLAG_SET(flags, SYS)) ? sys_dev : dev,
+		    (TC_FLAG_SET(flags, SYS) || TC_FLAG_SET(flags, FDE)) ?
+		    HDR_OFFSET_SYS : 0, &sz);
 		if (ehdr == NULL) {
 			tc_log(1, "error read hdr_enc: %s", dev);
 			goto out;
 		}
 
-		if (!sflag) {
+		if (!TC_FLAG_SET(flags, SYS)) {
 			/* Always read blksz-sized chunks */
 			sz = blksz;
 
@@ -935,7 +945,7 @@ info_map_common(const char *dev, int sflag, const char *sys_dev,
 			hehdr = NULL;
 		}
 
-		error = process_hdr(dev, sflag, (unsigned char *)pass,
+		error = process_hdr(dev, flags, (unsigned char *)pass,
 		    (nkeyfiles > 0)?MAX_PASSSZ:strlen(pass),
 		    ehdr, &info);
 
@@ -946,11 +956,11 @@ info_map_common(const char *dev, int sflag, const char *sys_dev,
 		 */
 		if (hehdr && (error || protect_hidden)) {
 			if (error) {
-				error2 = process_hdr(dev, sflag, (unsigned char *)pass,
+				error2 = process_hdr(dev, flags, (unsigned char *)pass,
 				    (nkeyfiles > 0)?MAX_PASSSZ:strlen(pass), hehdr,
 				    &info);
 			} else if (protect_hidden) {
-				error2 = process_hdr(dev, sflag, (unsigned char *)h_pass,
+				error2 = process_hdr(dev, flags, (unsigned char *)h_pass,
 				    (n_hkeyfiles > 0)?MAX_PASSSZ:strlen(h_pass), hehdr,
 				    &hinfo);
 			}
@@ -1048,7 +1058,7 @@ info_mapped_volume(const char *map_name, int interactive)
 }
 
 int
-info_volume(const char *device, int sflag, const char *sys_dev,
+info_volume(const char *device, int flags, const char *sys_dev,
     int protect_hidden, const char *keyfiles[], int nkeyfiles,
     const char *h_keyfiles[], int n_hkeyfiles,
     const char *passphrase, const char *passphrase_hidden,
@@ -1057,7 +1067,7 @@ info_volume(const char *device, int sflag, const char *sys_dev,
 {
 	struct tcplay_info *info;
 
-	info = info_map_common(device, sflag, sys_dev, protect_hidden,
+	info = info_map_common(device, flags, sys_dev, protect_hidden,
 	    keyfiles, nkeyfiles, h_keyfiles, n_hkeyfiles,
 	    passphrase, passphrase_hidden, interactive, retries, timeout);
 
@@ -1075,7 +1085,7 @@ info_volume(const char *device, int sflag, const char *sys_dev,
 }
 
 int
-map_volume(const char *map_name, const char *device, int sflag,
+map_volume(const char *map_name, const char *device, int flags,
     const char *sys_dev, int protect_hidden, const char *keyfiles[],
     int nkeyfiles, const char *h_keyfiles[], int n_hkeyfiles,
     const char *passphrase, const char *passphrase_hidden,
@@ -1086,7 +1096,7 @@ map_volume(const char *map_name, const char *device, int sflag,
 	struct tcplay_info *info;
 	int error;
 
-	info = info_map_common(device, sflag, sys_dev, protect_hidden,
+	info = info_map_common(device, flags, sys_dev, protect_hidden,
 	    keyfiles, nkeyfiles, h_keyfiles, n_hkeyfiles,
 	    passphrase, passphrase_hidden, interactive, retries, timeout);
 
@@ -1237,55 +1247,61 @@ dm_get_table(const char *name)
 	if ((dm_task_run(dmt)) == 0)
 		goto error;
 
-	next = dm_get_next_target(dmt, next, &start, &length, &target_type,
-	    &params);
+	tc_table->start = (off_t)0;
+	tc_table->size = (size_t)0;
 
-	tc_table->start = (off_t)start;
-	tc_table->size = (size_t)length;
-	strncpy(tc_table->target, target_type, sizeof(tc_table->target));
+	do {
+		next = dm_get_next_target(dmt, next, &start, &length,
+		    &target_type, &params);
 
-	/* Skip any leading whitespace */
-	while (params && *params == ' ')
-		params++;
+		tc_table->size += (size_t)length;
+		strncpy(tc_table->target, target_type,
+		    sizeof(tc_table->target));
 
-	if (strcmp(target_type, "crypt") == 0) {
-		while ((p1 = strsep(&params, " ")) != NULL) {
-			/* Skip any whitespace before the next strsep */
-			while (params && *params == ' ')
-				params++;
+		/* Skip any leading whitespace */
+		while (params && *params == ' ')
+			params++;
 
-			/* Process p1 */
-			if (c == 0) {
-				/* cipher */
-				strncpy(tc_table->cipher, p1,
-				    sizeof(tc_table->cipher));
-			} else if (c == 2) {
-				/* iv offset */
-				tc_table->skip = (off_t)strtoll(p1, NULL, 10);
-			} else if (c == 3) {
-				/* major:minor */
-				maj = strtoul(p1, NULL, 10);
-				while (*p1 != ':' && *p1 != '\0')
-					p1++;
-				min = strtoul(++p1, NULL, 10);
-				if ((xlate_maj_min("/dev", 2, tc_table->device,
-				    sizeof(tc_table->device), maj, min)) != 0)
-					snprintf(tc_table->device,
-					    sizeof(tc_table->device), "%u:%u",
-					    maj, min);
-			} else if (c == 4) {
-				/* block offset */
-				tc_table->offset = (off_t)strtoll(p1, NULL, 10);
+		if (strcmp(target_type, "crypt") == 0) {
+			while ((p1 = strsep(&params, " ")) != NULL) {
+				/* Skip any whitespace before the next strsep */
+				while (params && *params == ' ')
+					params++;
+
+				/* Process p1 */
+				if (c == 0) {
+					/* cipher */
+					strncpy(tc_table->cipher, p1,
+					    sizeof(tc_table->cipher));
+				} else if (c == 2) {
+					/* iv offset */
+					tc_table->skip = (off_t)strtoll(p1, NULL, 10);
+				} else if (c == 3) {
+					/* major:minor */
+					maj = strtoul(p1, NULL, 10);
+					while (*p1 != ':' && *p1 != '\0')
+						p1++;
+					min = strtoul(++p1, NULL, 10);
+					if ((xlate_maj_min("/dev", 2, tc_table->device,
+					    sizeof(tc_table->device), maj, min)) != 0)
+						snprintf(tc_table->device,
+						    sizeof(tc_table->device),
+						    "%u:%u", maj, min);
+				} else if (c == 4) {
+					/* block offset */
+					tc_table->offset = (off_t)strtoll(p1,
+					    NULL, 10);
+				}
+				++c;
 			}
-			++c;
-		}
 
-		if (c != 5) {
-			tc_log(1, "could not get all the info required from "
-			    "the table\n");
-			goto error;
+			if (c != 5) {
+				tc_log(1, "could not get all the info required from "
+				    "the table\n");
+				goto error;
+			}
 		}
-	}
+	} while (next != NULL);
 
 	if (dmt)
 		dm_task_destroy(dmt);
@@ -1494,15 +1510,6 @@ dm_setup(const char *mapname, struct tcplay_info *info)
 
 		cookie = 0;
 
-		/* aes-cbc-essiv:sha256 7997f8af... 0 /dev/ad0s0a 8 */
-		/*			   iv off---^  block off--^ */
-		snprintf(params, 512, "%s %s %"PRIu64 " %s %"PRIu64,
-		    cipher_chain->cipher->dm_crypt_str, cipher_chain->dm_key,
-		    (uint64_t)info->skip, dev, (uint64_t)offset);
-#ifdef DEBUG
-		printf("Params: %s\n", params);
-#endif
-
 		if ((dmt = dm_task_create(DM_DEVICE_CREATE)) == NULL) {
 			tc_log(1, "dm_task_create failed\n");
 			ret = -1;
@@ -1556,6 +1563,35 @@ dm_setup(const char *mapname, struct tcplay_info *info)
 		}
 
 		free(uu);
+
+		if (TC_FLAG_SET(info->flags, FDE)) {
+			/*
+			 * When the full disk encryption (FDE) flag is set,
+			 * we map the first N sectors using a linear target
+			 * as they aren't encrypted.
+			 */
+
+			/*  /dev/ad0s0a              0 */
+			/* dev---^       block off --^ */
+			snprintf(params, 512, "%s 0", dev);
+
+			if ((dm_task_add_target(dmt, 0, info->offset, "linear", params)) == 0) {
+				tc_log(1, "dm_task_add_target failed\n");
+				ret = -1;
+				goto out;
+			}
+
+			start = info->offset;
+		}
+
+		/* aes-cbc-essiv:sha256 7997f8af... 0 /dev/ad0s0a 8 */
+		/*			   iv off---^  block off--^ */
+		snprintf(params, 512, "%s %s %"PRIu64 " %s %"PRIu64,
+		    cipher_chain->cipher->dm_crypt_str, cipher_chain->dm_key,
+		    (uint64_t)info->skip, dev, (uint64_t)offset);
+#ifdef DEBUG
+		printf("Params: %s\n", params);
+#endif
 
 		if ((dm_task_add_target(dmt, start, info->size, "crypt", params)) == 0) {
 			tc_log(1, "dm_task_add_target failed\n");

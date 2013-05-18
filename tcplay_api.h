@@ -57,7 +57,7 @@ typedef struct tc_api_opts {
 	unsigned long	tc_prompt_timeout;
 	int		tc_use_system_encryption;
 	const char	*tc_system_device;
-
+	int		tc_use_fde;
 
 	/* Fields for creation */
 	const char	*tc_cipher;

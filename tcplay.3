@@ -28,7 +28,7 @@
 .\" OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.Dd May 16, 2013
+.Dd May 18, 2013
 .Dt TCPLAY 3
 .Os
 .Sh NAME
@@ -107,6 +107,7 @@ typedef struct tc_api_opts {
 	unsigned long	tc_prompt_timeout;
 	int		tc_use_system_encryption;
 	const char	*tc_system_device;
+	int		tc_use_fde;
 
 	/* Fields for creation */
 	const char	*tc_cipher;
@@ -304,6 +305,18 @@ should point to the parent device (i.e. underlying physical disk),
 while the
 .Fa tc_device
 argument should point to the actual encrypted partition.
+If
+.Fa tc_use_fde
+is specified, the device pointed to by
+.Fa tc_device
+should be a whole disk device, not any partition.
+The device will be mapped or queried as a whole.
+To access individual partitions, a utility such as
+.Xr kpartx 8
+should be used, which will create additional individual mappings
+for each partition in the decrypted mapped volume.
+For more details on full disk encryption, see
+.Xr tcplay 8 .
 .Pp
 The
 .Fn tc_api_unmap_volume
@@ -413,7 +426,8 @@ library offers full compatibility with TrueCrypt volumes including
 hidden
 volumes, system encryption (map-only), keyfiles and cipher cascading.
 .Sh SEE ALSO
-.Xr tcplay 8
+.Xr tcplay 8 ,
+.Xr kpartx 8
 .Sh HISTORY
 The
 .Nm tcplay
