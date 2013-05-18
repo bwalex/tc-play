@@ -1,3 +1,10 @@
+2013-??-?? Version 1.1  - Alex Hornung <alex@alexhornung.com>
+
+ * Added command to request information on mapped volumes
+
+ * Added support for full disk encryption
+
+
 2013-05-15 Version 1.0  - Alex Hornung <alex@alexhornung.com>
 
  * Fixed bug in hidden volume protection (issue #28).
