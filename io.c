@@ -64,7 +64,7 @@ read_to_safe_mem(const char *file, off_t offset, size_t *sz)
 		goto out;
 	}
 
-	if ((lseek(fd, offset, SEEK_SET) < 0)) {
+	if ((lseek(fd, offset, (offset >= 0) ? SEEK_SET : SEEK_END) < 0)) {
 		tc_log(1, "Error seeking on file %s\n", file);
 		goto m_err;
 	}
@@ -338,7 +338,7 @@ write_to_disk(const char *dev, off_t offset, size_t blksz, void *mem,
 		return -1;
 	}
 
-	if ((lseek(fd, offset, SEEK_SET) < 0)) {
+	if ((lseek(fd, offset, (offset >= 0) ? SEEK_SET : SEEK_END) < 0)) {
 		tc_log(1, "Error seeking on device %s\n", dev);
 		close(fd);
 		return -1;
