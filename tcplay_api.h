@@ -58,6 +58,7 @@ typedef struct tc_api_opts {
 	int		tc_use_system_encryption;
 	const char	*tc_system_device;
 	int		tc_use_fde;
+	int		tc_use_backup;
 
 	/* Fields for creation */
 	const char	*tc_cipher;

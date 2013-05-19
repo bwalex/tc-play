@@ -925,7 +925,9 @@ info_map_common(const char *dev, int flags, const char *sys_dev,
 		ehdr = (struct tchdr_enc *)read_to_safe_mem(
 		    (TC_FLAG_SET(flags, SYS)) ? sys_dev : dev,
 		    (TC_FLAG_SET(flags, SYS) || TC_FLAG_SET(flags, FDE)) ?
-		    HDR_OFFSET_SYS : 0, &sz);
+		    HDR_OFFSET_SYS :
+		    (!TC_FLAG_SET(flags, BACKUP)) ? 0 : -BACKUP_HDR_OFFSET_END,
+		    &sz);
 		if (ehdr == NULL) {
 			tc_log(1, "error read hdr_enc: %s", dev);
 			goto out;
@@ -936,7 +938,8 @@ info_map_common(const char *dev, int flags, const char *sys_dev,
 			sz = blksz;
 
 			hehdr = (struct tchdr_enc *)read_to_safe_mem(dev,
-			    HDR_OFFSET_HIDDEN, &sz);
+			    (!TC_FLAG_SET(flags, BACKUP)) ? HDR_OFFSET_HIDDEN :
+			    -BACKUP_HDR_HIDDEN_OFFSET_END, &sz);
 			if (hehdr == NULL) {
 				tc_log(1, "error read hdr_enc: %s", dev);
 				goto out;

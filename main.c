@@ -43,7 +43,8 @@
 #define SIGINFO SIGUSR1
 #endif
 
-#define FLAG_LONG_FDE 0xff01
+#define FLAG_LONG_FDE		0xff01
+#define FLAG_LONG_USE_BACKUP	0xff02
 
 
 static
@@ -119,6 +120,10 @@ usage(void)
 	    "\t Specifies that the disk (e.g. /dev/da0) is using system encryption.\n"
 	    "\t --fde\n"
 	    "\t Specifies that the disk (e.g. /dev/da0) is using full disk encryption.\n"
+	    "\t --use-backup\n"
+	    "\t Uses the backup headers (at the end of the volume) instead of the\n"
+	    "\t primary headers.\n"
+	    "\t This is useful when your primary headers have been corrupted.\n"
 	    "\n"
 	    "Valid options common to all commands are:\n"
 	    " -d <device path>, --device=<device path>\n"
@@ -151,6 +156,7 @@ static struct option longopts[] = {
 	{ "device",		required_argument,	NULL, 'd' },
 	{ "system-encryption",	required_argument,	NULL, 's' },
 	{ "fde",		no_argument,		NULL, FLAG_LONG_FDE },
+	{ "use-backup",		no_argument,		NULL, FLAG_LONG_USE_BACKUP },
 	{ "unmap",		required_argument,	NULL, 'u' },
 	{ "version",		no_argument,		NULL, 'v' },
 	{ "weak-keys",		no_argument,		NULL, 'w' },
@@ -288,6 +294,9 @@ main(int argc, char *argv[])
 			break;
 		case FLAG_LONG_FDE:
 			flags |= TC_FLAG_FDE;
+			break;
+		case FLAG_LONG_USE_BACKUP:
+			flags |= TC_FLAG_BACKUP;
 			break;
 		case 'h':
 		case '?':

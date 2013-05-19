@@ -176,6 +176,8 @@ tc_api_map_volume(tc_api_opts *api_opts)
 		flags |= TC_FLAG_SYS;
 	if (api_opts->tc_use_fde)
 		flags |= TC_FLAG_FDE;
+	if (api_opts->tc_use_backup)
+		flags |= TC_FLAG_BACKUP;
 
 	err = map_volume(api_opts->tc_map_name, api_opts->tc_device,
 	    flags, api_opts->tc_system_device,
@@ -219,6 +221,8 @@ tc_api_info_volume(tc_api_opts *api_opts, tc_api_volinfo *vol_info)
 		flags |= TC_FLAG_SYS;
 	if (api_opts->tc_use_fde)
 		flags |= TC_FLAG_FDE;
+	if (api_opts->tc_use_backup)
+		flags |= TC_FLAG_BACKUP;
 
 	info = info_map_common(api_opts->tc_device,
 	    flags, api_opts->tc_system_device,

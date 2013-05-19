@@ -25,6 +25,7 @@ module TCplayLib
            :tc_use_system_encryption, :int,
            :tc_system_device,         :pointer,
            :tc_use_fde,               :int,
+           :tc_use_backup,            :int,
 
     # Fields for creation
            :tc_cipher,                :pointer,
