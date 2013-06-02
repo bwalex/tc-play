@@ -151,7 +151,7 @@ actual on-disk format nor the encryption/decryption process.
 Some notable differences between actual implementation and documentation:
  - PBKDF using RIPEMD160 only uses 2000 iterations if the volume isn't a system
    volume.
- - The keyfile pool is not XOR'ed with the passphrase but modulo-8 summed.
+ - The keyfile pool is not XOR'ed with the passphrase but modulo-256 summed.
  - Every field *except* the minimum version field of the volume header are in
    big endian.
  - Some volume header fields (creation time of volume and header) are missing
