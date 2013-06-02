@@ -312,6 +312,8 @@ print_hex(unsigned char *buf, off_t start, size_t len)
 void
 print_info(struct tcplay_info *info)
 {
+	printf("Device:\t\t\t%s\n", info->dev);
+
 	if (info->pbkdf_prf != NULL) {
 		printf("PBKDF2 PRF:\t\t%s\n", info->pbkdf_prf->name);
 		printf("PBKDF2 iterations:\t%d\n",

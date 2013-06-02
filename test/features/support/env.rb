@@ -38,8 +38,9 @@ module TCplayLib
   end
 
   class TCApiVolinfo < FFI::Struct
-    layout :tc_cipher,                [:char, 256],
-           :tc_prf,                   [:char, 64 ],
+    layout :tc_device,                [:char, 1024],
+           :tc_cipher,                [:char,  256],
+           :tc_prf,                   [:char,   64],
            :tc_key_bits,              :int,
            :tc_size,                  :size_t,
            :tc_iv_offset,             :off_t,

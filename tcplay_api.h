@@ -71,6 +71,7 @@ typedef struct tc_api_opts {
 } tc_api_opts;
 
 typedef struct tc_api_volinfo {
+	char		tc_device[1024];
 	char		tc_cipher[256];
 	char		tc_prf[64];
 

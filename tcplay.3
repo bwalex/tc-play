@@ -138,6 +138,7 @@ functions take a
 data structure as second argument, which is defined as follows:
 .Bd -literal
 typedef struct tc_api_volinfo {
+	char		tc_device[1024];
 	char		tc_cipher[256];
 	char		tc_prf[64];
 
@@ -195,6 +196,9 @@ and
 .Fa tc_block_offset
 fields give the IV and block offset in bytes of the volume,
 respectively.
+The
+.Fa tc_device
+field contains the path to the raw encrypted block device.
 .Pp
 The
 .Fn tc_api_info_mapped_volume

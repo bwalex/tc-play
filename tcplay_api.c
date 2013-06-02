@@ -242,6 +242,8 @@ tc_api_info_volume(tc_api_opts *api_opts, tc_api_volinfo *vol_info)
 	vol_info->tc_size = info->size * (off_t)info->hdr->sec_sz;
 	vol_info->tc_iv_offset = info->skip * (off_t)info->hdr->sec_sz;
 	vol_info->tc_block_offset = info->offset * (off_t)info->hdr->sec_sz;
+	strncpy(vol_info->tc_device, info->dev, sizeof(vol_info->tc_device));
+	vol_info->tc_device[sizeof(vol_info->tc_device)-1] = '\0';
 
 	free_safe_mem(info->hdr);
 	free_safe_mem(info);
@@ -272,6 +274,8 @@ tc_api_info_mapped_volume(tc_api_opts *api_opts, tc_api_volinfo *vol_info)
 	vol_info->tc_size = info->size * (size_t)512;
 	vol_info->tc_iv_offset = info->skip * (off_t)512;
 	vol_info->tc_block_offset = info->offset * (off_t)512;
+	strncpy(vol_info->tc_device, info->dev, sizeof(vol_info->tc_device));
+	vol_info->tc_device[sizeof(vol_info->tc_device)-1] = '\0';
 
 	free_safe_mem(info);
 

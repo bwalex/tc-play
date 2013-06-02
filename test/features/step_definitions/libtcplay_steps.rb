@@ -139,6 +139,7 @@ Given /^I request information about volume ([^\s]+) with the API using the follo
   end
   r.should == TCplayLib::TC_OK
 
+  @info['device'] = api_info[:tc_device].to_ptr.get_string(0)
   @info['pbkdf2 prf'] = api_info[:tc_prf].to_ptr.get_string(0).downcase
   @info['cipher'] = api_info[:tc_cipher].to_ptr.get_string(0).downcase
   @info['key length'] = "#{api_info[:tc_key_bits].to_i} bits"
@@ -164,6 +165,7 @@ Given /^I request information about mapped volume ([^\s]+) with the API$/ do |ma
   end
   r.should == TCplayLib::TC_OK
 
+  @info['device'] = api_info[:tc_device].to_ptr.get_string(0)
   @info['pbkdf2 prf'] = api_info[:tc_prf].to_ptr.get_string(0).downcase
   @info['cipher'] = api_info[:tc_cipher].to_ptr.get_string(0).downcase
   @info['key length'] = "#{api_info[:tc_key_bits].to_i} bits"
