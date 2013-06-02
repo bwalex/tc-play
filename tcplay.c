@@ -1468,7 +1468,7 @@ dm_setup(const char *mapname, struct tcplay_info *info)
 	struct dm_task *dmt = NULL;
 	struct dm_info dmi;
 	char *params = NULL;
-	char *uu;
+	char *uu, *uu_temp;
 	char *uu_stack[64];
 	int uu_stack_idx;
 #if defined(__DragonFly__)
@@ -1536,12 +1536,12 @@ dm_setup(const char *mapname, struct tcplay_info *info)
 
 #if defined(__linux__)
 		uuid_generate(info->uuid);
-		if ((uu = malloc(1024)) == NULL) {
+		if ((uu_temp = malloc(1024)) == NULL) {
 			tc_log(1, "uuid_unparse memory failed\n");
 			ret = -1;
 			goto out;
 		}
-		uuid_unparse(info->uuid, uu);
+		uuid_unparse(info->uuid, uu_temp);
 #elif defined(__DragonFly__)
 		uuid_create(&info->uuid, &status);
 		if (status != uuid_s_ok) {
@@ -1550,13 +1550,23 @@ dm_setup(const char *mapname, struct tcplay_info *info)
 			goto out;
 		}
 
-		uuid_to_string(&info->uuid, &uu, &status);
-		if (uu == NULL) {
+		uuid_to_string(&info->uuid, &uu_temp, &status);
+		if (uu_temp == NULL) {
 			tc_log(1, "uuid_to_string failed\n");
 			ret = -1;
 			goto out;
 		}
 #endif
+
+		if ((uu = malloc(1024)) == NULL) {
+			free(uu_temp);
+			tc_log(1, "uuid second malloc failed\n");
+			ret = -1;
+			goto out;
+		}
+
+		snprintf(uu, 1024, "CRYPT-TCPLAY-%s", uu_temp);
+		free(uu_temp);
 
 		if ((dm_task_set_uuid(dmt, uu)) == 0) {
 			free(uu);
