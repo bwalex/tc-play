@@ -7,6 +7,10 @@
  * Added support to query/map volumes using the backup headers
    instead of the primary headers.
 
+ * Prefixed dm(4) uuids with CRYPT-TCPLAY-.
+
+ * Added the 'device' field to all info commands.
+
 
 2013-05-15 Version 1.0  - Alex Hornung <alex@alexhornung.com>
 
