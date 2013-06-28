@@ -426,7 +426,7 @@ read_passphrase(const char *prompt, char *pass, size_t passlen, size_t bufsz, ti
 	/* Warn about passphrase trimming */
 	if (strlen(pass) > MAX_PASSSZ)
 		tc_log(0, "WARNING: Passphrase is being trimmed to %ju "
-		    "characters, discarding rest.\n", passlen);
+		    "characters, discarding rest.\n", (uintmax_t) passlen);
 
 	/* Cut off after passlen characters */
 	pass[passlen] = '\0';
