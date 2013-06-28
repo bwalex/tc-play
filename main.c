@@ -137,7 +137,7 @@ usage(void)
 	    "\t multiple times.\n"
 	    );
 
-	exit(1);
+	exit(EXIT_FAILURE);
 }
 
 static struct option longopts[] = {
@@ -186,7 +186,7 @@ main(int argc, char *argv[])
 
 	if ((error = tc_play_init()) != 0) {
 		fprintf(stderr, "Initialization failed, exiting.");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	atexit(check_and_purge_safe_mem);
@@ -204,7 +204,7 @@ main(int argc, char *argv[])
 				usage();
 			if ((prf = check_prf_algo(optarg, 0)) == NULL) {
 				if (strcmp(optarg, "help") == 0)
-					exit(0);
+					exit(EXIT_SUCCESS);
 				else
 					usage();
 				/* NOT REACHED */
@@ -215,7 +215,7 @@ main(int argc, char *argv[])
 				usage();
 			if ((cipher_chain = check_cipher_chain(optarg, 0)) == NULL) {
 				if (strcmp(optarg, "help") == 0)
-					exit(0);
+					exit(EXIT_SUCCESS);
 				else
 					usage();
 				/* NOT REACHED */
@@ -260,7 +260,7 @@ main(int argc, char *argv[])
 			break;
 		case 'v':
 			printf("tcplay v%d.%d\n", MAJ_VER, MIN_VER);
-			exit(0);
+			exit(EXIT_SUCCESS);
 			/* NOT REACHED */
 		case 'w':
 			fprintf(stderr, "WARNING: Using urandom as source of "
@@ -272,7 +272,7 @@ main(int argc, char *argv[])
 				usage();
 			if ((h_prf = check_prf_algo(optarg, 0)) == NULL) {
 				if (strcmp(optarg, "help") == 0)
-					exit(0);
+					exit(EXIT_SUCCESS);
 				else
 					usage();
 				/* NOT REACHED */
@@ -283,7 +283,7 @@ main(int argc, char *argv[])
 				usage();
 			if ((h_cipher_chain = check_cipher_chain(optarg, 0)) == NULL) {
 				if (strcmp(optarg, "help") == 0)
-					exit(0);
+					exit(EXIT_SUCCESS);
 				else
 					usage();
 				/* NOT REACHED */
