@@ -1,3 +1,7 @@
 *~
 *.swp
 *.o
+*.a
+*.so
+*.so.*
+tcplay
