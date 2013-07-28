@@ -100,22 +100,28 @@ libtcplay.a: $(OBJS_LIB)
 install: install_program install_lib install_lib_static
 
 install_program: tcplay install_man8
+	$(INSTALL) -d $(SBINDIR)
 	$(INSTALL) tcplay $(SBINDIR)
 
 install_lib: libtcplay.so.$(MAJ_VER).$(MIN_VER) libtcplay.so install_h install_man3
+	$(INSTALL) -d $(LIBDIR)
 	$(INSTALL) libtcplay.so.$(MAJ_VER).$(MIN_VER) $(LIBDIR)
 	$(INSTALL) libtcplay.so $(LIBDIR)
 
 install_lib_static: libtcplay.a install_h install_man3
+	$(INSTALL) -d $(LIBDIR)
 	$(INSTALL) libtcplay.a $(LIBDIR)
 
 install_h: tcplay_api.h
+	$(INSTALL) -d $(INCLUDEDIR)
 	$(INSTALL) tcplay_api.h $(INCLUDEDIR)
 
 install_man3: tcplay.3
+	$(INSTALL) -d $(MANDIR)/man3
 	$(INSTALL) tcplay.3 $(MANDIR)/man3
 
 install_man8: tcplay.8
+	$(INSTALL) -d $(MANDIR)/man8
 	$(INSTALL) tcplay.8 $(MANDIR)/man8
 
 
