@@ -1,11 +1,21 @@
 # either linux or dragonfly
 SYSTEM?=linux
 
+DESTDIR?=
+PREFIX?=/usr/local
+LIBSUFFIX?=
+LIBDIR?=$(DESTDIR)/$(PREFIX)/lib$(LIBSUFFIX)
+MANDIR?=$(DESTDIR)/$(PREFIX)/share/man
+SBINDIR?=$(DESTDIR)/$(PREFIX)/sbin
+INCLUDEDIR?=$(DESTDIR)/$(PREFIX)/include
+
 # either openssl or gcrypt
 PBKDF_BACKEND?=openssl
 
 # system compiler, normally gcc
 CC?=gcc
+
+INSTALL?=install
 
 RM?=rm -f
 
@@ -33,16 +43,16 @@ SRCS+=	crypto.c generic_xts.c
 OBJS=	tcplay.o crc32.o safe_mem.o io.o hdr.o humanize.o
 OBJS+=	crypto.o generic_xts.o
 
-CFLAGS+= $(WARNFLAGS) -fPIC $(VER_FLAGS)
+COMMON_CFLAGS= $(WARNFLAGS) -fPIC $(VER_FLAGS)
 
 ifeq (${DEBUG}, yes)
-  CFLAGS+= -O0 -g -DDEBUG
+  COMMON_CFLAGS+= -O0 -g -DDEBUG
 else
-  CFLAGS+= -O3
+  COMMON_CFLAGS+= -O3
 endif
 
 ifeq (${SYSTEM}, linux)
-  CFLAGS+=	-D_GNU_SOURCE
+  COMMON_CFLAGS+=	-D_GNU_SOURCE
   LIBS+=	-lgcrypt -lgpg-error -ldevmapper -luuid
   SRCS+=	crypto-gcrypt.c
   OBJS+=	crypto-gcrypt.o
@@ -68,21 +78,45 @@ endif
 OBJS_PROG= $(OBJS) main.o
 OBJS_LIB= $(OBJS) tcplay_api.o
 
-all: program lib lib_static
+all: tcplay libtcplay.so libtcplay.a
 
-program: $(OBJS_PROG)
-	$(CC) $(CFLAGS) -o tcplay $(OBJS_PROG) $(LIBS)
+%.o: %.c
+	$(CC) $(COMMON_CFLAGS) $(CFLAGS)   -c -o $@ $<
 
-lib: $(OBJS_LIB)
-	$(CC) -shared -Wl,-version-script=tcplay.map -o libtcplay.so.$(MAJ_VER).$(MIN_VER) $(OBJS_LIB) $(LIBS)
+tcplay: $(OBJS_PROG)
+	$(CC) $(COMMON_CFLAGS) $(CFLAGS)   -o tcplay $(OBJS_PROG) $(LIBS)
+
+libtcplay.so.$(MAJ_VER).$(MIN_VER): $(OBJS_LIB)
+	$(CC) -shared -Wl,-version-script=tcplay.map $(LDFLAGS) -o libtcplay.so.$(MAJ_VER).$(MIN_VER) $(OBJS_LIB) $(LIBS)
+
+libtcplay.so: libtcplay.so.$(MAJ_VER).$(MIN_VER)
 	$(LN) -s libtcplay.so.$(MAJ_VER).$(MIN_VER) libtcplay.so
 
-lib_static: $(OBJS_LIB)
+libtcplay.a: $(OBJS_LIB)
 	$(AR) -rs libtcplay.a $(OBJS_LIB)
 
 
-test:
-	$(CC) -O0 -g -L. -I. tcplay_api_test.c -ltcplay -lcrypto -ldm -lprop
+install: install_program install_lib install_lib_static
+
+install_program: tcplay install_man8
+	$(INSTALL) tcplay $(SBINDIR)
+
+install_lib: libtcplay.so.$(MAJ_VER).$(MIN_VER) libtcplay.so install_h install_man3
+	$(INSTALL) libtcplay.so.$(MAJ_VER).$(MIN_VER) $(LIBDIR)
+	$(INSTALL) libtcplay.so $(LIBDIR)
+
+install_lib_static: libtcplay.a install_h install_man3
+	$(INSTALL) libtcplay.a $(LIBDIR)
+
+install_h: tcplay_api.h
+	$(INSTALL) tcplay_api.h $(INCLUDEDIR)
+
+install_man3: tcplay.3
+	$(INSTALL) tcplay.3 $(MANDIR)/man3
+
+install_man8: tcplay.8
+	$(INSTALL) tcplay.8 $(MANDIR)/man8
+
 
 clean_cmake_mess:
 	$(RM) CMakeCache.txt
@@ -98,3 +132,4 @@ clean: clean_cmake_mess
 	$(RM) $(OBJS_LIB)
 	$(RM) tcplay libtcplay.so* libtcplay.a tcplay.core ktrace.out
 
+.PHONY: install install_program install_lib install_lib_static install_man3 install_man8 install_h

@@ -80,7 +80,7 @@ The classic single-file Makefile can still be used for building, however, using
 
 Or, if you only want the command line tool:
 
-    make -f Makefile.classic program
+    make -f Makefile.classic tcplay
 
 
 
