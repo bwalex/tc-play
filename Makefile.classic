@@ -87,7 +87,8 @@ tcplay: $(OBJS_PROG)
 	$(CC) $(COMMON_CFLAGS) $(CFLAGS)   -o tcplay $(OBJS_PROG) $(LIBS)
 
 libtcplay.so.$(MAJ_VER).$(MIN_VER): $(OBJS_LIB)
-	$(CC) -shared -Wl,-version-script=tcplay.map $(LDFLAGS) -o libtcplay.so.$(MAJ_VER).$(MIN_VER) $(OBJS_LIB) $(LIBS)
+	$(CC) -shared -Wl,-version-script=tcplay.map -Wl,-soname=libtcplay.so.$(MAJ_VER).$(MIN_VER)  $(LDFLAGS) \
+		-o libtcplay.so.$(MAJ_VER).$(MIN_VER) $(OBJS_LIB) $(LIBS)
 
 libtcplay.so: libtcplay.so.$(MAJ_VER).$(MIN_VER)
 	$(LN) -s libtcplay.so.$(MAJ_VER).$(MIN_VER) libtcplay.so
