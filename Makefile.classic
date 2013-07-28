@@ -91,7 +91,7 @@ libtcplay.so.$(MAJ_VER).$(MIN_VER): $(OBJS_LIB)
 		-o libtcplay.so.$(MAJ_VER).$(MIN_VER) $(OBJS_LIB) $(LIBS)
 
 libtcplay.so: libtcplay.so.$(MAJ_VER).$(MIN_VER)
-	$(LN) -s libtcplay.so.$(MAJ_VER).$(MIN_VER) libtcplay.so
+	$(LN) -sf libtcplay.so.$(MAJ_VER).$(MIN_VER) libtcplay.so
 
 libtcplay.a: $(OBJS_LIB)
 	$(AR) -rs libtcplay.a $(OBJS_LIB)
@@ -106,7 +106,7 @@ install_program: tcplay install_man8
 install_lib: libtcplay.so.$(MAJ_VER).$(MIN_VER) libtcplay.so install_h install_man3
 	$(INSTALL) -d "$(DESTDIR)$(LIBDIR)"
 	$(INSTALL) libtcplay.so.$(MAJ_VER).$(MIN_VER) "$(DESTDIR)$(LIBDIR)"
-	$(INSTALL) libtcplay.so "$(DESTDIR)$(LIBDIR)"
+	$(LN) -sf libtcplay.so.$(MAJ_VER).$(MIN_VER) "$(DESTDIR)$(LIBDIR)/libtcplay.so"
 
 install_lib_static: libtcplay.a install_h install_man3
 	$(INSTALL) -d "$(DESTDIR)$(LIBDIR)"
