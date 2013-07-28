@@ -45,7 +45,7 @@ OBJS+=	crypto.o generic_xts.o
 
 COMMON_CFLAGS= $(WARNFLAGS) -fPIC $(VER_FLAGS)
 
-ifeq (${DEBUG}, yes)
+ifeq ($(DEBUG), yes)
   COMMON_CFLAGS+= -O0 -g -DDEBUG
 else
   COMMON_CFLAGS+= -O3
