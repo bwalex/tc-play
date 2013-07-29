@@ -11,6 +11,10 @@
 
  * Added the 'device' field to all info commands.
 
+ * Added command to modify/reencrypt a header, allowing passphrase
+   and keyfile changes, as well as restoring from the backup
+   header.
+
 
 2013-05-15 Version 1.0  - Alex Hornung <alex@alexhornung.com>
 

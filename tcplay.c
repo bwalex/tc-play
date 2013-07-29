@@ -964,6 +964,7 @@ info_map_common(const char *dev, int flags, const char *sys_dev,
 				error2 = process_hdr(dev, flags, (unsigned char *)pass,
 				    (nkeyfiles > 0)?MAX_PASSSZ:strlen(pass), hehdr,
 				    &info);
+				info->hidden = !error2;
 			} else if (protect_hidden) {
 				error2 = process_hdr(dev, flags, (unsigned char *)h_pass,
 				    (n_hkeyfiles > 0)?MAX_PASSSZ:strlen(h_pass), hehdr,
@@ -1120,6 +1121,154 @@ map_volume(const char *map_name, const char *device, int flags,
 	free_info(info);
 
 	return 0;
+}
+
+int
+modify_volume(const char *device, int flags, const char *sys_dev,
+    const char *keyfiles[], int nkeyfiles, const char *new_keyfiles[],
+    int n_newkeyfiles, struct pbkdf_prf_algo *new_prf_algo,
+    const char *passphrase, const char *new_passphrase, int interactive,
+    int retries, time_t timeout, int weak_salt)
+{
+	struct tcplay_info *info;
+	struct tchdr_enc *ehdr, *ehdr_backup;
+	char *pass, *pass_again;
+	int ret = -1;
+	off_t offset, offset_backup;
+	const char *dev;
+	size_t blocks, blksz;
+	int error;
+
+	ehdr = ehdr_backup = NULL;
+
+	info = info_map_common(device, flags, sys_dev, 0,
+	    keyfiles, nkeyfiles, NULL, 0,
+	    passphrase, NULL, interactive, retries, timeout);
+
+	if (info == NULL)
+		return -1;
+
+	pass = pass_again = NULL;
+
+	if (TC_FLAG_SET(flags, ONLY_RESTORE)) {
+		new_passphrase = passphrase;
+		new_keyfiles = keyfiles;
+		n_newkeyfiles = nkeyfiles;
+		new_prf_algo = NULL;
+	}
+
+	if (interactive && !TC_FLAG_SET(flags, ONLY_RESTORE)) {
+		if (((pass = alloc_safe_mem(PASS_BUFSZ)) == NULL) ||
+		   ((pass_again = alloc_safe_mem(PASS_BUFSZ)) == NULL)) {
+			tc_log(1, "could not allocate safe passphrase memory\n");
+			goto out;
+		}
+
+		if ((error = read_passphrase("New passphrase: ", pass, MAX_PASSSZ,
+		    PASS_BUFSZ, 0) ||
+		    (read_passphrase("Repeat passphrase: ", pass_again,
+		    MAX_PASSSZ, PASS_BUFSZ, 0)))) {
+			tc_log(1, "could not read passphrase\n");
+			goto out;
+		}
+
+		if (strcmp(pass, pass_again) != 0) {
+			tc_log(1, "Passphrases don't match\n");
+			goto out;
+		}
+
+		free_safe_mem(pass_again);
+		pass_again = NULL;
+	} else {
+		/* In batch mode, use provided passphrase */
+		if ((pass = alloc_safe_mem(PASS_BUFSZ)) == NULL) {
+			tc_log(1, "could not allocate safe "
+			    "passphrase memory");
+			goto out;
+		}
+
+		if (new_passphrase != NULL) {
+			strncpy(pass, new_passphrase, MAX_PASSSZ);
+			pass[MAX_PASSSZ] = '\0';
+		}
+	}
+
+	if (n_newkeyfiles > 0) {
+		/* Apply keyfiles to 'pass' */
+		if ((error = apply_keyfiles((unsigned char *)pass, PASS_BUFSZ,
+		    new_keyfiles, n_newkeyfiles))) {
+			tc_log(1, "could not apply keyfiles\n");
+			goto out;
+		}
+	}
+
+	ehdr = copy_reencrypt_hdr((unsigned char *)pass,
+	    (n_newkeyfiles > 0)?MAX_PASSSZ:strlen(pass),
+	    new_prf_algo, weak_salt, info, &ehdr_backup);
+	if (ehdr == NULL) {
+		tc_log(1, "Could not create header\n");
+		goto out;
+	}
+
+	tc_log(0, "Writing new volume headers to disk...\n");
+
+	dev = (TC_FLAG_SET(flags, SYS)) ? sys_dev : device;
+	if (TC_FLAG_SET(flags, SYS) || TC_FLAG_SET(flags, FDE)) {
+		/* SYS and FDE don't have backup headers (as far as I understand) */
+		if (info->hidden) {
+			offset = HDR_OFFSET_HIDDEN;
+		} else {
+			offset = HDR_OFFSET_SYS;
+		}
+	} else {
+		if (info->hidden) {
+			offset = HDR_OFFSET_HIDDEN;
+			offset_backup = -BACKUP_HDR_HIDDEN_OFFSET_END;
+		} else {
+			offset = 0;
+			offset_backup = -BACKUP_HDR_OFFSET_END;
+		}
+	}
+
+	if ((error = get_disk_info(dev, &blocks, &blksz)) != 0) {
+		tc_log(1, "could not get disk information\n");
+		goto out;
+	}
+
+	if ((error = write_to_disk(dev, offset, blksz, ehdr,
+	    sizeof(*ehdr))) != 0) {
+		tc_log(1, "Could not write volume header to device\n");
+		goto out;
+	}
+
+	if (!TC_FLAG_SET(flags, SYS) && !TC_FLAG_SET(flags, FDE)) {
+		if ((error = write_to_disk(dev, offset_backup, blksz,
+		    ehdr_backup, sizeof(*ehdr_backup))) != 0) {
+			tc_log(1, "Could not write backup volume header to device\n");
+			goto out;
+		}
+	}
+
+	/* XXX: add new flag for --modify that just reuses passphrase and keyfiles */
+
+	/* Everything went ok */
+	tc_log(0, "All done!\n");
+
+	ret = 0;
+
+out:
+	if (pass)
+		free_safe_mem(pass);
+	if (pass_again)
+		free_safe_mem(pass_again);
+	if (ehdr)
+		free_safe_mem(ehdr);
+	if (ehdr_backup)
+		free_safe_mem(ehdr_backup);
+	if (info)
+		free_safe_mem(info);
+
+	return ret;
 }
 
 static

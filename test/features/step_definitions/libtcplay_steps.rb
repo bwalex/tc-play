@@ -32,13 +32,12 @@ Given /^I map volume ([^\s]+) as ([^\s]+) with the API using the following setti
   opts[:tc_passphrase_hidden] = FFI::MemoryPointer.from_string(s['passphrase_hidden'] || '')
   opts[:tc_interactive_prompt] = 0
   opts[:tc_use_system_encryption] = 0
+  opts[:tc_use_backup] = ParseHelper.is_yes(s['use_backup'])
 
-  r = TCplayLib.tc_api_map_volume(opts)
-  if (r == TCplayLib::TC_ERR)
-    err_str = TCplayLib.tc_api_get_error_msg()
-    puts "Error from tc_api_map_volume: #{err_str}"
+  @retval = (TCplayLib.tc_api_map_volume(opts) == TCplayLib::TC_ERR)
+  if (@retval == TCplayLib::TC_ERR)
+    @err_str = TCplayLib.tc_api_get_error_msg()
   end
-  r.should == TCplayLib::TC_OK
 
   @mappings << map
   @maps = DMSetupHelper.get_crypt_mappings("#{map}")
@@ -88,12 +87,10 @@ Given /^I create a volume ([^\s]+) of size (\d+)M using the API with the followi
 
   @files_to_delete << "volumes/#{vol}"
 
-  r = TCplayLib.tc_api_create_volume(opts)
-  if (r == TCplayLib::TC_ERR)
-    err_str = TCplayLib.tc_api_get_error_msg()
-    puts "Error from tc_api_create_volume: #{err_str}"
+  @retval = (TCplayLib.tc_api_create_volume(opts) == TCplayLib::TC_ERR)
+  if (@retval == TCplayLib::TC_ERR)
+    @err_str = TCplayLib.tc_api_get_error_msg()
   end
-  r.should == TCplayLib::TC_OK
 end
 
 
@@ -127,17 +124,16 @@ Given /^I request information about volume ([^\s]+) with the API using the follo
   opts[:tc_passphrase_hidden] = FFI::MemoryPointer.from_string(s['passphrase_hidden'] || '')
   opts[:tc_interactive_prompt] = 0
   opts[:tc_use_system_encryption] = 0
+  opts[:tc_use_backup] = ParseHelper.is_yes(s['use_backup'])
 
   @info = {}
 
   api_info = TCplayLib::TCApiVolinfo.new
 
-  r = TCplayLib.tc_api_info_volume(opts, api_info)
-  if (r == TCplayLib::TC_ERR)
-    err_str = TCplayLib.tc_api_get_error_msg()
-    puts "Error from tc_api_info_volume: #{err_str}"
+  @retval = (TCplayLib.tc_api_info_volume(opts, api_info) == TCplayLib::TC_ERR)
+  if (@retval == TCplayLib::TC_ERR)
+    @err_str = TCplayLib.tc_api_get_error_msg()
   end
-  r.should == TCplayLib::TC_OK
 
   @info['device'] = api_info[:tc_device].to_ptr.get_string(0)
   @info['pbkdf2 prf'] = api_info[:tc_prf].to_ptr.get_string(0).downcase
@@ -158,12 +154,10 @@ Given /^I request information about mapped volume ([^\s]+) with the API$/ do |ma
 
   api_info = TCplayLib::TCApiVolinfo.new
 
-  r = TCplayLib.tc_api_info_mapped_volume(opts, api_info)
-  if (r == TCplayLib::TC_ERR)
-    err_str = TCplayLib.tc_api_get_error_msg()
-    puts "Error from tc_api_info_mapped_volume: #{err_str}"
+  @retval = (TCplayLib.tc_api_info_mapped_volume(opts, api_info) == TCplayLib::TC_ERR)
+  if (@retval == TCplayLib::TC_ERR)
+    @err_str = TCplayLib.tc_api_get_error_msg()
   end
-  r.should == TCplayLib::TC_OK
 
   @info['device'] = api_info[:tc_device].to_ptr.get_string(0)
   @info['pbkdf2 prf'] = api_info[:tc_prf].to_ptr.get_string(0).downcase

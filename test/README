@@ -44,6 +44,7 @@ keyfiles                | path_to_kf1, path_to_kf2, ...
 protect_hidden          | yes/no
 passphrase_hidden       | Any passphrase
 keyfiles_hidden         | path_to_kf1, path_to_kf2, ...
+use_backup              | yes/no
 
 
 
@@ -57,6 +58,7 @@ keyfiles                | path_to_kf1, path_to_kf2, ...
 protect_hidden          | yes/no
 passphrase_hidden       | Any passphrase
 keyfiles_hidden         | path_to_kf1, path_to_kf2, ...
+use_backup              | yes/no
 
 
 
@@ -83,6 +85,29 @@ passphrase_hidden       | Any passphrase
 keyfiles_hidden         | path_to_kf1, path_to_kf2, ...
 pbkdf_prf_hidden        | Any valid tcplay PBKDF PRF
 cipher_hidden           | Any valid tcplay cipher chain
+
+
+
+* "Given I modify volume <volume_name> using the following settings:"
+* "Given I modify volume <volume_name> with the API using the following settings:"
+
+Where <volume_name> is a file name containing a volume.
+The settings are specified in a table - the following are all possible settings:
+passphrase              | Any passphrase
+keyfiles                | path_to_kf1, path_to_kf2, ...
+new_passphrase          | Any passphrase
+new_keyfiles            | path_to_kf1, path_to_kf2, ...
+new_pbkdf_prf           | Any valid tcplay PBKDF PRF
+use_backup              | yes/no
+
+
+
+* "Given I modify volume <volume_name> by restoring from the backup header using the following settings:"
+
+Where <volume_name> is a file name containing a volume.
+The settings are specified in a table - the following are all possible settings:
+passphrase              | Any passphrase
+keyfiles                | path_to_kf1, path_to_kf2, ...
 
 
 
@@ -127,3 +152,11 @@ Block offset            | A string such as "131072 bytes"
 The "Given I request information about mapped volume" steps will
 generate the same information, except the PBKDF2 and CRC Key Data
 fields will be missing.
+
+
+
+* "Then I expect tcplay to succeed"
+
+
+
+* "Then I expect tcplay to fail"

@@ -29,7 +29,7 @@
 .\" OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.Dd May 19, 2013
+.Dd July 29, 2013
 .Dt TCPLAY 8
 .Os
 .Sh NAME
@@ -69,6 +69,22 @@
 .Op Fl -fde
 .Op Fl -use-backup
 .Nm
+.Fl -modify
+.Fl d Ar device
+.Op Fl k Ar keyfile
+.Op Fl -new-keyfile Ar new_keyfile
+.Op Fl -new-pbkdf-prf Ar pbkdf_hash
+.Op Fl s Ar system_device
+.Op Fl -fde
+.Op Fl -use-backup
+.Op Fl w
+.Nm
+.Fl -modify
+.Fl d Ar device
+.Op Fl k Ar keyfile
+.Fl -restore-from-backup-hdr
+.Op Fl w
+.Nm
 .Fl u Ar mapping
 .Nm
 .Fl h | v
@@ -95,6 +111,10 @@ by
 .Ar mapping .
 Information such as key CRC and the PBKDF2 PRF is not available
 via this command.
+.It Fl -modify
+Modify the volume header.
+This mode allows changing passphrase, keyfiles, PBKDF2 PRF as
+well as restoring from a backup header.
 .It Fl m Ar mapping , Fl -map Ns = Ns Ar mapping
 Map the encrypted TrueCrypt volume on the device specified by
 .Fl -device
@@ -136,6 +156,9 @@ If you only intend to map a hidden volume, the
 option has to be used.
 This option can appear multiple times; if so, multiple
 keyfiles will be used.
+This option is not valid in the
+.Fl -modify
+mode.
 .It Fl k Ar keyfile , Fl -keyfile Ns = Ns Ar keyfile
 Specifies a
 .Ar keyfile
@@ -196,9 +219,10 @@ Use this option carefully as it is a security risk!
 .El
 .Pp
 Additional options for the
-.Fl -info
-and
+.Fl -info ,
 .Fl -map
+and
+.Fl -modify
 commands are:
 .Bl -tag -width indent
 .It Fl e, Fl -protect-hidden
@@ -207,6 +231,11 @@ its reported size will be adjusted accordingly to the size of
 the hidden volume contained in it.
 Both the hidden volume and outer volume passphrase and keyfiles
 will be required.
+This option only applies to the
+.Fl -info
+and
+.Fl -map
+commands.
 .It Fl s Ar system_device , Fl -system-encryption Ns = Ns Ar system_device
 This option is required if you are attempting to access a device
 that uses system encryption, for example an encrypted
@@ -239,6 +268,36 @@ This option will force
 .Nm
 to use the backup headers, which are located at the end of the device,
 to access the volume.
+.El
+.Pp
+Additional options only for the
+.Fl -modify
+command are:
+.Bl -tag -width indent
+.It Fl -new-pbkdf-prf Ns = Ns Ar pbkdf_hash
+Specifies which hash algorithm to use for the PBKDF2 password
+derivation on reencrypting the volume header.
+If this option is not specified, the reencrypted header will
+use the current PRF.
+To see which algorithms are supported, specify
+.Fl -pbkdf-prf Ns = Ns Cm help .
+.It Fl -new-keyfile Ns = Ns Ar keyfile
+Specifies a
+.Ar keyfile
+to use in addition to the new passphrase on reencrypting the
+volume header.
+This option can appear multiple times; if so, multiple
+keyfiles will be used.
+.It Fl -restore-from-backup-hdr
+If this option is specified, neither
+.Fl -new-pbkdf-prf
+nor
+.Fl -new-keyfile
+should be specified.
+This option implies
+.Fl -use-backup .
+Use this option to restore the volume headers from the backup
+header.
 .El
 .Sh NOTES
 TrueCrypt limits passphrases to 64 characters (including the terminating

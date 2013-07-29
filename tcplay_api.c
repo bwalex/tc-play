@@ -283,6 +283,59 @@ tc_api_info_mapped_volume(tc_api_opts *api_opts, tc_api_volinfo *vol_info)
 }
 
 int
+tc_api_modify_volume(tc_api_opts *api_opts)
+{
+	struct pbkdf_prf_algo *prf_hash = NULL;
+	int nkeyfiles, n_newkeyfiles = 0;
+	int flags = 0;
+	int error;
+
+	if ((api_opts == NULL) ||
+	    (api_opts->tc_device == NULL)) {
+		errno = EFAULT;
+		return TC_ERR;
+	}
+
+	if (api_opts->tc_prf_hash != NULL) {
+		if ((prf_hash = check_prf_algo(api_opts->tc_prf_hash, 1)) == NULL) {
+			errno = EINVAL;
+			return TC_ERR;
+		}
+	}
+
+	for (nkeyfiles = 0; (nkeyfiles < MAX_KEYFILES) &&
+	    (api_opts->tc_keyfiles != NULL) &&
+	    (api_opts->tc_keyfiles[nkeyfiles] != NULL); nkeyfiles++)
+		;
+
+	for (n_newkeyfiles = 0; (n_newkeyfiles < MAX_KEYFILES) &&
+	    (api_opts->tc_new_keyfiles != NULL) &&
+	    (api_opts->tc_new_keyfiles[n_newkeyfiles] != NULL); n_newkeyfiles++)
+		;
+
+	if (api_opts->tc_use_system_encryption)
+		flags |= TC_FLAG_SYS;
+	if (api_opts->tc_use_fde)
+		flags |= TC_FLAG_FDE;
+	if (api_opts->tc_use_backup)
+		flags |= TC_FLAG_BACKUP;
+
+	error = modify_volume(api_opts->tc_device,
+	    flags, api_opts->tc_system_device,
+	    api_opts->tc_keyfiles, nkeyfiles,
+	    api_opts->tc_new_keyfiles, n_newkeyfiles,
+	    prf_hash,
+	    api_opts->tc_passphrase, api_opts->tc_new_passphrase,
+	    api_opts->tc_interactive_prompt, api_opts->tc_password_retries,
+	    (time_t)api_opts->tc_prompt_timeout, api_opts->tc_use_weak_salt);
+
+	if (error)
+		return TC_ERR;
+
+	return TC_OK;
+}
+
+int
 tc_api_unmap_volume(tc_api_opts *api_opts)
 {
 	int err;

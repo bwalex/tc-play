@@ -45,6 +45,10 @@
 
 #define FLAG_LONG_FDE		0xff01
 #define FLAG_LONG_USE_BACKUP	0xff02
+#define FLAG_LONG_MOD		0xff04
+#define FLAG_LONG_MOD_KF	0xff08
+#define FLAG_LONG_MOD_PRF	0xff10
+#define FLAG_LONG_MOD_NONE	0xff20
 
 
 static
@@ -60,12 +64,16 @@ void
 usage(void)
 {
 	fprintf(stderr,
-	    "usage: tcplay -c -d device [-g] [-z] [-w] [-a pbkdb_hash] [-b cipher]\n"
+	    "usage: tcplay -c -d device [-g] [-z] [-w] [-a pbkdf_hash] [-b cipher]\n"
 	    "              [-f keyfile_hidden] [-k keyfile] [-x pbkdf_hash] [-y cipher]\n"
 	    "       tcplay -i -d device [-e] [-f keyfile_hidden] [-k keyfile]\n"
-	    "              [-s system_device] [--fde]\n"
+	    "              [-s system_device] [--fde] [--use-backup]\n"
 	    "       tcplay -m mapping -d device [-e] [-f keyfile_hidden] [-k keyfile]\n"
-	    "              [-s system_device] [--fde]\n"
+	    "              [-s system_device] [--fde] [--use-backup]\n"
+	    "       tcplay --modify -d device [-k keyfile] [--new-keyfile=keyfile]\n"
+	    "              [--new-pbkdf-prf=pbkdf_hash] [-s system_device] [--fde]\n"
+	    "              [--use-backup] [-w]\n"
+	    "       tcplay --modify -d device [-k keyfile] --restore-from-backup-hdr [-w]\n"
 	    "       tcplay -j mapping\n"
 	    "       tcplay -u mapping\n"
 	    "       tcplay -h | -v\n"
@@ -84,6 +92,9 @@ usage(void)
 	    "\t specified by -d or --device.\n"
 	    " -u <mapping name>, --unmap=<mapping name>\n"
 	    "\t Removes a dm-crypt mapping with the given name.\n"
+	    " --modify\n"
+	    "\t Changes the volume's passphrase, keyfile and optionally the hashing\n"
+	    "\t function used for the PBKDF password derivation.\n"
 	    " -v, --version\n"
 	    "\t Print version message and exit.\n"
 	    "\n"
@@ -112,6 +123,32 @@ usage(void)
 	    "\t Uses a weak source of entropy (urandom) for key material.\n"
 	    "\t WARNING: This is a REALLY REALLY bad idea for anything but\n"
 	    "\t testing.\n"
+	    "\n"
+	    "Valid options for --modify are:\n"
+	    " --new-keyfile=<key file>\n"
+	    "\t Specifies a key file to use for the password derivation, when\n"
+	    "\t re-encrypting the header, can appear multiple times.\n"
+	    " --new-pbkdf-prf=<pbkdf prf algorithm>\n"
+	    "\t Specifies which hashing function to use for the PBKDF password\n"
+	    "\t derivation when re-encrypting the header.\n"
+	    "\t To see valid options, specify '-a help'.\n"
+	    " -s <disk path>, --system-encryption=<disk path>\n"
+	    "\t Specifies that the disk (e.g. /dev/da0) is using system encryption.\n"
+	    " --fde\n"
+	    "\t Specifies that the disk (e.g. /dev/da0) is using full disk encryption.\n"
+	    " --use-backup\n"
+	    "\t Uses the backup headers (at the end of the volume) instead of the\n"
+	    "\t primary headers. Both normal and backup headers will be modified!\n"
+	    "\t This is useful when your primary headers have been corrupted.\n"
+	    " --restore-from-backup-hdr\n"
+	    "\t Implies --use-backup, no new PBKDF hashing function, no new keyfiles\n"
+	    "\t and no new passphrase.\n"
+	    "\t In other words, this will simply restore both headers from the backup\n"
+	    "\t header."
+	    " -w, --weak-keys\n"
+	    "\t Uses a weak source of entropy (urandom) for salt material. The\n"
+	    "\t key material is not affected, as the master keys are kept intact.\n"
+	    "\t WARNING: This is a bad idea for anything but testing.\n"
 	    "\n"
 	    "Valid options for --info and --map are:\n"
 	    " -e, --protect-hidden\n"
@@ -157,6 +194,10 @@ static struct option longopts[] = {
 	{ "system-encryption",	required_argument,	NULL, 's' },
 	{ "fde",		no_argument,		NULL, FLAG_LONG_FDE },
 	{ "use-backup",		no_argument,		NULL, FLAG_LONG_USE_BACKUP },
+	{ "modify",		no_argument,		NULL, FLAG_LONG_MOD },
+	{ "new-keyfile",	required_argument,	NULL, FLAG_LONG_MOD_KF },
+	{ "new-pbkdf-prf",	required_argument,	NULL, FLAG_LONG_MOD_PRF },
+	{ "restore-from-backup-hdr", required_argument,	NULL, FLAG_LONG_MOD_NONE },
 	{ "unmap",		required_argument,	NULL, 'u' },
 	{ "version",		no_argument,		NULL, 'v' },
 	{ "weak-keys",		no_argument,		NULL, 'w' },
@@ -171,18 +212,22 @@ main(int argc, char *argv[])
 	const char *dev = NULL, *sys_dev = NULL, *map_name = NULL;
 	const char *keyfiles[MAX_KEYFILES];
 	const char *h_keyfiles[MAX_KEYFILES];
+	const char *new_keyfiles[MAX_KEYFILES];
 	int nkeyfiles;
 	int n_hkeyfiles;
+	int n_newkeyfiles;
 	int ch, error;
 	int flags = 0;
 	int info_vol = 0, map_vol = 0, protect_hidden = 0,
 	    unmap_vol = 0, info_map = 0,
-	    create_vol = 0, contain_hidden = 0, use_secure_erase = 1,
+	    create_vol = 0, modify_vol = 0,
+	    contain_hidden = 0, use_secure_erase = 1,
 	    use_weak_keys = 0;
 	struct pbkdf_prf_algo *prf = NULL;
 	struct tc_cipher_chain *cipher_chain = NULL;
 	struct pbkdf_prf_algo *h_prf = NULL;
 	struct tc_cipher_chain *h_cipher_chain = NULL;
+	struct pbkdf_prf_algo *new_prf = NULL;
 
 	if ((error = tc_play_init()) != 0) {
 		fprintf(stderr, "Initialization failed, exiting.");
@@ -195,6 +240,7 @@ main(int argc, char *argv[])
 
 	nkeyfiles = 0;
 	n_hkeyfiles = 0;
+	n_newkeyfiles = 0;
 
 	while ((ch = getopt_long(argc, argv, "a:b:cd:ef:ghij:k:m:s:u:vwx:y:z",
 	    longopts, NULL)) != -1) {
@@ -298,6 +344,29 @@ main(int argc, char *argv[])
 		case FLAG_LONG_USE_BACKUP:
 			flags |= TC_FLAG_BACKUP;
 			break;
+		case FLAG_LONG_MOD:
+			modify_vol = 1;
+			break;
+		case FLAG_LONG_MOD_KF:
+			new_keyfiles[n_newkeyfiles++] = optarg;
+			break;
+		case FLAG_LONG_MOD_PRF:
+			if (new_prf != NULL)
+				usage();
+			if ((new_prf = check_prf_algo(optarg, 0)) == NULL) {
+				if (strcmp(optarg, "help") == 0)
+					exit(EXIT_SUCCESS);
+				else
+					usage();
+				/* NOT REACHED */
+			}
+			break;
+		case FLAG_LONG_MOD_NONE:
+			new_prf = NULL;
+			n_newkeyfiles = 0;
+			flags |= TC_FLAG_ONLY_RESTORE;
+			flags |= TC_FLAG_BACKUP;
+			break;
 		case 'h':
 		case '?':
 		default:
@@ -310,19 +379,19 @@ main(int argc, char *argv[])
 	argv += optind;
 
 	/* Check arguments */
-	if (!(((map_vol || info_vol || create_vol) && dev != NULL) ||
+	if (!(((map_vol || info_vol || create_vol || modify_vol) && dev != NULL) ||
 	    ((unmap_vol || info_map) && map_name != NULL)) ||
 	    (TC_FLAG_SET(flags, SYS) && TC_FLAG_SET(flags, FDE)) ||
-	    (map_vol && info_vol) ||
-	    (map_vol && create_vol) ||
-	    (unmap_vol && map_vol) ||
-	    (unmap_vol && info_vol) ||
-	    (unmap_vol && create_vol) ||
-	    (create_vol && info_vol) ||
+	    (map_vol + info_vol + create_vol + unmap_vol + info_map + modify_vol > 1) ||
 	    (contain_hidden && !create_vol) ||
 	    (TC_FLAG_SET(flags, SYS) && (sys_dev == NULL)) ||
+	    (TC_FLAG_SET(flags, ONLY_RESTORE) && (n_newkeyfiles > 0 || new_prf != NULL)) ||
+	    (TC_FLAG_SET(flags, BACKUP) && (sys_dev != NULL || TC_FLAG_SET(flags, FDE))) ||
 	    (map_vol && (map_name == NULL)) ||
 	    (unmap_vol && (map_name == NULL)) ||
+	    (!modify_vol && n_newkeyfiles > 0) ||
+	    (!modify_vol && new_prf != NULL) ||
+	    (!modify_vol && TC_FLAG_SET(flags, ONLY_RESTORE)) ||
 	    (!(protect_hidden || create_vol) && n_hkeyfiles > 0)) {
 		usage();
 		/* NOT REACHED */
@@ -351,6 +420,10 @@ main(int argc, char *argv[])
 		    1 /* interactive */, DEFAULT_RETRIES, 0);
 	} else if (unmap_vol) {
 		error = dm_teardown(map_name, NULL);
+	} else if (modify_vol) {
+		error = modify_volume(dev, flags, sys_dev, keyfiles, nkeyfiles,
+		    new_keyfiles, n_newkeyfiles, new_prf, NULL, NULL,
+		    1 /* interactive */, DEFAULT_RETRIES, 0, use_weak_keys);
 	}
 
 	return error;

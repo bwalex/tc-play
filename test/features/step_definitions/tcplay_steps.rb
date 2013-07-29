@@ -20,6 +20,8 @@ Given /^I map volume ([^\s]+) as ([^\s]+) using the following settings:$/ do |vo
     protect_hidden = true
   end
 
+  @args << "--use-backup" if ParseHelper.is_yes(s['use_backup'])
+  
   s['passphrase'] ||= ''
   s['passphrase_hidden'] ||= ''
 
@@ -33,6 +35,8 @@ Given /^I map volume ([^\s]+) as ([^\s]+) using the following settings:$/ do |vo
       end
     end
   end
+
+  @retval = $?
 
   @mappings << map
   @maps = DMSetupHelper.get_crypt_mappings("#{map}")
@@ -95,6 +99,7 @@ Given /^I create a volume ([^\s]+) of size (\d+)M with the following parameters:
       tcplay_io.write("y\n")
     end
   end
+  @retval = $?
 end
 
 
@@ -117,6 +122,8 @@ Given /^I request information about volume ([^\s]+) using the following settings
     protect_hidden = true
   end
 
+  @args << "--use-backup" if ParseHelper.is_yes(s['use_backup'])
+
   s['passphrase'] ||= ''
   s['passphrase_hidden'] ||= ''
 
@@ -138,6 +145,7 @@ Given /^I request information about volume ([^\s]+) using the following settings
       end
     end
   end
+  @retval = $?
 end
 
 
@@ -156,6 +164,7 @@ Given /^I request information about mapped volume ([^\s]+)$/ do |map|
       end
     end
   end
+  @retval = $?
 end
 
 
@@ -169,6 +178,14 @@ Then /^I expect tcplay to report the following:$/ do |expected_info|
   expected_info.rows_hash.each_pair do |k,v|
     @info[k.downcase.strip].should == v.downcase
   end
+end
+
+Then /^I expect tcplay to succeed$/ do
+  @retval.should == 0
+end
+
+Then /^I expect tcplay to fail$/ do
+  @retval.should != 0
 end
 
 

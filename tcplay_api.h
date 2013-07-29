@@ -52,6 +52,8 @@ typedef struct tc_api_opts {
 	/* Fields for mapping / info */
 	const char	*tc_map_name;
 	int		tc_protect_hidden;
+
+	/* Fields for mapping / info / modify */
 	int		tc_password_retries;
 	int		tc_interactive_prompt;
 	unsigned long	tc_prompt_timeout;
@@ -59,6 +61,12 @@ typedef struct tc_api_opts {
 	const char	*tc_system_device;
 	int		tc_use_fde;
 	int		tc_use_backup;
+
+	/* Fields for modify */
+	const char	*tc_new_passphrase;
+	const char	**tc_new_keyfiles;
+	const char	*tc_new_prf_hash;
+	int		tc_use_weak_salt;
 
 	/* Fields for creation */
 	const char	*tc_cipher;
@@ -91,6 +99,7 @@ int tc_api_uninit(void);
 int tc_api_info_volume(tc_api_opts *api_opts, tc_api_volinfo *vol_info);
 int tc_api_info_mapped_volume(tc_api_opts *api_opts, tc_api_volinfo *vol_info);
 int tc_api_create_volume(tc_api_opts *api_opts);
+int tc_api_modify_volume(tc_api_opts *api_opts);
 int tc_api_map_volume(tc_api_opts *api_opts);
 int tc_api_unmap_volume(tc_api_opts *api_opts);
 int tc_api_check_cipher(tc_api_opts *api_opts);

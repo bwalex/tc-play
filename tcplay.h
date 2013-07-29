@@ -66,6 +66,7 @@
 #define TC_FLAG_SYS		0x0001
 #define TC_FLAG_FDE		0x0002
 #define TC_FLAG_BACKUP		0x0004
+#define TC_FLAG_ONLY_RESTORE	0x0008
 
 #define TC_FLAG_SET(f, x)	((f & TC_FLAG_##x) == TC_FLAG_##x)
 
@@ -146,6 +147,8 @@ struct tcplay_info {
 
 	/* Populated by dm_setup */
 	uuid_t uuid;
+
+	int hidden;
 };
 
 struct tcplay_dm_table {
@@ -201,6 +204,9 @@ struct tchdr_enc *create_hdr(unsigned char *pass, int passlen,
 struct tchdr_dec *decrypt_hdr(struct tchdr_enc *ehdr,
     struct tc_cipher_chain *cipher_chain, unsigned char *key);
 int verify_hdr(struct tchdr_dec *hdr);
+struct tchdr_enc *copy_reencrypt_hdr(unsigned char *pass, int passlen,
+    struct pbkdf_prf_algo *prf_algo, int weak, struct tcplay_info *info,
+    struct tchdr_enc **backup_hdr);
 
 void *_alloc_safe_mem(size_t req_sz, const char *file, int line);
 void _free_safe_mem(void *mem, const char *file, int line);
@@ -241,6 +247,11 @@ int map_volume(const char *map_name, const char *device, int flags,
     int nkeyfiles, const char *h_keyfiles[], int n_hkeyfiles,
     const char *passphrase, const char *passphrase_hidden, int interactive,
     int retries, time_t timeout);
+int modify_volume(const char *device, int flags, const char *sys_dev,
+    const char *keyfiles[], int nkeyfiles, const char *new_keyfiles[],
+    int n_newkeyfiles, struct pbkdf_prf_algo *new_prf_algo,
+    const char *passphrase, const char *new_passphrase, int interactive,
+    int retries, time_t timeout, int weak_salt);
 int dm_setup(const char *mapname, struct tcplay_info *info);
 int dm_teardown(const char *mapname, const char *device);
 struct tcplay_info *dm_info_map(const char *map_name);

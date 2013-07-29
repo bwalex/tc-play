@@ -19,6 +19,8 @@ module TCplayLib
     # Fields for mapping / info
            :tc_map_name,              :pointer,
            :tc_protect_hidden,        :int,
+
+    # Fields for mapping / info / modify
            :tc_password_retries,      :int,
            :tc_interactive_prompt,    :int,
            :tc_prompt_timeout,        :ulong,
@@ -26,6 +28,12 @@ module TCplayLib
            :tc_system_device,         :pointer,
            :tc_use_fde,               :int,
            :tc_use_backup,            :int,
+
+    # Fields for modify
+           :tc_new_passphrase,        :pointer,
+           :tc_new_keyfiles,          :pointer,
+           :tc_new_prf_hash,          :pointer,
+           :tc_use_weak_salt,         :int,
 
     # Fields for creation
            :tc_cipher,                :pointer,
@@ -54,6 +62,7 @@ module TCplayLib
   attach_function :tc_api_create_volume, [ TCApiOpts.by_ref ], :int
   attach_function :tc_api_map_volume, [ TCApiOpts.by_ref ], :int
   attach_function :tc_api_unmap_volume, [ TCApiOpts.by_ref ], :int
+  attach_function :tc_api_modify_volume, [ TCApiOpts.by_ref ], :int
   attach_function :tc_api_check_cipher, [ TCApiOpts.by_ref ], :int
   attach_function :tc_api_check_prf_hash, [ TCApiOpts.by_ref ], :int
   attach_function :tc_api_get_error_msg, [ ], :string
