@@ -2,6 +2,24 @@ require 'rspec/expectations'
 require 'expect'
 
 
+Given /^I corrupt sectors ([^\s]+) to ([^\s]+) of volume ([^\s]+)$/ do |first,last,vol|
+  loop_dev = @losetup.get_device("volumes/#{vol}")
+  first = first.to_i
+  last = last.to_i
+  count = last-first+1
+
+  IO.popen("dd if=/dev/urandom of=\"#{loop_dev}\" bs=512 count=#{count} seek=#{first} status=none") { |io| Process.wait(io.pid) }
+end
+
+
+Given /^I corrupt sector ([^\s]+) of volume ([^\s]+)$/ do |first,vol|
+  loop_dev = @losetup.get_device("volumes/#{vol}")
+  first = first.to_i
+
+  IO.popen("dd if=/dev/urandom of=\"#{loop_dev}\" bs=512 count=1 seek=#{first} status=none") { |io| Process.wait(io.pid) }
+end
+
+
 Given /^I map volume ([^\s]+) as ([^\s]+) using the following settings:$/ do |vol,map,settings|
   protect_hidden = false
   s = settings.rows_hash
@@ -21,7 +39,7 @@ Given /^I map volume ([^\s]+) as ([^\s]+) using the following settings:$/ do |vo
   end
 
   @args << "--use-backup" if ParseHelper.is_yes(s['use_backup'])
-  
+
   s['passphrase'] ||= ''
   s['passphrase_hidden'] ||= ''
 
@@ -36,7 +54,7 @@ Given /^I map volume ([^\s]+) as ([^\s]+) using the following settings:$/ do |vo
     end
   end
 
-  @retval = $?
+  @error = ($? != 0)
 
   @mappings << map
   @maps = DMSetupHelper.get_crypt_mappings("#{map}")
@@ -99,7 +117,7 @@ Given /^I create a volume ([^\s]+) of size (\d+)M with the following parameters:
       tcplay_io.write("y\n")
     end
   end
-  @retval = $?
+  @error = ($? != 0)
 end
 
 
@@ -145,7 +163,7 @@ Given /^I request information about volume ([^\s]+) using the following settings
       end
     end
   end
-  @retval = $?
+  @error = ($? != 0)
 end
 
 
@@ -164,7 +182,67 @@ Given /^I request information about mapped volume ([^\s]+)$/ do |map|
       end
     end
   end
-  @retval = $?
+  @error = ($? != 0)
+end
+
+
+Given /^I modify volume ([^\s]+) using the following settings:$/ do |vol,settings|
+  s = settings.rows_hash
+
+  loop_dev = @losetup.get_device("volumes/#{vol}")
+  @args = [
+    "--modify",
+    "-d #{loop_dev}",
+    "-w", # We don't want to wait for /dev/random to have enough entropy
+  ]
+
+  ParseHelper.csv_parse(s['keyfiles']) { |kf| @args << "-k \"keyfiles/#{kf}\"" } unless s['keyfiles'].nil?
+  ParseHelper.csv_parse(s['new_keyfiles']) { |kf| @args << "--new-keyfile=\"keyfiles/#{kf}\"" } unless s['new_keyfiles'].nil?
+
+  @args << "--new-pbkdf-prf=#{s['new_pbkdf_prf'].strip}" unless s['new_pbkdf_prf'].nil?
+  @args << "--use-backup" if ParseHelper.is_yes(s['use_backup'])
+
+  s['passphrase'] ||= ''
+  s['new_passphrase'] ||= ''
+
+  IO.popen("#{@tcplay} #{@args.join(' ')}", mode='r+') do |tcplay_io|
+    tcplay_io.expect /Passphrase:/, 10 do
+      tcplay_io.write("#{s['passphrase']}\n")
+    end
+
+    tcplay_io.expect /New passphrase/, 10 do
+      tcplay_io.write("#{s['new_passphrase']}\n")
+    end
+
+    tcplay_io.expect /Repeat/, 10 do
+      tcplay_io.write("#{s['new_passphrase']}\n")
+    end
+  end
+  @error = ($? != 0)
+end
+
+
+Given /^I modify volume ([^\s]+) by restoring from the backup header using the following settings:$/ do |vol,settings|
+  s = settings.rows_hash
+
+  loop_dev = @losetup.get_device("volumes/#{vol}")
+  @args = [
+    "--modify",
+    "--restore-from-backup-hdr",
+    "-d #{loop_dev}",
+    "-w", # We don't want to wait for /dev/random to have enough entropy
+  ]
+
+  ParseHelper.csv_parse(s['keyfiles']) { |kf| @args << "-k \"keyfiles/#{kf}\"" } unless s['keyfiles'].nil?
+
+  s['passphrase'] ||= ''
+
+  IO.popen("#{@tcplay} #{@args.join(' ')}", mode='r+') do |tcplay_io|
+    tcplay_io.expect /Passphrase:/, 10 do
+      tcplay_io.write("#{s['passphrase']}\n")
+    end
+  end
+  @error = ($? != 0)
 end
 
 
@@ -181,11 +259,11 @@ Then /^I expect tcplay to report the following:$/ do |expected_info|
 end
 
 Then /^I expect tcplay to succeed$/ do
-  @retval.should == 0
+  @error.should == false
 end
 
 Then /^I expect tcplay to fail$/ do
-  @retval.should != 0
+  @error.should == true
 end
 
 

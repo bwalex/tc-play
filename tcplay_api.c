@@ -230,7 +230,7 @@ tc_api_info_volume(tc_api_opts *api_opts, tc_api_volinfo *vol_info)
 	    api_opts->tc_keyfiles_hidden, n_hkeyfiles,
 	    api_opts->tc_passphrase, api_opts->tc_passphrase_hidden,
 	    api_opts->tc_interactive_prompt, api_opts->tc_password_retries,
-	    (time_t)api_opts->tc_prompt_timeout);
+	    (time_t)api_opts->tc_prompt_timeout, NULL);
 
 	if (info == NULL || info->hdr == NULL)
 		return TC_ERR;
@@ -296,8 +296,8 @@ tc_api_modify_volume(tc_api_opts *api_opts)
 		return TC_ERR;
 	}
 
-	if (api_opts->tc_prf_hash != NULL) {
-		if ((prf_hash = check_prf_algo(api_opts->tc_prf_hash, 1)) == NULL) {
+	if (api_opts->tc_new_prf_hash != NULL) {
+		if ((prf_hash = check_prf_algo(api_opts->tc_new_prf_hash, 1)) == NULL) {
 			errno = EINVAL;
 			return TC_ERR;
 		}

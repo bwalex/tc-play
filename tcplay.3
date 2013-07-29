@@ -28,7 +28,7 @@
 .\" OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.Dd May 19, 2013
+.Dd July 30, 2013
 .Dt TCPLAY 3
 .Os
 .Sh NAME
@@ -37,6 +37,7 @@
 .Nm tc_api_info_volume ,
 .Nm tc_api_info_mapped_volume ,
 .Nm tc_api_create_volume ,
+.Nm tc_api_modify_volume ,
 .Nm tc_api_map_volume ,
 .Nm tc_api_unmap_volume ,
 .Nm tc_api_check_cipher ,
@@ -60,6 +61,8 @@
 .Ft int
 .Fn tc_api_create_volume "tc_api_opts *api_opts"
 .Ft int
+.Fn tc_api_modify_volume "tc_api_opts *api_opts"
+.Ft int
 .Fn tc_api_map_volume "tc_api_opts *api_opts"
 .Ft int
 .Fn tc_api_unmap_volume "tc_api_opts *api_opts"
@@ -82,6 +85,7 @@ volumes.
 .Pp
 The
 .Fn tc_api_create_volume ,
+.Fn tc_api_modify_volume ,
 .Fn tc_api_map_volume ,
 .Fn tc_api_unmap_volume ,
 .Fn tc_api_check_cipher
@@ -99,9 +103,11 @@ typedef struct tc_api_opts {
 	const char	**tc_passphrase_hidden;
 	const char	**tc_keyfiles_hidden;
 
-	/* Fields for mapping */
+	/* Fields for mapping / info */
 	const char	*tc_map_name;
 	int		tc_protect_hidden;
+
+	/* Fields for mapping / info / modify */
 	int		tc_password_retries;
 	int		tc_interactive_prompt;
 	unsigned long	tc_prompt_timeout;
@@ -109,6 +115,12 @@ typedef struct tc_api_opts {
 	const char	*tc_system_device;
 	int		tc_use_fde;
 	int		tc_use_backup;
+
+	/* Fields for modify */
+	const char	*tc_new_passphrase;
+	const char	**tc_new_keyfiles;
+	const char	*tc_new_prf_hash;
+	int		tc_use_weak_salt;
 
 	/* Fields for creation */
 	const char	*tc_cipher;
@@ -122,9 +134,10 @@ typedef struct tc_api_opts {
 .Ed
 .Pp
 where the keyfile fields,
-.Fa tc_keyfiles
+.Fa tc_keyfiles ,
+.Fa tc_keyfiles_hidden
 and
-.Fa tc_keyfiles_hidden ,
+.Fa tc_new_keyfiles
 are
 .Dv NULL
 terminated arrays of key file strings.
@@ -265,6 +278,77 @@ is specified, the key material for the master key will be taken from
 instead of
 .Pa /dev/random .
 This option should never be used other than for testing.
+.Pp
+The
+.Fn tc_api_modify_volume
+function modifies a volume (header) according to the parameters specified
+in the
+.Fa api_opts
+parameter.
+The volume is specified in
+.Fa tc_device .
+The
+.Fa tc_interactive_prompt
+field determines whether the user will be prompted to enter a passphrase
+interactively or whether the passphrase in
+.Fa tc_passphrase
+will be used.
+If an interactive prompt is used, the prompt will time out after
+.Fa tc_prompt_timeout
+seconds.
+A value of 0 indicates that no timeout will occur.
+The number of passphrase entry retries is defined by
+.Fa tc_password_retries .
+Depending on the passphrase/keyfiles used
+either the outer or the hidden volume header will be modified.
+Any keyfiles that are needed to unlock the volume are specified in
+.Fa tc_keyfiles .
+If
+.Fa tc_use_system_encryption
+is specified, a device using system encryption can be accessed.
+The
+.Fa tc_system_device
+should point to the parent device (i.e. underlying physical disk),
+while the
+.Fa tc_device
+argument should point to the actual encrypted partition.
+If
+.Fa tc_use_fde
+is specified, the device pointed to by
+.Fa tc_device
+should be a whole disk device, not any partition.
+If
+.Fa tc_use_backup
+is specified,
+.Nm tcplay
+will use the backup headers at the end of a volume
+instead of the primary headers as template for the modification.
+Both the backup and the main header will always be written as part
+of a
+.Fn tc_api_modify_volume
+call.
+The
+.Fa tc_new_passphrase
+and
+.Fa tc_new_keyfiles
+arguments specify the new passphrase and keyfile(s) to be used, respectively.
+The
+.Fa tc_new_passphrase
+argument will only be used if
+.Fa tc_interactive_prompt
+is not set, otherwise the user will be prompted for the new passphrase.
+The
+.Fa tc_new_prf_hash
+specifies the PBKDF2 PRF hash algorithm to be used when reencrypting the header.
+If it is
+.Dv NULL ,
+the same PBKDF2 PRF hash function will be used that the header already uses.
+If
+.Fa tc_use_weak_salt
+is set, a weak source of entropy will be used for the salt of both the
+main and backup headers.
+This option does not affect the entropy of the master volume keys, as these
+are not modified.
 .Pp
 The
 .Fn tc_api_map_volume

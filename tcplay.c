@@ -830,7 +830,7 @@ info_map_common(const char *dev, int flags, const char *sys_dev,
     int protect_hidden, const char *keyfiles[], int nkeyfiles,
     const char *h_keyfiles[], int n_hkeyfiles, const char *passphrase,
     const char *passphrase_hidden, int interactive, int retries,
-    time_t timeout)
+    time_t timeout, char *passphrase_out)
 {
 	struct tchdr_enc *ehdr, *hehdr = NULL;
 	struct tcplay_info *info, *hinfo = NULL;
@@ -839,6 +839,7 @@ info_map_common(const char *dev, int flags, const char *sys_dev,
 	int error, error2 = 0;
 	size_t sz;
 	size_t blocks, blksz;
+	int is_hidden = 0;
 
 	if ((error = get_disk_info(dev, &blocks, &blksz)) != 0) {
 		tc_log(1, "could not get disk information\n");
@@ -878,6 +879,10 @@ info_map_common(const char *dev, int flags, const char *sys_dev,
 				strncpy(pass, passphrase, MAX_PASSSZ);
 				pass[MAX_PASSSZ] = '\0';
 			}
+		}
+
+		if (passphrase_out != NULL) {
+			strcpy(passphrase_out, pass);
 		}
 
 		if (nkeyfiles > 0) {
@@ -964,7 +969,7 @@ info_map_common(const char *dev, int flags, const char *sys_dev,
 				error2 = process_hdr(dev, flags, (unsigned char *)pass,
 				    (nkeyfiles > 0)?MAX_PASSSZ:strlen(pass), hehdr,
 				    &info);
-				info->hidden = !error2;
+				is_hidden = !error2;
 			} else if (protect_hidden) {
 				error2 = process_hdr(dev, flags, (unsigned char *)h_pass,
 				    (n_hkeyfiles > 0)?MAX_PASSSZ:strlen(h_pass), hehdr,
@@ -1038,6 +1043,9 @@ out:
 	if (hehdr)
 		free_safe_mem(hehdr);
 
+	if (info != NULL)
+		info->hidden = is_hidden;
+
 	return info;
 }
 
@@ -1075,7 +1083,8 @@ info_volume(const char *device, int flags, const char *sys_dev,
 
 	info = info_map_common(device, flags, sys_dev, protect_hidden,
 	    keyfiles, nkeyfiles, h_keyfiles, n_hkeyfiles,
-	    passphrase, passphrase_hidden, interactive, retries, timeout);
+	    passphrase, passphrase_hidden, interactive, retries, timeout,
+	    NULL);
 
 	if (info != NULL) {
 		if (interactive)
@@ -1104,7 +1113,8 @@ map_volume(const char *map_name, const char *device, int flags,
 
 	info = info_map_common(device, flags, sys_dev, protect_hidden,
 	    keyfiles, nkeyfiles, h_keyfiles, n_hkeyfiles,
-	    passphrase, passphrase_hidden, interactive, retries, timeout);
+	    passphrase, passphrase_hidden, interactive, retries, timeout,
+	    NULL);
 
 	if (info == NULL)
 		return -1;
@@ -1140,22 +1150,31 @@ modify_volume(const char *device, int flags, const char *sys_dev,
 	int error;
 
 	ehdr = ehdr_backup = NULL;
-
-	info = info_map_common(device, flags, sys_dev, 0,
-	    keyfiles, nkeyfiles, NULL, 0,
-	    passphrase, NULL, interactive, retries, timeout);
-
-	if (info == NULL)
-		return -1;
-
 	pass = pass_again = NULL;
+	info = NULL;
 
 	if (TC_FLAG_SET(flags, ONLY_RESTORE)) {
-		new_passphrase = passphrase;
+		if (interactive) {
+			if ((pass = alloc_safe_mem(PASS_BUFSZ)) == NULL) {
+				tc_log(1, "could not allocate safe "
+				    "passphrase memory");
+				goto out;
+			}
+		} else {
+			new_passphrase = passphrase;
+		}
 		new_keyfiles = keyfiles;
 		n_newkeyfiles = nkeyfiles;
 		new_prf_algo = NULL;
 	}
+
+	info = info_map_common(device, flags, sys_dev, 0,
+	    keyfiles, nkeyfiles, NULL, 0,
+	    passphrase, NULL, interactive, retries, timeout, pass);
+
+
+	if (info == NULL)
+		goto out;
 
 	if (interactive && !TC_FLAG_SET(flags, ONLY_RESTORE)) {
 		if (((pass = alloc_safe_mem(PASS_BUFSZ)) == NULL) ||
@@ -1179,7 +1198,7 @@ modify_volume(const char *device, int flags, const char *sys_dev,
 
 		free_safe_mem(pass_again);
 		pass_again = NULL;
-	} else {
+	} else if (!interactive) {
 		/* In batch mode, use provided passphrase */
 		if ((pass = alloc_safe_mem(PASS_BUFSZ)) == NULL) {
 			tc_log(1, "could not allocate safe "
@@ -1210,8 +1229,6 @@ modify_volume(const char *device, int flags, const char *sys_dev,
 		goto out;
 	}
 
-	tc_log(0, "Writing new volume headers to disk...\n");
-
 	dev = (TC_FLAG_SET(flags, SYS)) ? sys_dev : device;
 	if (TC_FLAG_SET(flags, SYS) || TC_FLAG_SET(flags, FDE)) {
 		/* SYS and FDE don't have backup headers (as far as I understand) */
@@ -1235,6 +1252,8 @@ modify_volume(const char *device, int flags, const char *sys_dev,
 		goto out;
 	}
 
+	tc_log(0, "Writing new volume headers to disk...\n");
+
 	if ((error = write_to_disk(dev, offset, blksz, ehdr,
 	    sizeof(*ehdr))) != 0) {
 		tc_log(1, "Could not write volume header to device\n");
@@ -1248,8 +1267,6 @@ modify_volume(const char *device, int flags, const char *sys_dev,
 			goto out;
 		}
 	}
-
-	/* XXX: add new flag for --modify that just reuses passphrase and keyfiles */
 
 	/* Everything went ok */
 	tc_log(0, "All done!\n");

@@ -197,7 +197,7 @@ static struct option longopts[] = {
 	{ "modify",		no_argument,		NULL, FLAG_LONG_MOD },
 	{ "new-keyfile",	required_argument,	NULL, FLAG_LONG_MOD_KF },
 	{ "new-pbkdf-prf",	required_argument,	NULL, FLAG_LONG_MOD_PRF },
-	{ "restore-from-backup-hdr", required_argument,	NULL, FLAG_LONG_MOD_NONE },
+	{ "restore-from-backup-hdr", no_argument,	NULL, FLAG_LONG_MOD_NONE },
 	{ "unmap",		required_argument,	NULL, 'u' },
 	{ "version",		no_argument,		NULL, 'v' },
 	{ "weak-keys",		no_argument,		NULL, 'w' },

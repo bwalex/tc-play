@@ -235,7 +235,7 @@ struct tcplay_info *info_map_common(const char *dev, int flags,
     const char *sys_dev, int protect_hidden, const char *keyfiles[],
     int nkeyfiles, const char *h_keyfiles[], int n_hkeyfiles,
     const char *passphrase, const char *passphrase_hidden, int interactive,
-    int retries, time_t timeout);
+    int retries, time_t timeout, char *passphrase_out);
 int info_mapped_volume(const char *map_name, int interactive);
 int info_volume(const char *device, int flags, const char *sys_dev,
     int protect_hidden, const char *keyfiles[], int nkeyfiles,

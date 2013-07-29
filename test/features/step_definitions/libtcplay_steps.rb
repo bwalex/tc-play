@@ -32,14 +32,14 @@ Given /^I map volume ([^\s]+) as ([^\s]+) with the API using the following setti
   opts[:tc_passphrase_hidden] = FFI::MemoryPointer.from_string(s['passphrase_hidden'] || '')
   opts[:tc_interactive_prompt] = 0
   opts[:tc_use_system_encryption] = 0
-  opts[:tc_use_backup] = ParseHelper.is_yes(s['use_backup'])
+  opts[:tc_use_backup] = (s['use_backup'].nil? ? 0 : ParseHelper.is_yes(s['use_backup']))
 
-  @retval = (TCplayLib.tc_api_map_volume(opts) == TCplayLib::TC_ERR)
-  if (@retval == TCplayLib::TC_ERR)
+  @error = (TCplayLib.tc_api_map_volume(opts) == TCplayLib::TC_ERR)
+  if (@error)
     @err_str = TCplayLib.tc_api_get_error_msg()
   end
 
-  @mappings << map
+  @mappings << map unless @error
   @maps = DMSetupHelper.get_crypt_mappings("#{map}")
 end
 
@@ -87,8 +87,8 @@ Given /^I create a volume ([^\s]+) of size (\d+)M using the API with the followi
 
   @files_to_delete << "volumes/#{vol}"
 
-  @retval = (TCplayLib.tc_api_create_volume(opts) == TCplayLib::TC_ERR)
-  if (@retval == TCplayLib::TC_ERR)
+  @error = (TCplayLib.tc_api_create_volume(opts) == TCplayLib::TC_ERR)
+  if (@error)
     @err_str = TCplayLib.tc_api_get_error_msg()
   end
 end
@@ -124,14 +124,14 @@ Given /^I request information about volume ([^\s]+) with the API using the follo
   opts[:tc_passphrase_hidden] = FFI::MemoryPointer.from_string(s['passphrase_hidden'] || '')
   opts[:tc_interactive_prompt] = 0
   opts[:tc_use_system_encryption] = 0
-  opts[:tc_use_backup] = ParseHelper.is_yes(s['use_backup'])
+  opts[:tc_use_backup] = (s['use_backup'].nil? ? 0 : ParseHelper.is_yes(s['use_backup']))
 
   @info = {}
 
   api_info = TCplayLib::TCApiVolinfo.new
 
-  @retval = (TCplayLib.tc_api_info_volume(opts, api_info) == TCplayLib::TC_ERR)
-  if (@retval == TCplayLib::TC_ERR)
+  @error = (TCplayLib.tc_api_info_volume(opts, api_info) == TCplayLib::TC_ERR)
+  if (@error)
     @err_str = TCplayLib.tc_api_get_error_msg()
   end
 
@@ -154,8 +154,8 @@ Given /^I request information about mapped volume ([^\s]+) with the API$/ do |ma
 
   api_info = TCplayLib::TCApiVolinfo.new
 
-  @retval = (TCplayLib.tc_api_info_mapped_volume(opts, api_info) == TCplayLib::TC_ERR)
-  if (@retval == TCplayLib::TC_ERR)
+  @error = (TCplayLib.tc_api_info_mapped_volume(opts, api_info) == TCplayLib::TC_ERR)
+  if (@error)
     @err_str = TCplayLib.tc_api_get_error_msg()
   end
 
@@ -166,6 +166,40 @@ Given /^I request information about mapped volume ([^\s]+) with the API$/ do |ma
   @info['volume size'] = "#{api_info[:tc_size]} bytes"
   @info['iv offset'] =  "#{api_info[:tc_iv_offset]} bytes"
   @info['block offset'] = "#{api_info[:tc_block_offset]} bytes"
+end
+
+
+Given /^I modify volume ([^\s]+) with the API using the following settings:$/ do |vol,settings|
+  s = settings.rows_hash
+
+  loop_dev = @losetup.get_device("volumes/#{vol}")
+
+  opts = TCplayLib::TCApiOpts.new
+
+  opts[:tc_device] = FFI::MemoryPointer.from_string(loop_dev)
+
+  unless s['keyfiles'].nil?
+    keyfiles = ParseHelper.csv_parse(s['keyfiles']) { |kf| "keyfiles/#{kf}" }
+    opts[:tc_keyfiles] = FFIHelper.str_array_to_p(keyfiles)
+  end
+
+  unless s['new_keyfiles'].nil?
+    new_keyfiles = ParseHelper.csv_parse(s['new_keyfiles']) { |kf| "keyfiles/#{kf}" }
+    opts[:tc_new_keyfiles] = FFIHelper.str_array_to_p(new_keyfiles)
+  end
+
+  opts[:tc_passphrase] = FFI::MemoryPointer.from_string(s['passphrase'] || '')
+  opts[:tc_new_passphrase] = FFI::MemoryPointer.from_string(s['new_passphrase'] || '')
+  opts[:tc_new_prf_hash] = FFI::MemoryPointer.from_string(s['new_pbkdf_prf'].strip) unless s['new_pbkdf_prf'].nil?
+  opts[:tc_interactive_prompt] = 0
+  opts[:tc_use_system_encryption] = 0
+  opts[:tc_use_weak_salt] = 1
+  opts[:tc_use_backup] = (s['use_backup'].nil? ? 0 : ParseHelper.is_yes(s['use_backup']))
+
+  @error = (TCplayLib.tc_api_modify_volume(opts) == TCplayLib::TC_ERR)
+  if (@error)
+    @err_str = TCplayLib.tc_api_get_error_msg()
+  end
 end
 
 

@@ -336,6 +336,19 @@ struct tchdr_enc *copy_reencrypt_hdr(unsigned char *pass, int passlen,
 		goto error;
 	}
 
+	HOST_TO_BE(16, info->hdr->tc_ver);
+	HOST_TO_LE(16, info->hdr->tc_min_ver);
+	HOST_TO_BE(32, info->hdr->crc_keys);
+	HOST_TO_BE(64, info->hdr->vol_ctime);
+	HOST_TO_BE(64, info->hdr->hdr_ctime);
+	HOST_TO_BE(64, info->hdr->sz_vol);
+	HOST_TO_BE(64, info->hdr->sz_hidvol);
+	HOST_TO_BE(64, info->hdr->off_mk_scope);
+	HOST_TO_BE(64, info->hdr->sz_mk_scope);
+	HOST_TO_BE(32, info->hdr->sec_sz);
+	HOST_TO_BE(32, info->hdr->flags);
+	HOST_TO_BE(32, info->hdr->crc_dhdr);
+
 	memset(iv, 0, sizeof(iv));
 	error = tc_encrypt(info->cipher_chain, key, iv,
 	    (unsigned char *)info->hdr, sizeof(struct tchdr_dec), ehdr->enc);
