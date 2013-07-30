@@ -16,7 +16,7 @@ mapped.
 
 It is based solely on the documentation available on the TrueCrypt website,
 many hours of trial and error and the output of the Linux' TrueCrypt client.
-As it turns out, most technical documents on TrueCrypt contains mistakes, hence
+As it turns out, most technical documents on TrueCrypt contain mistakes, hence
 the trial and error approach.
 
 
