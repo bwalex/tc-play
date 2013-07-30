@@ -6,7 +6,9 @@ keyfiles, cipher cascades, etc) and stable TrueCrypt implementation.
 This implementation supports mapping (opening) both system and normal TrueCrypt
 volumes, as well as opening hidden volumes and opening an outer volume while
 protecting a hidden volume. There is also support to create volumes, including
-hidden volumes, etc.
+hidden volumes, etc. Since version 1.1, there is also support for restoring
+from the backup header (if present), change passphrase, keyfile and PBKDF2
+PRF function.
 
 Since tcplay uses dm-crypt (or dm_target_crypt on DragonFly) it makes full use
 of any available hardware encryption/decryption support once the volume has been
@@ -137,9 +139,6 @@ your changes into this repository so that there is a single point of contact.
 I've noticed that sometimes bugs are only reported downstream (e.g. in the
 distro's bugtracker). Please make sure those bugs are also reported upstream on
 github, otherwise odds are they will never reach me.
-
-Coming features:
- - restoring header from backup header
 
 
 
