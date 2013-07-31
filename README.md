@@ -96,7 +96,7 @@ Download for packaging
 ==========
 Latest release can be found as a (source) zip at:
 
-https://github.com/bwalex/tc-play/archive/v1.0.zip
+https://github.com/bwalex/tc-play/archive/v1.1.tar.gz
 
 
 
