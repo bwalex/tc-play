@@ -94,7 +94,7 @@ Please refer to the man pages bundled with tcplay.
 
 Download for packaging
 ==========
-Latest release can be found as a (source) zip at:
+Latest release can be found as a (source) tarball at:
 
 https://github.com/bwalex/tc-play/archive/v1.1.tar.gz
 
