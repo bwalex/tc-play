@@ -1,4 +1,7 @@
-2013-??-?? Version 1.1  - Alex Hornung <alex@alexhornung.com>
+2013-07-31 Version 1.1  - Alex Hornung <alex@alexhornung.com>
+
+Special thanks to Mike Baker, Joshua Escamilla and Alon Bar-Lev
+for contributing fixes/improvements!
 
  * Added command to request information on mapped volumes.
 
@@ -15,7 +18,7 @@
    and keyfile changes, as well as restoring from the backup
    header.
 
- * Improvements to Makefile.classic (thanks to Alon Bar-Lev).
+ * Improvements to Makefile.classic.
 
 
 2013-05-15 Version 1.0  - Alex Hornung <alex@alexhornung.com>
