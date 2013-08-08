@@ -299,6 +299,15 @@ This option implies
 Use this option to restore the volume headers from the backup
 header.
 .El
+.Pp
+Sending a
+.Dv SIGINFO
+or
+.Dv SIGUSR1
+signal to a running
+.Nm
+process makes it print progress on slower tasks
+such as gathering entropy or wiping the volume.
 .Sh NOTES
 TrueCrypt limits passphrases to 64 characters (including the terminating
 null character).
