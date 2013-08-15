@@ -40,7 +40,7 @@ module TCplayLib
            :tc_prf_hash,              :pointer,
            :tc_cipher_hidden,         :pointer,
            :tc_prf_hash_hidden,       :pointer,
-           :tc_size_hidden_in_bytes,  :size_t,
+           :tc_size_hidden_in_bytes,  :uint64,
            :tc_no_secure_erase,       :int,
            :tc_use_weak_keys,         :int
   end
@@ -50,7 +50,7 @@ module TCplayLib
            :tc_cipher,                [:char,  256],
            :tc_prf,                   [:char,   64],
            :tc_key_bits,              :int,
-           :tc_size,                  :size_t,
+           :tc_size,                  :uint64,
            :tc_iv_offset,             :off_t,
            :tc_block_offset,          :off_t
   end

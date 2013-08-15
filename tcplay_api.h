@@ -73,7 +73,7 @@ typedef struct tc_api_opts {
 	const char	*tc_prf_hash;
 	const char	*tc_cipher_hidden;
 	const char	*tc_prf_hash_hidden;
-	size_t		tc_size_hidden_in_bytes;
+	uint64_t	tc_size_hidden_in_bytes;
 	int		tc_no_secure_erase;
 	int		tc_use_weak_keys;
 } tc_api_opts;
@@ -85,7 +85,7 @@ typedef struct tc_api_volinfo {
 
 	int		tc_key_bits;
 
-	size_t		tc_size;
+	uint64_t	tc_size;
 	off_t		tc_iv_offset;
 	off_t		tc_block_offset;
 } tc_api_volinfo;

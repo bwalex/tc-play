@@ -153,8 +153,8 @@ get_random(unsigned char *buf, size_t len, int weak)
 	return 0;
 }
 
-static size_t secure_erase_total_bytes = 0;
-static size_t secure_erase_erased_bytes = 0;
+static disksz_t secure_erase_total_bytes = 0;
+static disksz_t secure_erase_erased_bytes = 0;
 
 float
 get_secure_erase_progress(void)
@@ -173,7 +173,7 @@ secure_erase_summary(void)
 }
 
 int
-secure_erase(const char *dev, size_t bytes, size_t blksz)
+secure_erase(const char *dev, disksz_t bytes, size_t blksz)
 {
 	size_t erased = 0;
 	int fd_rand, fd;
@@ -269,7 +269,7 @@ get_disk_info(const char *dev, size_t *blocks, size_t *bsize)
 }
 #elif defined(__linux__)
 int
-get_disk_info(const char *dev, size_t *blocks, size_t *bsize)
+get_disk_info(const char *dev, disksz_t *blocks, size_t *bsize)
 {
 	uint64_t nbytes;
 	int blocksz;
@@ -290,7 +290,7 @@ get_disk_info(const char *dev, size_t *blocks, size_t *bsize)
 		return -1;
 	}
 
-	*blocks = (size_t)(nbytes / blocksz);
+	*blocks = (disksz_t)(nbytes / blocksz);
 	*bsize = (size_t)(blocksz);
 
 	close(fd);

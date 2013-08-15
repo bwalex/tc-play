@@ -332,7 +332,7 @@ print_info(struct tcplay_info *info)
 	} else {
 		printf("Sector size:\t\t512\n");
 	}
-	printf("Volume size:\t\t%zu sectors\n", info->size);
+	printf("Volume size:\t\t%"DISKSZ_FMT" sectors\n", info->size);
 #if 0
 	/* Don't print this; it's always 0 and is rather confusing */
 	printf("Volume offset:\t\t%"PRIu64"\n", (uint64_t)info->start);
@@ -517,13 +517,14 @@ create_volume(const char *dev, int hidden, const char *keyfiles[], int nkeyfiles
     const char *h_keyfiles[], int n_hkeyfiles, struct pbkdf_prf_algo *prf_algo,
     struct tc_cipher_chain *cipher_chain, struct pbkdf_prf_algo *h_prf_algo,
     struct tc_cipher_chain *h_cipher_chain, const char *passphrase,
-    const char *h_passphrase, size_t size_hidden_bytes_in, int interactive,
+    const char *h_passphrase, disksz_t size_hidden_bytes_in, int interactive,
     int use_secure_erase, int weak_keys)
 {
 	char *pass, *pass_again;
 	char *h_pass = NULL;
 	char buf[1024];
-	size_t blocks, blksz, hidden_blocks = 0;
+	disksz_t blocks, hidden_blocks = 0;
+	size_t blksz;
 	struct tchdr_enc *ehdr, *hehdr;
 	struct tchdr_enc *ehdr_backup, *hehdr_backup;
 	uint64_t tmp;
@@ -838,7 +839,8 @@ info_map_common(const char *dev, int flags, const char *sys_dev,
 	char *h_pass;
 	int error, error2 = 0;
 	size_t sz;
-	size_t blocks, blksz;
+	size_t blksz;
+	disksz_t blocks;
 	int is_hidden = 0;
 
 	if ((error = get_disk_info(dev, &blocks, &blksz)) != 0) {
@@ -1146,7 +1148,8 @@ modify_volume(const char *device, int flags, const char *sys_dev,
 	int ret = -1;
 	off_t offset, offset_backup;
 	const char *dev;
-	size_t blocks, blksz;
+	size_t blksz;
+	disksz_t blocks;
 	int error;
 
 	ehdr = ehdr_backup = NULL;

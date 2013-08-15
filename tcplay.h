@@ -79,6 +79,11 @@
 #include <uuid/uuid.h>
 #endif
 
+
+typedef uint64_t disksz_t;
+#define DISKSZ_FMT PRIu64
+
+
 struct pbkdf_prf_algo {
 	const char *name;
 	int iteration_count;
@@ -140,7 +145,7 @@ struct tcplay_info {
 	int volflags;
 
 	off_t start;	/* Logical volume offset in table */
-	size_t size;	/* Volume size */
+	disksz_t size;	/* Volume size */
 
 	off_t skip;	/* IV offset */
 	off_t offset;	/* Block offset */
@@ -155,7 +160,7 @@ struct tcplay_dm_table {
 	char device[PATH_MAX];	/* Underlying device */
 	char target[256];	/* DM Target type */
 	off_t start;		/* Logical volume offset in table */
-	size_t size;		/* Volume size */
+	disksz_t size;		/* Volume size */
 
 	char cipher[256];	/* Cipher */
 	off_t skip;		/* IV offset */
@@ -164,8 +169,8 @@ struct tcplay_dm_table {
 
 void *read_to_safe_mem(const char *file, off_t offset, size_t *sz);
 int get_random(unsigned char *buf, size_t len, int weak);
-int secure_erase(const char *dev, size_t bytes, size_t blksz);
-int get_disk_info(const char *dev, size_t *blocks, size_t *bsize);
+int secure_erase(const char *dev, disksz_t bytes, size_t blksz);
+int get_disk_info(const char *dev, disksz_t *blocks, size_t *bsize);
 int write_to_disk(const char *dev, off_t offset, size_t blksz, void *mem,
     size_t bytes);
 int read_passphrase(const char *prompt, char *pass, size_t passlen,
@@ -198,8 +203,8 @@ int apply_keyfiles(unsigned char *pass, size_t pass_memsz, const char *keyfiles[
 
 struct tchdr_enc *create_hdr(unsigned char *pass, int passlen,
     struct pbkdf_prf_algo *prf_algo, struct tc_cipher_chain *cipher_chain,
-    size_t sec_sz, size_t total_blocks,
-    off_t offset, size_t blocks, int hidden, int weak,
+    size_t sec_sz, disksz_t total_blocks,
+    off_t offset, disksz_t blocks, int hidden, int weak,
     struct tchdr_enc **backup_hdr);
 struct tchdr_dec *decrypt_hdr(struct tchdr_enc *ehdr,
     struct tc_cipher_chain *cipher_chain, unsigned char *key);
@@ -229,7 +234,7 @@ int create_volume(const char *dev, int hidden, const char *keyfiles[],
     int nkeyfiles, const char *h_keyfiles[], int n_hkeyfiles,
     struct pbkdf_prf_algo *prf_algo, struct tc_cipher_chain *cipher_chain,
     struct pbkdf_prf_algo *h_prf_algo, struct tc_cipher_chain *h_cipher_chain,
-    const char *passphrase, const char *h_passphrase, size_t hidden_bytes_in,
+    const char *passphrase, const char *h_passphrase, disksz_t hidden_bytes_in,
     int interactive, int secure_erase, int weak_keys);
 struct tcplay_info *info_map_common(const char *dev, int flags,
     const char *sys_dev, int protect_hidden, const char *keyfiles[],
