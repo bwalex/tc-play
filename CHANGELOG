@@ -1,4 +1,12 @@
-2013-07-31 Version 1.1  - Alex Hornung <alex@alexhornung.com>
+2013-??-?? Version 1.2 - Alex Hornung <alex@alexhornung.com>
+
+ * Documented SIGINFO/SIGUSR1 behaviour in man page.
+
+ * Fixed creation (and volinfo) of 2GB+ volumes on 32-bit
+   architectures, including armhf.
+
+
+2013-07-31 Version 1.1 - Alex Hornung <alex@alexhornung.com>
 
 Special thanks to Mike Baker, Joshua Escamilla and Alon Bar-Lev
 for contributing fixes/improvements!
@@ -21,7 +29,7 @@ for contributing fixes/improvements!
  * Improvements to Makefile.classic.
 
 
-2013-05-15 Version 1.0  - Alex Hornung <alex@alexhornung.com>
+2013-05-15 Version 1.0 - Alex Hornung <alex@alexhornung.com>
 
  * Fixed bug in hidden volume protection (issue #28).
 

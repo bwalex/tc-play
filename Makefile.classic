@@ -25,7 +25,7 @@ LN?=ln
 DEBUG?=no
 
 MAJ_VER=1
-MIN_VER=1
+MIN_VER=2
 
 
 # I've given up on -Werror for now; many Linux distros have warnings even in
@@ -36,7 +36,7 @@ WARNFLAGS= -Wsystem-headers -Wall -W -Wno-unused-parameter \
 	-Wswitch -Wshadow -Wcast-align -Wunused-parameter -Wchar-subscripts \
 	-Winline -Wnested-externs
 
-VER_FLAGS= -DMAJ_VER=$(MAJ_VER) -DMIN_VER=$(MIN_VER)
+VER_FLAGS= -DMAJ_VER=$(MAJ_VER) -DMIN_VER=$(MIN_VER) -D_FILE_OFFSET_BITS=64
 
 SRCS=	tcplay.c crc32.c safe_mem.c io.c hdr.c humanize.c
 SRCS+=	crypto.c generic_xts.c
