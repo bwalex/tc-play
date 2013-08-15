@@ -670,7 +670,7 @@ create_volume(const char *dev, int hidden, const char *keyfiles[], int nkeyfiles
 		while (hidden_blocks == 0) {
 			if ((r = _humanize_number(buf, sizeof(buf),
 			    (uint64_t)(blocks * blksz))) < 0) {
-				sprintf(buf, "%zu bytes", (blocks * blksz));
+				sprintf(buf, "%"DISKSZ_FMT" bytes", (blocks * blksz));
 			}
 
 			printf("The total volume size of %s is %s (bytes)\n", dev, buf);
@@ -706,10 +706,11 @@ create_volume(const char *dev, int hidden, const char *keyfiles[], int nkeyfiles
 	if (interactive) {
 		/* Show summary and ask for confirmation */
 		printf("Summary of actions:\n");
-		printf(" - Completely erase *EVERYTHING* on %s\n", dev);
+		if (use_secure_erase)
+			printf(" - Completely erase *EVERYTHING* on %s\n", dev);
 		printf(" - Create %svolume on %s\n", hidden?("outer "):"", dev);
 		if (hidden) {
-			printf(" - Create hidden volume of %zu bytes at end of "
+			printf(" - Create hidden volume of %"DISKSZ_FMT" bytes at end of "
 			    "outer volume\n",
 			    hidden_blocks * blksz);
 		}
