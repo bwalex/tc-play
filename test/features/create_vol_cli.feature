@@ -85,8 +85,10 @@ Feature: Command line volume creation
       | cipher_hidden     | SERPENT-256-XTS                  |
     And I map volume tmpvol1 as tcplay_test using the following settings:
       | keyfiles          | key.2             |
+      | prompt_skipped    | yes               |
     And I request information about volume tmpvol1 using the following settings:
       | keyfiles          | key.2             |
+      | prompt_skipped    | yes               |
     Then I expect dmsetup to have the following tables:
       | name           | begin   | end     | algo                  | offset    | iv_offset     |
       | tcplay_test    | 0       | 4096    | serpent-xts-plain64   | 16128     | 16128         |

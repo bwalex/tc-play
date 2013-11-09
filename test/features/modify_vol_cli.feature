@@ -122,6 +122,7 @@ Feature: Command line volume modification
       | cipher_hidden     | SERPENT-256-XTS                  |
     And I modify volume tmpvol1 using the following settings:
       | keyfiles       | key.2             |
+      | prompt_skipped | yes               |
       | new_passphrase | new_hidden        |
       | new_keyfiles   | key.1, key.2      |
     And I map volume tmpvol1 as tcplay_test using the following settings:
@@ -159,8 +160,10 @@ Feature: Command line volume modification
       | new_pbkdf_prf  | SHA512            |
     And I map volume tmpvol1 as tcplay_test using the following settings:
       | keyfiles          | key.1, key.2   |
+      | prompt_skipped    | yes            |
     And I request information about volume tmpvol1 using the following settings:
       | keyfiles          | key.1, key.2   |
+      | prompt_skipped    | yes            |
     Then I expect dmsetup to have the following tables:
       | name           | begin   | end     | algo                  | offset    | iv_offset     |
       | tcplay_test    | 0       | 4096    | serpent-xts-plain64   | 16128     | 16128         |
@@ -216,11 +219,14 @@ Feature: Command line volume modification
       | cipher_hidden     | SERPENT-256-XTS                  |
     And I corrupt sector 128 of volume tmpvol1
     And I modify volume tmpvol1 by restoring from the backup header using the following settings:
-      | keyfiles       | key.2             |
+      | keyfiles          | key.2          |
+      | prompt_skipped    | yes            |
     And I map volume tmpvol1 as tcplay_test using the following settings:
       | keyfiles          | key.2          |
+      | prompt_skipped    | yes            |
     And I request information about volume tmpvol1 using the following settings:
       | keyfiles          | key.2          |
+      | prompt_skipped    | yes            |
     Then I expect dmsetup to have the following tables:
       | name           | begin   | end     | algo                  | offset    | iv_offset     |
       | tcplay_test    | 0       | 4096    | serpent-xts-plain64   | 16128     | 16128         |

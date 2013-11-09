@@ -843,6 +843,7 @@ info_map_common(const char *dev, int flags, const char *sys_dev,
 	size_t blksz;
 	disksz_t blocks;
 	int is_hidden = 0;
+	int try_empty = 0;
 
 	if ((error = get_disk_info(dev, &blocks, &blksz)) != 0) {
 		tc_log(1, "could not get disk information\n");
@@ -851,6 +852,15 @@ info_map_common(const char *dev, int flags, const char *sys_dev,
 
 	if (retries < 1)
 		retries = 1;
+
+	/*
+	 * Add one retry so we can do a first try without asking for
+	 * a password if keyfiles are passed in.
+	 */
+	if (interactive && (nkeyfiles > 0)) {
+		try_empty = 1;
+		++retries;
+	}
 
 	info = NULL;
 
@@ -868,7 +878,9 @@ info_map_common(const char *dev, int flags, const char *sys_dev,
 			goto out;
 		}
 
-		if (interactive) {
+		if (try_empty) {
+			pass[0] = '\0';
+		} else if (interactive) {
 		        if ((error = read_passphrase("Passphrase: ", pass,
 			    MAX_PASSSZ, PASS_BUFSZ, timeout))) {
 				tc_log(1, "could not read passphrase\n");
@@ -983,7 +995,8 @@ info_map_common(const char *dev, int flags, const char *sys_dev,
 		/* We need both to protect a hidden volume */
 		if ((protect_hidden && (error || error2)) ||
 		    (error && error2)) {
-			tc_log(1, "Incorrect password or not a TrueCrypt volume\n");
+			if (!try_empty)
+				tc_log(1, "Incorrect password or not a TrueCrypt volume\n");
 
 			if (info) {
 				free_info(info);
@@ -1010,6 +1023,8 @@ info_map_common(const char *dev, int flags, const char *sys_dev,
 				free_safe_mem(hehdr);
 				hehdr = NULL;
 			}
+
+			try_empty = 0;
 			continue;
 		}
 
@@ -1032,6 +1047,7 @@ info_map_common(const char *dev, int flags, const char *sys_dev,
 				hinfo = NULL;
 			}
 		}
+		try_empty = 0;
         }
 
 out:

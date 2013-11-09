@@ -44,8 +44,10 @@ Given /^I map volume ([^\s]+) as ([^\s]+) using the following settings:$/ do |vo
   s['passphrase_hidden'] ||= ''
 
   IO.popen("#{@tcplay} #{@args.join(' ')}", mode='r+') do |tcplay_io|
-    tcplay_io.expect /Passphrase/, 10 do
-      tcplay_io.write("#{s['passphrase']}\n")
+    unless ParseHelper.is_yes(s['prompt_skipped'])
+      tcplay_io.expect /Passphrase/, 10 do
+        tcplay_io.write("#{s['passphrase']}\n")
+      end
     end
     if protect_hidden == true
       tcplay_io.expect /Passphrase for hidden volume/, 10 do
@@ -148,8 +150,10 @@ Given /^I request information about volume ([^\s]+) using the following settings
   @info = {}
 
   IO.popen("#{@tcplay} #{@args.join(' ')}", mode='r+') do |tcplay_io|
-    tcplay_io.expect /Passphrase:/, 10 do
-      tcplay_io.write("#{s['passphrase']}\n")
+    unless ParseHelper.is_yes(s['prompt_skipped'])
+      tcplay_io.expect /Passphrase:/, 10 do
+        tcplay_io.write("#{s['passphrase']}\n")
+      end
     end
     if protect_hidden == true
       tcplay_io.expect /Passphrase for hidden volume:/, 10 do
@@ -206,8 +210,10 @@ Given /^I modify volume ([^\s]+) using the following settings:$/ do |vol,setting
   s['new_passphrase'] ||= ''
 
   IO.popen("#{@tcplay} #{@args.join(' ')}", mode='r+') do |tcplay_io|
-    tcplay_io.expect /Passphrase:/, 10 do
-      tcplay_io.write("#{s['passphrase']}\n")
+    unless ParseHelper.is_yes(s['prompt_skipped'])
+      tcplay_io.expect /Passphrase:/, 10 do
+        tcplay_io.write("#{s['passphrase']}\n")
+      end
     end
 
     tcplay_io.expect /New passphrase/, 10 do
@@ -238,8 +244,10 @@ Given /^I modify volume ([^\s]+) by restoring from the backup header using the f
   s['passphrase'] ||= ''
 
   IO.popen("#{@tcplay} #{@args.join(' ')}", mode='r+') do |tcplay_io|
-    tcplay_io.expect /Passphrase:/, 10 do
-      tcplay_io.write("#{s['passphrase']}\n")
+    unless ParseHelper.is_yes(s['prompt_skipped'])
+      tcplay_io.expect /Passphrase:/, 10 do
+        tcplay_io.write("#{s['passphrase']}\n")
+      end
     end
   end
   @error = ($? != 0)
