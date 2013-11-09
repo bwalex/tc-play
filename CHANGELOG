@@ -5,6 +5,9 @@
  * Fixed creation (and volinfo) of 2GB+ volumes on 32-bit
    architectures, including armhf.
 
+ * Try without a passphrase first if keyfiles are provided (issue
+   #42).
+
 
 2013-07-31 Version 1.1 - Alex Hornung <alex@alexhornung.com>
 
