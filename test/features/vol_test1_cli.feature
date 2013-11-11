@@ -12,8 +12,8 @@ Feature: Command line mapping/info tests using volume test1.tc
       | Cipher             | AES-256-XTS        |
       | Key Length         | 512 bits           |
       | Volume size        | 40448 sectors      |
-      | IV offset          | 256                |
-      | Block offset       | 256                |
+      | IV offset          | 256 sectors        |
+      | Block offset       | 256 sectors        |
 
 
 
@@ -28,8 +28,8 @@ Feature: Command line mapping/info tests using volume test1.tc
       | Cipher             | AES-256-XTS        |
       | Key Length         | 512 bits           |
       | Volume size        | 10240 sectors      |
-      | IV offset          | 30464              |
-      | Block offset       | 30464              |
+      | IV offset          | 30464 sectors      |
+      | Block offset       | 30464 sectors      |
 
 
 
@@ -46,5 +46,5 @@ Feature: Command line mapping/info tests using volume test1.tc
       | Cipher             | AES-256-XTS        |
       | Key Length         | 512 bits           |
       | Volume size        | 30208 sectors      |
-      | IV offset          | 256                |
-      | Block offset       | 256                |
+      | IV offset          | 256 sectors        |
+      | Block offset       | 256 sectors        |

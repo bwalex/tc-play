@@ -14,8 +14,8 @@ Feature: Command line mapping/info tests using volume test2.tc
       | Cipher             | SERPENT-256-XTS,TWOFISH-256-XTS,AES-256-XTS |
       | Key Length         | 1536 bits                                   |
       | Volume size        | 9728 sectors                                |
-      | IV offset          | 256                                         |
-      | Block offset       | 256                                         |
+      | IV offset          | 256 sectors                                 |
+      | Block offset       | 256 sectors                                 |
 
 
 
@@ -32,8 +32,8 @@ Feature: Command line mapping/info tests using volume test2.tc
       | Cipher             | SERPENT-256-XTS,TWOFISH-256-XTS             |
       | Key Length         | 1024 bits                                   |
       | Volume size        | 2040 sectors                                |
-      | IV offset          | 7936                                        |
-      | Block offset       | 7936                                        |
+      | IV offset          | 7936 sectors                                |
+      | Block offset       | 7936 sectors                                |
 
 
 
@@ -53,5 +53,5 @@ Feature: Command line mapping/info tests using volume test2.tc
       | Cipher             | SERPENT-256-XTS,TWOFISH-256-XTS,AES-256-XTS |
       | Key Length         | 1536 bits                                   |
       | Volume size        | 7688 sectors                                |
-      | IV offset          | 256                                         |
-      | Block offset       | 256                                         |
+      | IV offset          | 256 sectors                                 |
+      | Block offset       | 256 sectors                                 |

@@ -144,17 +144,22 @@ struct tcplay_info {
 	int flags;
 	int volflags;
 
-	off_t start;	/* Logical volume offset in table */
-	disksz_t size;	/* Volume size */
+	uint32_t blk_sz;
 
-	off_t skip;	/* IV offset */
-	off_t offset;	/* Block offset */
+	off_t start;	/* Logical volume offset in table (in blk_sz blocks) */
+	disksz_t size;	/* Volume size (in blk_sz blocks) */
+
+	off_t skip;	/* IV offset (in blk_sz blocks) */
+	off_t offset;	/* Block offset (in blk_sz blocks) */
 
 	/* Populated by dm_setup */
 	uuid_t uuid;
 
 	int hidden;
 };
+
+#define INFO_TO_DM_BLOCKS(info, memb) \
+    (((info)->memb * (uint64_t)((info)->blk_sz))/512)
 
 struct tcplay_dm_table {
 	char device[PATH_MAX];	/* Underlying device */

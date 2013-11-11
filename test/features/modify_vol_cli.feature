@@ -24,8 +24,8 @@ Feature: Command line volume modification
       | Key Length         | 512 bits          |
       | Sector size        | 512               |
       | Volume size        | 19968 sectors     |
-      | IV offset          | 256               |
-      | Block offset       | 256               |
+      | IV offset          | 256 sectors       |
+      | Block offset       | 256 sectors       |
 
   Scenario: Simple volume #1 (change PBKDF PRF)
     Given I create a volume tmpvol1 of size 10M with the following parameters:
@@ -51,8 +51,8 @@ Feature: Command line volume modification
       | Key Length         | 512 bits          |
       | Sector size        | 512               |
       | Volume size        | 19968 sectors     |
-      | IV offset          | 256               |
-      | Block offset       | 256               |
+      | IV offset          | 256 sectors       |
+      | Block offset       | 256 sectors       |
 
   Scenario: Cascade volume #1 (change passphrase)
     Given I create a volume tmpvol1 of size 10M with the following parameters:
@@ -77,8 +77,8 @@ Feature: Command line volume modification
       | Key Length         | 1024 bits                   |
       | Sector size        | 512                         |
       | Volume size        | 19968 sectors               |
-      | IV offset          | 256                         |
-      | Block offset       | 256                         |
+      | IV offset          | 256 sectors                 |
+      | Block offset       | 256 sectors                 |
 
   Scenario: Hidden volume #1 (change passphrase)
     Given I create a volume tmpvol1 of size 10M with the following parameters:
@@ -107,8 +107,8 @@ Feature: Command line volume modification
       | Key Length         | 512 bits                    |
       | Sector size        | 512                         |
       | Volume size        | 19968 sectors               |
-      | IV offset          | 256                         |
-      | Block offset       | 256                         |
+      | IV offset          | 256 sectors                 |
+      | Block offset       | 256 sectors                 |
 
   Scenario: Hidden volume #2 (change passphrase, keyfiles)
     Given I create a volume tmpvol1 of size 10M with the following parameters:
@@ -141,8 +141,8 @@ Feature: Command line volume modification
       | Key Length         | 512 bits                    |
       | Sector size        | 512                         |
       | Volume size        | 4096 sectors                |
-      | IV offset          | 16128                       |
-      | Block offset       | 16128                       |
+      | IV offset          | 16128 sectors               |
+      | Block offset       | 16128 sectors               |
 
   Scenario: Hidden volume #3 (change keyfiles, PBKDF PRF)
     Given I create a volume tmpvol1 of size 10M with the following parameters:
@@ -174,8 +174,8 @@ Feature: Command line volume modification
       | Key Length         | 512 bits                    |
       | Sector size        | 512                         |
       | Volume size        | 4096 sectors                |
-      | IV offset          | 16128                       |
-      | Block offset       | 16128                       |
+      | IV offset          | 16128 sectors               |
+      | Block offset       | 16128 sectors               |
 
   Scenario: Hidden volume #4 (restore from backup, outer)
     Given I create a volume tmpvol1 of size 10M with the following parameters:
@@ -204,8 +204,8 @@ Feature: Command line volume modification
       | Key Length         | 512 bits                    |
       | Sector size        | 512                         |
       | Volume size        | 19968 sectors               |
-      | IV offset          | 256                         |
-      | Block offset       | 256                         |
+      | IV offset          | 256 sectors                 |
+      | Block offset       | 256 sectors                 |
 
   Scenario: Hidden volume #5 (restore from backup, hidden)
     Given I create a volume tmpvol1 of size 10M with the following parameters:
@@ -237,5 +237,5 @@ Feature: Command line volume modification
       | Key Length         | 512 bits                    |
       | Sector size        | 512                         |
       | Volume size        | 4096 sectors                |
-      | IV offset          | 16128                       |
-      | Block offset       | 16128                       |
+      | IV offset          | 16128 sectors               |
+      | Block offset       | 16128 sectors               |

@@ -18,8 +18,8 @@ Feature: Passphrase 64-byte limitation using command line
       | Key Length         | 512 bits          |
       | Sector size        | 512               |
       | Volume size        | 1536 sectors      |
-      | IV offset          | 256               |
-      | Block offset       | 256               |
+      | IV offset          | 256 sectors       |
+      | Block offset       | 256 sectors       |
 
   Scenario: Long passphrase TrueCrypt-created volume mapping with trimming
     Given I map volume test_long.tc as tcplay_test using the following settings:
@@ -38,8 +38,8 @@ Feature: Passphrase 64-byte limitation using command line
       | Key Length         | 512 bits          |
       | Sector size        | 512               |
       | Volume size        | 1536 sectors      |
-      | IV offset          | 256               |
-      | Block offset       | 256               |
+      | IV offset          | 256 sectors       |
+      | Block offset       | 256 sectors       |
 
   Scenario: Long passphrase volume creation
     Given I create a volume tmpvol1 of size 10M with the following parameters:
@@ -60,5 +60,5 @@ Feature: Passphrase 64-byte limitation using command line
       | Key Length         | 512 bits          |
       | Sector size        | 512               |
       | Volume size        | 19968 sectors     |
-      | IV offset          | 256               |
-      | Block offset       | 256               |
+      | IV offset          | 256 sectors       |
+      | Block offset       | 256 sectors       |

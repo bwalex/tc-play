@@ -342,8 +342,10 @@ print_info(struct tcplay_info *info)
 	printf("Vol Flags:\t\t%d\n", info->volflags);
 #endif
 
-	printf("IV offset:\t\t%"PRIu64"\n", (uint64_t)info->skip);
-	printf("Block offset:\t\t%"PRIu64"\n", (uint64_t)info->offset);
+	printf("IV offset:\t\t%"PRIu64" sectors\n",
+	    (uint64_t)info->skip);
+	printf("Block offset:\t\t%"PRIu64" sectors\n",
+	    (uint64_t)info->offset);
 }
 
 static
@@ -368,6 +370,7 @@ new_info(const char *dev, int flags, struct tc_cipher_chain *cipher_chain,
 	info->pbkdf_prf = prf;
 	info->start = start;
 	info->hdr = hdr;
+	info->blk_sz = hdr->sec_sz;
 	info->size = hdr->sz_mk_scope / hdr->sec_sz;	/* volume size */
 	info->skip = hdr->off_mk_scope / hdr->sec_sz;	/* iv skip */
 
@@ -1594,6 +1597,7 @@ dm_info_map(const char *map_name)
 	info->size = dm_table[0]->size;
 	info->skip = dm_table[outermost]->skip;
 	info->offset = dm_table[outermost]->offset;
+	info->blk_sz = 512;
 
 	return info;
 
@@ -1677,8 +1681,13 @@ dm_setup(const char *mapname, struct tcplay_info *info)
 	}
 
 	strcpy(dev, info->dev);
-	start = info->start;
-	offset = info->offset;
+
+	/*
+	 * Device Mapper blocks are always 512-byte blocks, so convert
+	 * from the "native" block size to the dm block size here.
+	 */
+	start = INFO_TO_DM_BLOCKS(info, start);
+	offset = INFO_TO_DM_BLOCKS(info, offset);
 	uu_stack_idx = 0;
 
 	/*
@@ -1776,25 +1785,29 @@ dm_setup(const char *mapname, struct tcplay_info *info)
 			/* dev---^       block off --^ */
 			snprintf(params, 512, "%s 0", dev);
 
-			if ((dm_task_add_target(dmt, 0, info->offset, "linear", params)) == 0) {
+			if ((dm_task_add_target(dmt, 0,
+				INFO_TO_DM_BLOCKS(info, offset),
+				"linear", params)) == 0) {
 				tc_log(1, "dm_task_add_target failed\n");
 				ret = -1;
 				goto out;
 			}
 
-			start = info->offset;
+			start = INFO_TO_DM_BLOCKS(info, offset);
 		}
 
 		/* aes-cbc-essiv:sha256 7997f8af... 0 /dev/ad0s0a 8 */
 		/*			   iv off---^  block off--^ */
 		snprintf(params, 512, "%s %s %"PRIu64 " %s %"PRIu64,
 		    cipher_chain->cipher->dm_crypt_str, cipher_chain->dm_key,
-		    (uint64_t)info->skip, dev, (uint64_t)offset);
+		    (uint64_t)INFO_TO_DM_BLOCKS(info, skip), dev,
+		    (uint64_t)offset);
 #ifdef DEBUG
 		printf("Params: %s\n", params);
 #endif
 
-		if ((dm_task_add_target(dmt, start, info->size, "crypt", params)) == 0) {
+		if ((dm_task_add_target(dmt, start,
+		    INFO_TO_DM_BLOCKS(info, size), "crypt", params)) == 0) {
 			tc_log(1, "dm_task_add_target failed\n");
 			ret = -1;
 			goto out;

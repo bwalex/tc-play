@@ -20,8 +20,8 @@ Feature: Command line volume creation
       | Key Length         | 512 bits          |
       | Sector size        | 512               |
       | Volume size        | 19968 sectors     |
-      | IV offset          | 256               |
-      | Block offset       | 256               |
+      | IV offset          | 256 sectors       |
+      | Block offset       | 256 sectors       |
 
   Scenario: Cascade volume #1
     Given I create a volume tmpvol1 of size 10M with the following parameters:
@@ -43,8 +43,8 @@ Feature: Command line volume creation
       | Key Length         | 1024 bits                   |
       | Sector size        | 512                         |
       | Volume size        | 19968 sectors               |
-      | IV offset          | 256                         |
-      | Block offset       | 256                         |
+      | IV offset          | 256 sectors                 |
+      | Block offset       | 256 sectors                 |
 
   Scenario: Hidden volume #1
     Given I create a volume tmpvol1 of size 10M with the following parameters:
@@ -70,8 +70,8 @@ Feature: Command line volume creation
       | Key Length         | 512 bits                    |
       | Sector size        | 512                         |
       | Volume size        | 19968 sectors               |
-      | IV offset          | 256                         |
-      | Block offset       | 256                         |
+      | IV offset          | 256 sectors                 |
+      | Block offset       | 256 sectors                 |
 
   Scenario: Hidden volume #2
     Given I create a volume tmpvol1 of size 10M with the following parameters:
@@ -99,8 +99,8 @@ Feature: Command line volume creation
       | Key Length         | 512 bits                    |
       | Sector size        | 512                         |
       | Volume size        | 4096 sectors                |
-      | IV offset          | 16128                       |
-      | Block offset       | 16128                       |
+      | IV offset          | 16128 sectors               |
+      | Block offset       | 16128 sectors               |
 
   Scenario: Hidden volume #3
     Given I create a volume tmpvol1 of size 10M with the following parameters:
@@ -129,5 +129,5 @@ Feature: Command line volume creation
       | Key Length         | 512 bits                    |
       | Sector size        | 512                         |
       | Volume size        | 4096 sectors                |
-      | IV offset          | 16128                       |
-      | Block offset       | 16128                       |
+      | IV offset          | 16128 sectors               |
+      | Block offset       | 16128 sectors               |
