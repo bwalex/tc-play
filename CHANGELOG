@@ -8,6 +8,8 @@
  * Try without a passphrase first if keyfiles are provided (issue
    #42).
 
+ * Fixed handling of disks and volumes with 4k sectors (issue #45).
+
 
 2013-07-31 Version 1.1 - Alex Hornung <alex@alexhornung.com>
 
