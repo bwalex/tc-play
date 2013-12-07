@@ -144,7 +144,7 @@ usage(void)
 	    "\t Implies --use-backup, no new PBKDF hashing function, no new keyfiles\n"
 	    "\t and no new passphrase.\n"
 	    "\t In other words, this will simply restore both headers from the backup\n"
-	    "\t header."
+	    "\t header.\n"
 	    " -w, --weak-keys\n"
 	    "\t Uses a weak source of entropy (urandom) for salt material. The\n"
 	    "\t key material is not affected, as the master keys are kept intact.\n"
