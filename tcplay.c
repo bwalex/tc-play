@@ -1489,7 +1489,7 @@ dm_get_table(const char *name)
 				++c;
 			}
 
-			if (c != 5) {
+			if (c < 5) {
 				tc_log(1, "could not get all the info required from "
 				    "the table\n");
 				goto error;
@@ -1796,12 +1796,13 @@ dm_setup(const char *mapname, struct tcplay_info *info)
 			start = INFO_TO_DM_BLOCKS(info, offset);
 		}
 
-		/* aes-cbc-essiv:sha256 7997f8af... 0 /dev/ad0s0a 8 */
-		/*			   iv off---^  block off--^ */
-		snprintf(params, 512, "%s %s %"PRIu64 " %s %"PRIu64,
+		/* aes-cbc-essiv:sha256 7997f8af... 0 /dev/ad0s0a 8 <opts> */
+		/*			   iv off---^  block off--^ <opts> */
+		snprintf(params, 512, "%s %s %"PRIu64 " %s %"PRIu64 " %s",
 		    cipher_chain->cipher->dm_crypt_str, cipher_chain->dm_key,
 		    (uint64_t)INFO_TO_DM_BLOCKS(info, skip), dev,
-		    (uint64_t)offset);
+		    (uint64_t)offset,
+		    TC_FLAG_SET(info->flags, ALLOW_TRIM) ? "1 allow_discards" : "");
 #ifdef DEBUG
 		printf("Params: %s\n", params);
 #endif

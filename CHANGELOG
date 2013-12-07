@@ -10,6 +10,9 @@
 
  * Fixed handling of disks and volumes with 4k sectors (issue #45).
 
+ * Add an option to allow TRIM (discards) on the mapped volume
+   (issue #47).
+
 
 2013-07-31 Version 1.1 - Alex Hornung <alex@alexhornung.com>
 

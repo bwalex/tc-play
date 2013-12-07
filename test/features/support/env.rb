@@ -28,6 +28,7 @@ module TCplayLib
            :tc_system_device,         :pointer,
            :tc_use_fde,               :int,
            :tc_use_backup,            :int,
+           :tc_allow_trim,            :int,
 
     # Fields for modify
            :tc_new_passphrase,        :pointer,

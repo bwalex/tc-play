@@ -29,7 +29,7 @@
 .\" OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.Dd July 29, 2013
+.Dd December 07, 2013
 .Dt TCPLAY 8
 .Os
 .Sh NAME
@@ -66,6 +66,7 @@
 .Op Fl f Ar keyfile_hidden
 .Op Fl k Ar keyfile
 .Op Fl s Ar system_device
+.Op Fl t
 .Op Fl -fde
 .Op Fl -use-backup
 .Nm
@@ -268,6 +269,14 @@ This option will force
 .Nm
 to use the backup headers, which are located at the end of the device,
 to access the volume.
+.El
+.Pp
+Additional options only for the
+.Fl -map
+command are:
+.Bl -tag -width indent
+.It Fl t , Fl -allow-trim
+This option enables TRIM (discard) support on the mapped volume.
 .El
 .Pp
 Additional options only for the

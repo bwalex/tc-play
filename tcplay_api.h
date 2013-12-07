@@ -61,6 +61,7 @@ typedef struct tc_api_opts {
 	const char	*tc_system_device;
 	int		tc_use_fde;
 	int		tc_use_backup;
+	int		tc_allow_trim;
 
 	/* Fields for modify */
 	const char	*tc_new_passphrase;

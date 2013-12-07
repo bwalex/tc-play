@@ -67,6 +67,7 @@
 #define TC_FLAG_FDE		0x0002
 #define TC_FLAG_BACKUP		0x0004
 #define TC_FLAG_ONLY_RESTORE	0x0008
+#define TC_FLAG_ALLOW_TRIM	0x0010
 
 #define TC_FLAG_SET(f, x)	((f & TC_FLAG_##x) == TC_FLAG_##x)
 

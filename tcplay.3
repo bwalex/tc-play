@@ -28,7 +28,7 @@
 .\" OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.Dd July 30, 2013
+.Dd December 07, 2013
 .Dt TCPLAY 3
 .Os
 .Sh NAME
@@ -115,6 +115,7 @@ typedef struct tc_api_opts {
 	const char	*tc_system_device;
 	int		tc_use_fde;
 	int		tc_use_backup;
+	int		tc_allow_trim;
 
 	/* Fields for modify */
 	const char	*tc_new_passphrase;
@@ -412,6 +413,11 @@ is specified,
 .Nm tcplay
 will use the backup headers at the end of a volume
 instead of the primary headers to access it.
+If
+.Fa tc_allow_trim
+is specified,
+.Nm tcplay
+will allow TRIM (discards) on the mapped volume.
 .Pp
 The
 .Fn tc_api_unmap_volume

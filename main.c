@@ -155,6 +155,8 @@ usage(void)
 	    "\t Protect a hidden volume when mounting the outer volume.\n"
 	    " -s <disk path>, --system-encryption=<disk path>\n"
 	    "\t Specifies that the disk (e.g. /dev/da0) is using system encryption.\n"
+	    " -t, --allow-trim\n"
+	    "\t Allow discards (TRIM command) on mapped volume.\n"
 	    " --fde\n"
 	    "\t Specifies that the disk (e.g. /dev/da0) is using full disk encryption.\n"
 	    " --use-backup\n"
@@ -192,6 +194,7 @@ static struct option longopts[] = {
 	{ "protect-hidden",	no_argument,		NULL, 'e' },
 	{ "device",		required_argument,	NULL, 'd' },
 	{ "system-encryption",	required_argument,	NULL, 's' },
+	{ "allow-trim",		no_argument,		NULL, 't' },
 	{ "fde",		no_argument,		NULL, FLAG_LONG_FDE },
 	{ "use-backup",		no_argument,		NULL, FLAG_LONG_USE_BACKUP },
 	{ "modify",		no_argument,		NULL, FLAG_LONG_MOD },
@@ -242,7 +245,7 @@ main(int argc, char *argv[])
 	n_hkeyfiles = 0;
 	n_newkeyfiles = 0;
 
-	while ((ch = getopt_long(argc, argv, "a:b:cd:ef:ghij:k:m:s:u:vwx:y:z",
+	while ((ch = getopt_long(argc, argv, "a:b:cd:ef:ghij:k:m:s:tu:vwx:y:z",
 	    longopts, NULL)) != -1) {
 		switch(ch) {
 		case 'a':
@@ -299,6 +302,9 @@ main(int argc, char *argv[])
 		case 's':
 			flags |= TC_FLAG_SYS;
 			sys_dev = optarg;
+			break;
+		case 't':
+			flags |= TC_FLAG_ALLOW_TRIM;
 			break;
 		case 'u':
 			unmap_vol = 1;
