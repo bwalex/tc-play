@@ -69,7 +69,7 @@ usage(void)
 	    "       tcplay -i -d device [-e] [-f keyfile_hidden] [-k keyfile]\n"
 	    "              [-s system_device] [--fde] [--use-backup]\n"
 	    "       tcplay -m mapping -d device [-e] [-f keyfile_hidden] [-k keyfile]\n"
-	    "              [-s system_device] [--fde] [--use-backup]\n"
+	    "              [-s system_device] [--fde] [--use-backup] [--allow-trim]\n"
 	    "       tcplay --modify -d device [-k keyfile] [--new-keyfile=keyfile]\n"
 	    "              [--new-pbkdf-prf=pbkdf_hash] [-s system_device] [--fde]\n"
 	    "              [--use-backup] [-w]\n"
