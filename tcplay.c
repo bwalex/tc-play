@@ -2099,6 +2099,44 @@ opts_add_keyfile_new(struct tcplay_opts *opts, const char *keyfile)
 }
 
 void
+opts_clear_keyfile(struct tcplay_opts *opts)
+{
+	int i;
+
+	for (i = 0; i < opts->nkeyfiles; i++) {
+		free_safe_mem(opts->keyfiles[i]);
+	}
+
+	opts->nkeyfiles = 0;
+}
+
+void
+opts_clear_keyfile_hidden(struct tcplay_opts *opts)
+{
+	int i;
+
+	for (i = 0; i < opts->n_hkeyfiles; i++) {
+		free_safe_mem(opts->h_keyfiles[i]);
+	}
+
+	opts->n_hkeyfiles = 0;
+}
+
+
+void
+opts_clear_keyfile_new(struct tcplay_opts *opts)
+{
+	int i;
+
+	for (i = 0; i < opts->n_newkeyfiles; i++) {
+		free_safe_mem(opts->new_keyfiles[i]);
+	}
+
+	opts->n_newkeyfiles = 0;
+}
+
+
+void
 opts_free(struct tcplay_opts *opts)
 {
 	int i;
@@ -2133,4 +2171,6 @@ opts_free(struct tcplay_opts *opts)
 		free_safe_mem(opts->h_hdr_file_in);
 	if (opts->hdr_file_out)
 		free_safe_mem(opts->hdr_file_out);
+
+	free_safe_mem(opts);
 }

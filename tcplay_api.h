@@ -32,64 +32,15 @@
 
 #include <stddef.h>
 
-#define TC_OK	0
-#define TC_ERR	-1
+#define TC_OK		0
+#define TC_ERR_OTHER	-1
+#define TC_ERR_UNIMPL	-255
 
-typedef enum tc_api_state {
-	TC_STATE_UNKNOWN,
-	TC_STATE_ERASE,
-	TC_STATE_GET_RANDOM
-} tc_api_state;
+struct tc_api_opts;
+struct tc_api_volinfo;
 
-typedef struct tc_api_opts {
-	/* Common fields */
-	const char	*tc_device;
-	const char	*tc_passphrase;
-	const char	**tc_keyfiles;
-	const char	*tc_passphrase_hidden;
-	const char	**tc_keyfiles_hidden;
-
-	/* Fields for mapping / info */
-	const char	*tc_map_name;
-	int		tc_protect_hidden;
-
-	/* Fields for mapping / info / modify */
-	int		tc_password_retries;
-	int		tc_interactive_prompt;
-	unsigned long	tc_prompt_timeout;
-	int		tc_use_system_encryption;
-	const char	*tc_system_device;
-	int		tc_use_fde;
-	int		tc_use_backup;
-	int		tc_allow_trim;
-
-	/* Fields for modify */
-	const char	*tc_new_passphrase;
-	const char	**tc_new_keyfiles;
-	const char	*tc_new_prf_hash;
-	int		tc_use_weak_salt;
-
-	/* Fields for creation */
-	const char	*tc_cipher;
-	const char	*tc_prf_hash;
-	const char	*tc_cipher_hidden;
-	const char	*tc_prf_hash_hidden;
-	uint64_t	tc_size_hidden_in_bytes;
-	int		tc_no_secure_erase;
-	int		tc_use_weak_keys;
-} tc_api_opts;
-
-typedef struct tc_api_volinfo {
-	char		tc_device[1024];
-	char		tc_cipher[256];
-	char		tc_prf[64];
-
-	int		tc_key_bits;
-
-	uint64_t	tc_size;
-	off_t		tc_iv_offset;
-	off_t		tc_block_offset;
-} tc_api_volinfo;
+typedef struct tc_api_opts *tc_api_opts;
+typedef struct tc_api_volinfo *tc_api_volinfo;
 
 #ifdef __cplusplus
 extern "C" {
@@ -97,14 +48,14 @@ extern "C" {
 
 int tc_api_init(int verbose);
 int tc_api_uninit(void);
-int tc_api_info_volume(tc_api_opts *api_opts, tc_api_volinfo *vol_info);
-int tc_api_info_mapped_volume(tc_api_opts *api_opts, tc_api_volinfo *vol_info);
-int tc_api_create_volume(tc_api_opts *api_opts);
-int tc_api_modify_volume(tc_api_opts *api_opts);
-int tc_api_map_volume(tc_api_opts *api_opts);
-int tc_api_unmap_volume(tc_api_opts *api_opts);
-int tc_api_check_cipher(tc_api_opts *api_opts);
-int tc_api_check_prf_hash(tc_api_opts *api_opts);
+
+tc_api_opts tc_api_opts_init(void);
+int tc_api_opts_uninit(tc_api_opts opts);
+int tc_api_opts_set(tc_api_opts opts, const char *key, ...);
+
+int tc_api_do(const char *op, tc_api_opts opts);
+
+
 const char *tc_api_get_error_msg(void);
 const char *tc_api_get_summary(void);
 tc_api_state tc_api_get_state(float *progress_pct);

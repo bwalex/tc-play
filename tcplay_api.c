@@ -32,6 +32,7 @@
 #include <errno.h>
 #include <string.h>
 #include <stdio.h>
+#include <stdarg.h>
 
 #include "tcplay.h"
 #include "tcplay_api.h"
@@ -353,37 +354,320 @@ tc_api_unmap_volume(tc_api_opts *api_opts)
 	return (err) ? TC_ERR : TC_OK;
 }
 
-int
-tc_api_check_cipher(tc_api_opts *api_opts)
-{
-	struct tc_cipher_chain *chain;
 
-	if (api_opts == NULL || api_opts->tc_cipher == NULL) {
+tc_api_opts
+tc_api_opts_init(void)
+{
+	struct tc_api_opts *opts = NULL;
+	int fail = 1;
+
+	if ((opts = alloc_safe_mem(sizeof(*opts))) == NULL) {
+		errno = ENOMEM;
+		goto out;
+	}
+
+	opts->opts = NULL;
+
+	if ((opts->opts = opts_init()) == NULL) {
+		errno = ENOMEM;
+		goto out;
+	}
+
+	fail = 0;
+
+out:
+	if (opts != NULL) {
+		if (opts->opts != NULL)
+			opts_free(opts->opts);
+		free_safe_mem(opts);
+	}
+
+	return fail ? NULL : opts;
+}
+
+int
+tc_api_opts_uninit(tc_api_opts opts)
+{
+	opts_free(opts->opts);
+	free_safe_mem(opts);
+}
+
+#define _match(k, v) (strcmp(k, v) == 0)
+
+#define _set_str(k) \
+	do {							\
+		if ((opts->k = strdup_safe_mem(s)) == NULL) {	\
+			errno = ENOMEM;				\
+			r = TC_ERR;				\
+			goto out;				\
+		}						\
+	} while (0)
+
+#define _clr_str(k) \
+	do {							\
+		if (opts->k)					\
+			free_safe_mem(opts->k);			\
+		opts->k = NULL;					\
+	} while (0)
+
+int
+tc_api_opts_set(tc_api_opts api_opts, const char *key, ...)
+{
+	struct tcplay_opts *opts;
+	va_list ap;
+	const char *s;
+	int64_t i64;
+	int i;
+	int r = TC_OK;
+
+	if (api_opts == NULL || ((opts = api_opts->opts) == NULL)) {
 		errno = EFAULT;
 		return TC_ERR;
 	}
 
-	if ((chain = check_cipher_chain(api_opts->tc_cipher, 1)) != NULL)
-		return TC_OK;
+	va_start(ap, key);
 
-	errno = ENOENT;
-	return TC_ERR;
+	if (_match(key, "interactive")) {
+		i = va_arg(ap, int);
+		opts->interactive = i;
+	} else if (_match(key, "weak_keys_and_salt")) {
+		i = va_arg(ap, int);
+		opts->weak_keys_and_salt = i;
+	} else if (_match(key, "hidden")) {
+		i = va_arg(ap, int);
+		opts->hidden = i;
+	} else if (_match(key, "secure_erase")) {
+		i = va_arg(ap, int);
+		opts->secure_erase = i;
+	} else if (_match(key, "protect_hidden")) {
+		i = va_arg(ap, int);
+		opts->protect_hidden = i;
+	} else if (_match(key, "fde")) {
+		i = va_arg(ap, int);
+		if (i)
+			opts->flags |= TC_FLAG_FDE;
+		else
+			opts->flags &= ~TC_FLAG_FDE;
+	} else if (_match(key, "use_backup_header")) {
+		i = va_arg(ap, int);
+		if (i)
+			opts->flags |= TC_FLAG_BACKUP;
+		else
+			opts->flags &= ~TC_FLAG_BACKUP;
+	} else if (_match(key, "allow_trim")) {
+		i = va_arg(ap, int);
+		if (i)
+			opts->flags |= TC_FLAG_ALLOW_TRIM;
+		else
+			opts->flags &= ~TC_FLAG_ALLOW_TRIM;
+	} else if (_match(key, "hidden_size_bytes")) {
+		i64 = va_arg(ap, int64_t);
+		opts->hidden_size_bytes = (disksz_t)i64;
+	} else if (_match(key, "retries")) {
+		i = va_arg(ap, int);
+		opts->retries = i;
+	} else if (_match(key, "timeout")) {
+		i = va_arg(ap, int);
+		opts->timeout = (time_t)i;
+	} else if (_match(key, "save_header_to_file")) {
+		s = va_arg(ap, const char *);
+		if (s != NULL) {
+			_set_str(hdr_file_out);
+			opts->flags |= TC_FLAG_SAVE_TO_FILE;
+		} else {
+			_clr_str(hdr_file_out);
+			opts->flags &= ~TC_FLAG_SAVE_TO_FILE;
+		}
+	} else if (_match(key, "header_from_file")) {
+		s = va_arg(ap, const char *);
+		if (s != NULL) {
+			_set_str(hdr_file_in);
+			opts->flags |= TC_FLAG_HDR_FROM_FILE;
+		} else {
+			_clr_str(hdr_file_in);
+			opts->flags &= ~TC_FLAG_HDR_FROM_FILE;
+		}
+	} else if (_match(key, "hidden_header_from_file")) {
+		s = va_arg(ap, const char *);
+		if (s != NULL) {
+			_set_str(h_hdr_file_in);
+			opts->flags |= TC_FLAG_H_HDR_FROM_FILE;
+		} else {
+			_clr_str(h_hdr_file_in);
+			opts->flags &= ~TC_FLAG_H_HDR_FROM_FILE;
+		}
+	} else if (_match(key, "sys")) {
+		s = va_arg(ap, const char *);
+		if (s != NULL) {
+			_set_str(sys_dev);
+			opts->flags |= TC_FLAG_SYS;
+		} else {
+			_clr_str(sys_dev);
+			opts->flags &= ~TC_FLAG_SYS;
+		}
+	} else if (_match(key, "passphrase")) {
+		s = va_arg(ap, const char *);
+		if (s != NULL) {
+			_set_str(passphrase);
+		} else {
+			_clr_str(passphrase);
+		}
+	} else if (_match(key, "h_passphrase")) {
+		s = va_arg(ap, const char *);
+		if (s != NULL) {
+			_set_str(h_passphrase);
+		} else {
+			_clr_str(h_passphrase);
+		}
+	} else if (_match(key, "new_passphrase")) {
+		s = va_arg(ap, const char *);
+		if (s != NULL) {
+			_set_str(new_passphrase);
+		} else {
+			_clr_str(new_passphrase);
+		}
+	} else if (_match(key, "dev")) {
+		s = va_arg(ap, const char *);
+		if (s != NULL) {
+			_set_str(dev);
+		} else {
+			_clr_str(dev);
+		}
+	} else if (_match(key, "map_name")) {
+		s = va_arg(ap, const char *);
+		if (s != NULL) {
+			_set_str(map_name);
+		} else {
+			_clr_str(map_name);
+		}
+	} else if (_match(key, "keyfiles")) {
+		s = va_arg(ap, const char *);
+		if (s != NULL) {
+			opts_add_keyfile(opts, s);
+		} else {
+			opts_clear_keyfile(opts);
+		}
+	} else if (_match(key, "h_keyfiles")) {
+		s = va_arg(ap, const char *);
+		if (s != NULL) {
+			opts_add_keyfile_hidden(opts, s);
+		} else {
+			opts_clear_keyfile_hidden(opts);
+		}
+	} else if (_match(key, "new_keyfiles")) {
+		s = va_arg(ap, const char *);
+		if (s != NULL) {
+			opts_add_keyfile_new(opts, s);
+		} else {
+			opts_clear_keyfile_new(opts);
+		}
+	} else if (_match(key, "prf_algo")) {
+		s = va_arg(ap, const char *);
+		if (s != NULL) {
+			if ((opts->prf_algo = check_prf_algo(s, 1)) == NULL) {
+				errno = ENOENT;
+				r = TC_ERR;
+				goto out;
+			}
+		} else {
+			opts->prf_algo = NULL;
+		}
+	} else if (_match(key, "h_prf_algo")) {
+		s = va_arg(ap, const char *);
+		if (s != NULL) {
+			if ((opts->h_prf_algo = check_prf_algo(s, 1)) == NULL) {
+				errno = ENOENT;
+				r = TC_ERR;
+				goto out;
+			}
+		} else {
+			opts->h_prf_algo = NULL;
+		}
+	} else if (_match(key, "new_prf_algo")) {
+		s = va_arg(ap, const char *);
+		if (s != NULL) {
+			if ((opts->new_prf_algo = check_prf_algo(s, 1)) == NULL) {
+				errno = ENOENT;
+				r = TC_ERR;
+				goto out;
+			}
+		} else {
+			opts->new_prf_algo = NULL;
+		}
+	} else if (_match(key, "cipher_chain")) {
+		s = va_arg(ap, const char *);
+		if (s != NULL) {
+			if ((opts->cipher_chain = check_cipher_chain(s, 1)) == NULL) {
+				errno = ENOENT;
+				r = TC_ERR;
+				goto out;
+			}
+		} else {
+			opts->cipher_chain = NULL;
+		}
+	} else if (_match(key, "h_cipher_chain")) {
+		s = va_arg(ap, const char *);
+		if (s != NULL) {
+			if ((opts->h_cipher_chain = check_cipher_chain(s, 1)) == NULL) {
+				errno = ENOENT;
+				r = TC_ERR;
+				goto out;
+			}
+		} else {
+			opts->h_cipher_chain = NULL;
+		}
+	} else {
+		r = TC_ERR_UNIMPL;
+	}
+
+out:
+	va_end(ap);
+
+	return r;
 }
 
-int
-tc_api_check_prf_hash(tc_api_opts *api_opts)
-{
-	struct pbkdf_prf_algo *prf_hash;
 
-	if (api_opts == NULL || api_opts->tc_prf_hash == NULL) {
+int
+tc_api_do(const char *op, tc_api_opts api_opts)
+{
+	struct tcplay_opts *opts;
+	int r = TC_OK;
+
+	if (api_opts == NULL || ((opts = api_opts->opts) == NULL)) {
 		errno = EFAULT;
 		return TC_ERR;
 	}
 
-	if ((prf_hash = check_prf_algo(api_opts->tc_prf_hash, 1)) != NULL)
-		return TC_OK;
+	if (api_opts->last_info != NULL) {
+		free_info(api_opts->last_info);
+	}
 
-	errno = ENOENT;
-	return TC_ERR;
+	if (_match(op, "create")) {
+		r = create_volume(opts);
+	} else if (_match(op, "map")) {
+		r = map_volume(opts);
+	} else if (_match(op, "unmap")) {
+		r = dm_teardown(opts->map_name, opts->dev);
+	} else if (_match(op, "info")) {
+		if ((api_opts->last_info = info_map_common(opts, NULL)) == NULL) {
+			r = TC_ERR;
+		}
+	} else if (_match(op, "info_mapped")) {
+		if ((api_opts->last_info = dm_info_map(opts)) == NULL) {
+			r = TC_ERR;
+		}
+	} else if (_match(op, "modify")) {
+		r = modify_volume(opts);
+	} else if (_match(op, "restore")) {
+		opts->flags |= TC_FLAG_ONLY_RESTORE;
+		r = modify_volume(opts);
+		opts->flags &= ~TC_FLAG_ONLY_RESTORE;
+	} else {
+		r = TC_ERR_UNIMPL;
+	}
+
+	return r;
 }
 
+/* XXX: free_cipher_chain calls to opts cleanups here and in tcplay.c */
+/* XXX: free_info calls here in uninit */
