@@ -49,6 +49,9 @@
 #define FLAG_LONG_MOD_KF	0xff08
 #define FLAG_LONG_MOD_PRF	0xff10
 #define FLAG_LONG_MOD_NONE	0xff20
+#define FLAG_LONG_MOD_TO_FILE	0xff40
+#define FLAG_LONG_USE_HDR_FILE	0xfe01
+#define FLAG_LONG_USE_HHDR_FILE	0xfe02
 
 
 static
@@ -68,11 +71,14 @@ usage(void)
 	    "              [-f keyfile_hidden] [-k keyfile] [-x pbkdf_hash] [-y cipher]\n"
 	    "       tcplay -i -d device [-e] [-f keyfile_hidden] [-k keyfile]\n"
 	    "              [-s system_device] [--fde] [--use-backup]\n"
+	    "              [--use-hdr-file=hdr_file] [--use-hidden-hdr-file=hdr_file]\n"
 	    "       tcplay -m mapping -d device [-e] [-f keyfile_hidden] [-k keyfile]\n"
 	    "              [-s system_device] [--fde] [--use-backup] [--allow-trim]\n"
+	    "              [--use-hdr-file=hdr_file] [--use-hidden-hdr-file=hdr_file]\n"
 	    "       tcplay --modify -d device [-k keyfile] [--new-keyfile=keyfile]\n"
 	    "              [--new-pbkdf-prf=pbkdf_hash] [-s system_device] [--fde]\n"
-	    "              [--use-backup] [-w]\n"
+	    "              [--use-backup] [--save-hdr-to-file=hdr_file] [-w]\n"
+	    "              [--use-hdr-file=hdr_file] [--use-hidden-hdr-file=hdr_file]\n"
 	    "       tcplay --modify -d device [-k keyfile] --restore-from-backup-hdr [-w]\n"
 	    "       tcplay -j mapping\n"
 	    "       tcplay -u mapping\n"
@@ -140,15 +146,24 @@ usage(void)
 	    "\t Uses the backup headers (at the end of the volume) instead of the\n"
 	    "\t primary headers. Both normal and backup headers will be modified!\n"
 	    "\t This is useful when your primary headers have been corrupted.\n"
+	    " --use-hdr-file=<header file>\n"
+	    "\t Use the header in the specified file instead of the main header on the\n"
+	    "\t disk as source for the modify operation.\n"
+	    " --use-hidden-hdr-file=<header file>\n"
+	    "\t Use the header in the specified file instead of the hidden header on the\n"
+	    "\t disk as source for the modify operation.\n"
 	    " --restore-from-backup-hdr\n"
 	    "\t Implies --use-backup, no new PBKDF hashing function, no new keyfiles\n"
 	    "\t and no new passphrase.\n"
 	    "\t In other words, this will simply restore both headers from the backup\n"
-	    "\t header.\n"
+	    "\t header. This option cannot be used to restore from a backup header file.\n"
 	    " -w, --weak-keys\n"
 	    "\t Uses a weak source of entropy (urandom) for salt material. The\n"
 	    "\t key material is not affected, as the master keys are kept intact.\n"
 	    "\t WARNING: This is a bad idea for anything but testing.\n"
+	    " --save-hdr-backup=<header file>\n"
+	    "\t Saves the modified header in the specified file instead of updating\n"
+	    "\t the header files on disk.\n"
 	    "\n"
 	    "Valid options for --info and --map are:\n"
 	    " -e, --protect-hidden\n"
@@ -163,6 +178,12 @@ usage(void)
 	    "\t Uses the backup headers (at the end of the volume) instead of the\n"
 	    "\t primary headers.\n"
 	    "\t This is useful when your primary headers have been corrupted.\n"
+	    " --use-hdr-file=<header file>\n"
+	    "\t Use the header in the specified file instead of the main header on the\n"
+	    "\t disk.\n"
+	    " --use-hidden-hdr-file=<header file>\n"
+	    "\t Use the header in the specified file instead of the hidden header on the\n"
+	    "\t disk.\n"
 	    "\n"
 	    "Valid options common to all commands are:\n"
 	    " -d <device path>, --device=<device path>\n"
@@ -197,10 +218,13 @@ static struct option longopts[] = {
 	{ "allow-trim",		no_argument,		NULL, 't' },
 	{ "fde",		no_argument,		NULL, FLAG_LONG_FDE },
 	{ "use-backup",		no_argument,		NULL, FLAG_LONG_USE_BACKUP },
+	{ "use-hdr-file",	required_argument,	NULL, FLAG_LONG_USE_HDR_FILE },
+	{ "use-hidden-hdr-file",required_argument,	NULL, FLAG_LONG_USE_HHDR_FILE },
 	{ "modify",		no_argument,		NULL, FLAG_LONG_MOD },
 	{ "new-keyfile",	required_argument,	NULL, FLAG_LONG_MOD_KF },
 	{ "new-pbkdf-prf",	required_argument,	NULL, FLAG_LONG_MOD_PRF },
 	{ "restore-from-backup-hdr", no_argument,	NULL, FLAG_LONG_MOD_NONE },
+	{ "save-hdr-backup",	required_argument,	NULL, FLAG_LONG_MOD_TO_FILE },
 	{ "unmap",		required_argument,	NULL, 'u' },
 	{ "version",		no_argument,		NULL, 'v' },
 	{ "weak-keys",		no_argument,		NULL, 'w' },
@@ -216,6 +240,7 @@ main(int argc, char *argv[])
 	const char *keyfiles[MAX_KEYFILES];
 	const char *h_keyfiles[MAX_KEYFILES];
 	const char *new_keyfiles[MAX_KEYFILES];
+	const char *hdr_file_out, *hdr_file_in, *h_hdr_file_in;
 	int nkeyfiles;
 	int n_hkeyfiles;
 	int n_newkeyfiles;
@@ -350,6 +375,14 @@ main(int argc, char *argv[])
 		case FLAG_LONG_USE_BACKUP:
 			flags |= TC_FLAG_BACKUP;
 			break;
+		case FLAG_LONG_USE_HDR_FILE:
+			flags |= TC_FLAG_HDR_FROM_FILE;
+			hdr_file_in = optarg;
+			break;
+		case FLAG_LONG_USE_HHDR_FILE:
+			flags |= TC_FLAG_H_HDR_FROM_FILE;
+			h_hdr_file_in = optarg;
+			break;
 		case FLAG_LONG_MOD:
 			modify_vol = 1;
 			break;
@@ -372,6 +405,10 @@ main(int argc, char *argv[])
 			n_newkeyfiles = 0;
 			flags |= TC_FLAG_ONLY_RESTORE;
 			flags |= TC_FLAG_BACKUP;
+			break;
+		case FLAG_LONG_MOD_TO_FILE:
+			flags |= TC_FLAG_SAVE_TO_FILE;
+			hdr_file_out = optarg;
 			break;
 		case 'h':
 		case '?':
@@ -398,6 +435,7 @@ main(int argc, char *argv[])
 	    (!modify_vol && n_newkeyfiles > 0) ||
 	    (!modify_vol && new_prf != NULL) ||
 	    (!modify_vol && TC_FLAG_SET(flags, ONLY_RESTORE)) ||
+	    (!modify_vol && TC_FLAG_SET(flags, SAVE_TO_FILE)) ||
 	    (!(protect_hidden || create_vol) && n_hkeyfiles > 0)) {
 		usage();
 		/* NOT REACHED */
@@ -418,18 +456,21 @@ main(int argc, char *argv[])
 	} else if (info_vol) {
 		error = info_volume(dev, flags, sys_dev, protect_hidden,
 		    keyfiles, nkeyfiles, h_keyfiles, n_hkeyfiles, NULL, NULL,
-		    1 /* interactive */, DEFAULT_RETRIES, 0);
+		    1 /* interactive */, DEFAULT_RETRIES, 0,
+		    hdr_file_in, h_hdr_file_in);
 	} else if (map_vol) {
 		error = map_volume(map_name,
 		    dev, flags, sys_dev, protect_hidden,
 		    keyfiles, nkeyfiles, h_keyfiles, n_hkeyfiles, NULL, NULL,
-		    1 /* interactive */, DEFAULT_RETRIES, 0);
+		    1 /* interactive */, DEFAULT_RETRIES, 0,
+		    hdr_file_in, h_hdr_file_in);
 	} else if (unmap_vol) {
 		error = dm_teardown(map_name, NULL);
 	} else if (modify_vol) {
 		error = modify_volume(dev, flags, sys_dev, keyfiles, nkeyfiles,
 		    new_keyfiles, n_newkeyfiles, new_prf, NULL, NULL,
-		    1 /* interactive */, DEFAULT_RETRIES, 0, use_weak_keys);
+		    1 /* interactive */, DEFAULT_RETRIES, 0, use_weak_keys,
+		    hdr_file_in, h_hdr_file_in, hdr_file_out);
 	}
 
 	return error;

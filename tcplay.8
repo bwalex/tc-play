@@ -29,7 +29,7 @@
 .\" OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.Dd December 07, 2013
+.Dd December 08, 2013
 .Dt TCPLAY 8
 .Os
 .Sh NAME
@@ -57,6 +57,8 @@
 .Op Fl s Ar system_device
 .Op Fl -fde
 .Op Fl -use-backup
+.Op Fl -use-hdr-file Ar hdr_file
+.Op Fl -use-hidden-hdr-file Ar hdr_file
 .Nm
 .Fl j Ar mapping
 .Nm
@@ -69,6 +71,8 @@
 .Op Fl t
 .Op Fl -fde
 .Op Fl -use-backup
+.Op Fl -use-hdr-file Ar hdr_file
+.Op Fl -use-hidden-hdr-file Ar hdr_file
 .Nm
 .Fl -modify
 .Fl d Ar device
@@ -78,6 +82,9 @@
 .Op Fl s Ar system_device
 .Op Fl -fde
 .Op Fl -use-backup
+.Op Fl -use-hdr-file Ar hdr_file
+.Op Fl -use-hidden-hdr-file Ar hdr_file
+.Op Fl -save-hdr-backup Ar hdr_file
 .Op Fl w
 .Nm
 .Fl -modify
@@ -474,6 +481,47 @@ individual partition on the encrypted disk:
 .Bd -ragged -offset indent
 .Sy kpartx Fl -av Cm /dev/mapper/tcplay_sdb
 .Ed
+.Pp
+To restore the main volume header from the backup header, the following
+command can be used:
+.Bd -ragged -offset indent
+.Nm Fl -modify
+.Fl -device Ns = Ns Cm /dev/sdb
+.Fl -restore-from-backup-hdr
+.Ed
+.Pp
+As with most other commands, which header is saved (used as source) depends
+on the passphrase and keyfiles used.
+.Pp
+To save a backup copy of a header, the following command can be used:
+.Bd -ragged -offset indent
+.Nm Fl -modify
+.Fl -device Ns = Ns Cm /dev/sdb
+.Fl -save-hdr-backup Ns = Ns Cm /tmp/sdb_backup_header.hdr
+.Ed
+.Pp
+As with most other commands, which header is saved (used as source) depends
+on the passphrase and keyfiles used.
+.Pp
+To restore a header from a backup header file, the following command can be
+used:
+.Bd -ragged -offset indent
+.Nm Fl -modify
+.Nm -use-hdr-file Ns = Ns Cm /tmp/sdb_backup_header.hdr
+.Ed
+.Pp
+Similarly, to restore a hidden header from a backup header file:
+.Bd -ragged -offset indent
+.Nm Fl -modify
+.Nm -use-hidden-hdr-file Ns = Ns Cm /tmp/sdb_backup_hidden_header.hdr
+.Ed
+.Pp
+Which header is used as the source of the operation will still depend on the
+passphrase and keyfiles used.
+Even if you use the
+.Fl -use-hidden-hdr-file
+option, if you specify the passphrase and keyfiles for the main header, the
+main header will be used instead.
 .Sh SEE ALSO
 .Xr crypttab 5 ,
 .Xr cryptsetup 8 ,

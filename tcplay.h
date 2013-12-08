@@ -68,6 +68,9 @@
 #define TC_FLAG_BACKUP		0x0004
 #define TC_FLAG_ONLY_RESTORE	0x0008
 #define TC_FLAG_ALLOW_TRIM	0x0010
+#define TC_FLAG_SAVE_TO_FILE	0x0020
+#define TC_FLAG_HDR_FROM_FILE	0x0040
+#define TC_FLAG_H_HDR_FROM_FILE	0x0080
 
 #define TC_FLAG_SET(f, x)	((f & TC_FLAG_##x) == TC_FLAG_##x)
 
@@ -179,6 +182,7 @@ int secure_erase(const char *dev, disksz_t bytes, size_t blksz);
 int get_disk_info(const char *dev, disksz_t *blocks, size_t *bsize);
 int write_to_disk(const char *dev, off_t offset, size_t blksz, void *mem,
     size_t bytes);
+int write_to_file(const char *file, void *mem, size_t bytes);
 int read_passphrase(const char *prompt, char *pass, size_t passlen,
     size_t bufsz, time_t timeout);
 float get_random_read_progress(void);
@@ -246,23 +250,28 @@ struct tcplay_info *info_map_common(const char *dev, int flags,
     const char *sys_dev, int protect_hidden, const char *keyfiles[],
     int nkeyfiles, const char *h_keyfiles[], int n_hkeyfiles,
     const char *passphrase, const char *passphrase_hidden, int interactive,
-    int retries, time_t timeout, char *passphrase_out);
+    int retries, time_t timeout, char *passphrase_out,
+    const char *hdr_file_in, const char *h_hdr_file_in);
 int info_mapped_volume(const char *map_name, int interactive);
 int info_volume(const char *device, int flags, const char *sys_dev,
     int protect_hidden, const char *keyfiles[], int nkeyfiles,
     const char *h_keyfiles[], int n_hkeyfiles,
     const char *passphrase, const char *passphrase_hidden, int interactive,
-    int retries, time_t timeout);
+    int retries, time_t timeout, const char *hdr_file_in,
+    const char *h_hdr_file_in);
 int map_volume(const char *map_name, const char *device, int flags,
     const char *sys_dev, int protect_hidden, const char *keyfiles[],
     int nkeyfiles, const char *h_keyfiles[], int n_hkeyfiles,
     const char *passphrase, const char *passphrase_hidden, int interactive,
-    int retries, time_t timeout);
+    int retries, time_t timeout, const char *hdr_file_in,
+    const char *h_hdr_file_in);
 int modify_volume(const char *device, int flags, const char *sys_dev,
     const char *keyfiles[], int nkeyfiles, const char *new_keyfiles[],
     int n_newkeyfiles, struct pbkdf_prf_algo *new_prf_algo,
     const char *passphrase, const char *new_passphrase, int interactive,
-    int retries, time_t timeout, int weak_salt);
+    int retries, time_t timeout, int weak_salt,
+    const char *hdr_file_in, const char *h_hdr_file_in,
+    const char *hdr_file_out);
 int dm_setup(const char *mapname, struct tcplay_info *info);
 int dm_teardown(const char *mapname, const char *device);
 struct tcplay_info *dm_info_map(const char *map_name);

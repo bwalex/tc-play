@@ -835,7 +835,8 @@ info_map_common(const char *dev, int flags, const char *sys_dev,
     int protect_hidden, const char *keyfiles[], int nkeyfiles,
     const char *h_keyfiles[], int n_hkeyfiles, const char *passphrase,
     const char *passphrase_hidden, int interactive, int retries,
-    time_t timeout, char *passphrase_out)
+    time_t timeout, char *passphrase_out,
+    const char *hdr_file_in, const char *h_hdr_file_in)
 {
 	struct tchdr_enc *ehdr, *hehdr = NULL;
 	struct tcplay_info *info, *hinfo = NULL;
@@ -947,27 +948,45 @@ info_map_common(const char *dev, int flags, const char *sys_dev,
 		/* Always read blksz-sized chunks */
 		sz = blksz;
 
-		ehdr = (struct tchdr_enc *)read_to_safe_mem(
-		    (TC_FLAG_SET(flags, SYS)) ? sys_dev : dev,
-		    (TC_FLAG_SET(flags, SYS) || TC_FLAG_SET(flags, FDE)) ?
-		    HDR_OFFSET_SYS :
-		    (!TC_FLAG_SET(flags, BACKUP)) ? 0 : -BACKUP_HDR_OFFSET_END,
-		    &sz);
-		if (ehdr == NULL) {
-			tc_log(1, "error read hdr_enc: %s", dev);
-			goto out;
+		if (TC_FLAG_SET(flags, HDR_FROM_FILE)) {
+			ehdr = (struct tchdr_enc *)read_to_safe_mem(
+			    hdr_file_in, 0, &sz);
+			if (ehdr == NULL) {
+				tc_log(1, "error read hdr_enc: %s", hdr_file_in);
+				goto out;
+			}
+		} else {
+			ehdr = (struct tchdr_enc *)read_to_safe_mem(
+			    (TC_FLAG_SET(flags, SYS)) ? sys_dev : dev,
+			    (TC_FLAG_SET(flags, SYS) || TC_FLAG_SET(flags, FDE)) ?
+			    HDR_OFFSET_SYS :
+			    (!TC_FLAG_SET(flags, BACKUP)) ? 0 : -BACKUP_HDR_OFFSET_END,
+			    &sz);
+			if (ehdr == NULL) {
+				tc_log(1, "error read hdr_enc: %s", dev);
+				goto out;
+			}
 		}
 
 		if (!TC_FLAG_SET(flags, SYS)) {
 			/* Always read blksz-sized chunks */
 			sz = blksz;
 
-			hehdr = (struct tchdr_enc *)read_to_safe_mem(dev,
-			    (!TC_FLAG_SET(flags, BACKUP)) ? HDR_OFFSET_HIDDEN :
-			    -BACKUP_HDR_HIDDEN_OFFSET_END, &sz);
-			if (hehdr == NULL) {
-				tc_log(1, "error read hdr_enc: %s", dev);
-				goto out;
+			if (TC_FLAG_SET(flags, H_HDR_FROM_FILE)) {
+				hehdr = (struct tchdr_enc *)read_to_safe_mem(
+				    h_hdr_file_in, 0, &sz);
+				if (hehdr == NULL) {
+					tc_log(1, "error read hdr_enc: %s", h_hdr_file_in);
+					goto out;
+				}
+			} else {
+				hehdr = (struct tchdr_enc *)read_to_safe_mem(dev,
+				    (!TC_FLAG_SET(flags, BACKUP)) ? HDR_OFFSET_HIDDEN :
+				    -BACKUP_HDR_HIDDEN_OFFSET_END, &sz);
+				if (hehdr == NULL) {
+					tc_log(1, "error read hdr_enc: %s", dev);
+					goto out;
+				}
 			}
 		} else {
 			hehdr = NULL;
@@ -1099,14 +1118,15 @@ info_volume(const char *device, int flags, const char *sys_dev,
     const char *h_keyfiles[], int n_hkeyfiles,
     const char *passphrase, const char *passphrase_hidden,
     int interactive, int retries,
-    time_t timeout)
+    time_t timeout,
+    const char *hdr_file_in, const char *h_hdr_file_in)
 {
 	struct tcplay_info *info;
 
 	info = info_map_common(device, flags, sys_dev, protect_hidden,
 	    keyfiles, nkeyfiles, h_keyfiles, n_hkeyfiles,
 	    passphrase, passphrase_hidden, interactive, retries, timeout,
-	    NULL);
+	    NULL, hdr_file_in, h_hdr_file_in);
 
 	if (info != NULL) {
 		if (interactive)
@@ -1127,7 +1147,8 @@ map_volume(const char *map_name, const char *device, int flags,
     int nkeyfiles, const char *h_keyfiles[], int n_hkeyfiles,
     const char *passphrase, const char *passphrase_hidden,
     int interactive, int retries,
-    time_t timeout)
+    time_t timeout,
+    const char *hdr_file_in, const char *h_hdr_file_in)
 
 {
 	struct tcplay_info *info;
@@ -1136,7 +1157,7 @@ map_volume(const char *map_name, const char *device, int flags,
 	info = info_map_common(device, flags, sys_dev, protect_hidden,
 	    keyfiles, nkeyfiles, h_keyfiles, n_hkeyfiles,
 	    passphrase, passphrase_hidden, interactive, retries, timeout,
-	    NULL);
+	    NULL, hdr_file_in, h_hdr_file_in);
 
 	if (info == NULL)
 		return -1;
@@ -1160,7 +1181,8 @@ modify_volume(const char *device, int flags, const char *sys_dev,
     const char *keyfiles[], int nkeyfiles, const char *new_keyfiles[],
     int n_newkeyfiles, struct pbkdf_prf_algo *new_prf_algo,
     const char *passphrase, const char *new_passphrase, int interactive,
-    int retries, time_t timeout, int weak_salt)
+    int retries, time_t timeout, int weak_salt, const char *hdr_file_in,
+    const char *h_hdr_file_in, const char *hdr_file_out)
 {
 	struct tcplay_info *info;
 	struct tchdr_enc *ehdr, *ehdr_backup;
@@ -1193,7 +1215,8 @@ modify_volume(const char *device, int flags, const char *sys_dev,
 
 	info = info_map_common(device, flags, sys_dev, 0,
 	    keyfiles, nkeyfiles, NULL, 0,
-	    passphrase, NULL, interactive, retries, timeout, pass);
+	    passphrase, NULL, interactive, retries, timeout, pass,
+	    hdr_file_in, h_hdr_file_in);
 
 
 	if (info == NULL)
@@ -1275,19 +1298,26 @@ modify_volume(const char *device, int flags, const char *sys_dev,
 		goto out;
 	}
 
-	tc_log(0, "Writing new volume headers to disk...\n");
+	tc_log(0, "Writing new volume headers to disk/file...\n");
 
-	if ((error = write_to_disk(dev, offset, blksz, ehdr,
-	    sizeof(*ehdr))) != 0) {
-		tc_log(1, "Could not write volume header to device\n");
-		goto out;
-	}
-
-	if (!TC_FLAG_SET(flags, SYS) && !TC_FLAG_SET(flags, FDE)) {
-		if ((error = write_to_disk(dev, offset_backup, blksz,
-		    ehdr_backup, sizeof(*ehdr_backup))) != 0) {
-			tc_log(1, "Could not write backup volume header to device\n");
+	if (TC_FLAG_SET(flags, SAVE_TO_FILE)) {
+		if ((error = write_to_file(hdr_file_out, ehdr, sizeof(*ehdr))) != 0) {
+			tc_log(1, "Could not write volume header to file\n");
 			goto out;
+		}
+	} else {
+		if ((error = write_to_disk(dev, offset, blksz, ehdr,
+		    sizeof(*ehdr))) != 0) {
+			tc_log(1, "Could not write volume header to device\n");
+			goto out;
+		}
+
+		if (!TC_FLAG_SET(flags, SYS) && !TC_FLAG_SET(flags, FDE)) {
+			if ((error = write_to_disk(dev, offset_backup, blksz,
+			    ehdr_backup, sizeof(*ehdr_backup))) != 0) {
+				tc_log(1, "Could not write backup volume header to device\n");
+				goto out;
+			}
 		}
 	}
 

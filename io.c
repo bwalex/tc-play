@@ -358,6 +358,28 @@ write_to_disk(const char *dev, off_t offset, size_t blksz, void *mem,
 }
 
 
+int
+write_to_file(const char *file, void *mem, size_t bytes)
+{
+	int fd;
+	ssize_t w;
+
+	if ((fd = open(file, O_WRONLY)) < 0) {
+		tc_log(1, "Error opening file %s\n", file);
+		return -1;
+	}
+
+	if ((w = write(fd, mem, bytes)) < 0) {
+		tc_log(1, "Error writing to file %s\n", file);
+		close(fd);
+		return -1;
+	}
+
+	close(fd);
+	return 0;
+}
+
+
 static struct termios termios_old;
 static int tty_fd;
 

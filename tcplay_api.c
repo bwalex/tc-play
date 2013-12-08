@@ -187,7 +187,7 @@ tc_api_map_volume(tc_api_opts *api_opts)
 	    api_opts->tc_keyfiles_hidden, n_hkeyfiles,
 	    api_opts->tc_passphrase, api_opts->tc_passphrase_hidden,
 	    api_opts->tc_interactive_prompt, api_opts->tc_password_retries,
-	    (time_t)api_opts->tc_prompt_timeout);
+	    (time_t)api_opts->tc_prompt_timeout, NULL, NULL);
 
 	return (err) ? TC_ERR : TC_OK;
 }
@@ -232,7 +232,7 @@ tc_api_info_volume(tc_api_opts *api_opts, tc_api_volinfo *vol_info)
 	    api_opts->tc_keyfiles_hidden, n_hkeyfiles,
 	    api_opts->tc_passphrase, api_opts->tc_passphrase_hidden,
 	    api_opts->tc_interactive_prompt, api_opts->tc_password_retries,
-	    (time_t)api_opts->tc_prompt_timeout, NULL);
+	    (time_t)api_opts->tc_prompt_timeout, NULL, NULL, NULL);
 
 	if (info == NULL || info->hdr == NULL)
 		return TC_ERR;
@@ -329,7 +329,8 @@ tc_api_modify_volume(tc_api_opts *api_opts)
 	    prf_hash,
 	    api_opts->tc_passphrase, api_opts->tc_new_passphrase,
 	    api_opts->tc_interactive_prompt, api_opts->tc_password_retries,
-	    (time_t)api_opts->tc_prompt_timeout, api_opts->tc_use_weak_salt);
+	    (time_t)api_opts->tc_prompt_timeout, api_opts->tc_use_weak_salt,
+	    NULL, NULL, NULL);
 
 	if (error)
 		return TC_ERR;
