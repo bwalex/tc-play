@@ -91,6 +91,7 @@ Feature: Command line volume modification
       | pbkdf_prf_hidden  | RIPEMD160                        |
       | cipher_hidden     | SERPENT-256-XTS                  |
     And I modify volume tmpvol1 using the following settings:
+      | prompt_skipped | true              |
       | keyfiles       | key.2             |
       | new_passphrase | new_hidden        |
     And I map volume tmpvol1 as tcplay_test using the following settings:
