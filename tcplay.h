@@ -176,6 +176,57 @@ struct tcplay_dm_table {
 	off_t offset;		/* Block offset */
 };
 
+
+
+struct tcplay_opts {
+	/* (Mostly) common options */
+	const char	*dev;
+	const char	*keyfiles[MAX_KEYFILES];
+	int		nkeyfiles;
+	const char	*h_keyfiles[MAX_KEYFILES];
+	int		n_hkeyfiles;
+	struct pbkdf_prf_algo	*prf_algo;
+	struct tc_cipher_chain	*cipher_chain;
+	struct pbkdf_prf_algo	*h_prf_algo;
+	struct tc_cipher_chain	*h_cipher_chain;
+	const char	*passphrase;
+	const char	*h_passphrase;
+	int		interactive;
+	int		weak_keys_and_salt;
+
+	/* Options for create */
+	int		hidden;
+	disksz_t	hidden_size_bytes;
+	int		secure_erase; /* XXX: default to 1! */
+
+	/* Options for map, info_mapped */
+	const char	*map_name;
+
+	/* Options for info, map, modify */
+	int		flags;
+	const char	*sys_dev;
+	int		protect_hidden;
+	int		retries;	/* XXX: default to DEFAULT_RETRIES */
+	time_t		timeout;
+
+	const char	*hdr_file_in;
+	const char	*h_hdr_file_in;
+
+	/* Options for modify only */
+	struct pbkdf_prf_algo	*new_prf_algo;
+	const char	*new_passphrase;
+	const char	*hdr_file_out;
+	const char	*new_keyfiles[MAX_KEYFILES];
+	int		n_newkeyfiles;
+};
+
+
+struct tcplay_opts *opts_init(void);
+int opts_add_keyfile(struct tcplay_opts *opts, const char *keyfile);
+int opts_add_keyfile_hidden(struct tcplay_opts *opts, const char *keyfile);
+int opts_add_keyfile_new(struct tcplay_opts *opts, const char *keyfile);
+void opts_free(struct tcplay_opts *opts);
+
 void *read_to_safe_mem(const char *file, off_t offset, size_t *sz);
 int get_random(unsigned char *buf, size_t len, int weak);
 int secure_erase(const char *dev, disksz_t bytes, size_t blksz);
@@ -224,6 +275,7 @@ struct tchdr_enc *copy_reencrypt_hdr(unsigned char *pass, int passlen,
     struct tchdr_enc **backup_hdr);
 
 void *_alloc_safe_mem(size_t req_sz, const char *file, int line);
+void *_strdup_safe_mem(const char *in, const char *file, int line);
 void _free_safe_mem(void *mem, const char *file, int line);
 void check_and_purge_safe_mem(void);
 
@@ -240,38 +292,13 @@ void print_info(struct tcplay_info *info);
 int adjust_info(struct tcplay_info *info, struct tcplay_info *hinfo);
 int process_hdr(const char *dev, int flags, unsigned char *pass, int passlen,
     struct tchdr_enc *ehdr, struct tcplay_info **pinfo);
-int create_volume(const char *dev, int hidden, const char *keyfiles[],
-    int nkeyfiles, const char *h_keyfiles[], int n_hkeyfiles,
-    struct pbkdf_prf_algo *prf_algo, struct tc_cipher_chain *cipher_chain,
-    struct pbkdf_prf_algo *h_prf_algo, struct tc_cipher_chain *h_cipher_chain,
-    const char *passphrase, const char *h_passphrase, disksz_t hidden_bytes_in,
-    int interactive, int secure_erase, int weak_keys);
-struct tcplay_info *info_map_common(const char *dev, int flags,
-    const char *sys_dev, int protect_hidden, const char *keyfiles[],
-    int nkeyfiles, const char *h_keyfiles[], int n_hkeyfiles,
-    const char *passphrase, const char *passphrase_hidden, int interactive,
-    int retries, time_t timeout, char *passphrase_out,
-    const char *hdr_file_in, const char *h_hdr_file_in);
-int info_mapped_volume(const char *map_name, int interactive);
-int info_volume(const char *device, int flags, const char *sys_dev,
-    int protect_hidden, const char *keyfiles[], int nkeyfiles,
-    const char *h_keyfiles[], int n_hkeyfiles,
-    const char *passphrase, const char *passphrase_hidden, int interactive,
-    int retries, time_t timeout, const char *hdr_file_in,
-    const char *h_hdr_file_in);
-int map_volume(const char *map_name, const char *device, int flags,
-    const char *sys_dev, int protect_hidden, const char *keyfiles[],
-    int nkeyfiles, const char *h_keyfiles[], int n_hkeyfiles,
-    const char *passphrase, const char *passphrase_hidden, int interactive,
-    int retries, time_t timeout, const char *hdr_file_in,
-    const char *h_hdr_file_in);
-int modify_volume(const char *device, int flags, const char *sys_dev,
-    const char *keyfiles[], int nkeyfiles, const char *new_keyfiles[],
-    int n_newkeyfiles, struct pbkdf_prf_algo *new_prf_algo,
-    const char *passphrase, const char *new_passphrase, int interactive,
-    int retries, time_t timeout, int weak_salt,
-    const char *hdr_file_in, const char *h_hdr_file_in,
-    const char *hdr_file_out);
+int create_volume(struct tcplay_opts *opts);
+struct tcplay_info *info_map_common(struct tcplay_opts *opts,
+    char *passphrase_out);
+int info_mapped_volume(struct tcplay_opts *opts);
+int info_volume(struct tcplay_opts *opts);
+int map_volume(struct tcplay_opts *opts);
+int modify_volume(struct tcplay_opts *opts);
 int dm_setup(const char *mapname, struct tcplay_info *info);
 int dm_teardown(const char *mapname, const char *device);
 struct tcplay_info *dm_info_map(const char *map_name);
@@ -290,6 +317,9 @@ extern int tc_internal_state;
 
 #define alloc_safe_mem(x) \
 	_alloc_safe_mem(x, __FILE__, __LINE__)
+
+#define strdup_safe_mem(x) \
+	_strdup_safe_mem(x, __FILE__, __LINE__)
 
 #define free_safe_mem(x) \
 	_free_safe_mem(x, __FILE__, __LINE__)

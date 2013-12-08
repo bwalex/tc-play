@@ -233,29 +233,22 @@ static struct option longopts[] = {
 	{ NULL,			0,			NULL, 0   },
 };
 
+#define _set_str_opt(opt) \
+	do {									\
+		if ((opts->opt = strdup_safe_mem(optarg)) == NULL) {		\
+			fprintf(stderr, "Could not allocate safe mem.\n");	\
+			exit(EXIT_FAILURE);					\
+		}								\
+	} while(0)
+
 int
 main(int argc, char *argv[])
 {
-	const char *dev = NULL, *sys_dev = NULL, *map_name = NULL;
-	const char *keyfiles[MAX_KEYFILES];
-	const char *h_keyfiles[MAX_KEYFILES];
-	const char *new_keyfiles[MAX_KEYFILES];
-	const char *hdr_file_out, *hdr_file_in, *h_hdr_file_in;
-	int nkeyfiles;
-	int n_hkeyfiles;
-	int n_newkeyfiles;
+	struct tcplay_opts *opts;
 	int ch, error;
-	int flags = 0;
-	int info_vol = 0, map_vol = 0, protect_hidden = 0,
+	int info_vol = 0, map_vol = 0,
 	    unmap_vol = 0, info_map = 0,
-	    create_vol = 0, modify_vol = 0,
-	    contain_hidden = 0, use_secure_erase = 1,
-	    use_weak_keys = 0;
-	struct pbkdf_prf_algo *prf = NULL;
-	struct tc_cipher_chain *cipher_chain = NULL;
-	struct pbkdf_prf_algo *h_prf = NULL;
-	struct tc_cipher_chain *h_cipher_chain = NULL;
-	struct pbkdf_prf_algo *new_prf = NULL;
+	    create_vol = 0, modify_vol = 0;
 
 	if ((error = tc_play_init()) != 0) {
 		fprintf(stderr, "Initialization failed, exiting.");
@@ -266,17 +259,20 @@ main(int argc, char *argv[])
 	signal(SIGUSR1, sig_handler);
 	signal(SIGINFO, sig_handler);
 
-	nkeyfiles = 0;
-	n_hkeyfiles = 0;
-	n_newkeyfiles = 0;
+	if ((opts = opts_init()) == NULL) {
+		fprintf(stderr, "Initialization failed (opts), exiting.");
+		exit(EXIT_FAILURE);
+	}
+
+	opts->interactive = 1;
 
 	while ((ch = getopt_long(argc, argv, "a:b:cd:ef:ghij:k:m:s:tu:vwx:y:z",
 	    longopts, NULL)) != -1) {
 		switch(ch) {
 		case 'a':
-			if (prf != NULL)
+			if (opts->prf_algo != NULL)
 				usage();
-			if ((prf = check_prf_algo(optarg, 0)) == NULL) {
+			if ((opts->prf_algo = check_prf_algo(optarg, 0)) == NULL) {
 				if (strcmp(optarg, "help") == 0)
 					exit(EXIT_SUCCESS);
 				else
@@ -285,9 +281,9 @@ main(int argc, char *argv[])
 			}
 			break;
 		case 'b':
-			if (cipher_chain != NULL)
+			if (opts->cipher_chain != NULL)
 				usage();
-			if ((cipher_chain = check_cipher_chain(optarg, 0)) == NULL) {
+			if ((opts->cipher_chain = check_cipher_chain(optarg, 0)) == NULL) {
 				if (strcmp(optarg, "help") == 0)
 					exit(EXIT_SUCCESS);
 				else
@@ -299,41 +295,47 @@ main(int argc, char *argv[])
 			create_vol = 1;
 			break;
 		case 'd':
-			dev = optarg;
+			_set_str_opt(dev);
 			break;
 		case 'e':
-			protect_hidden = 1;
+			opts->protect_hidden = 1;
 			break;
 		case 'f':
-			h_keyfiles[n_hkeyfiles++] = optarg;
+			if ((error = opts_add_keyfile_hidden(opts, optarg)) != 0) {
+				fprintf(stderr, "Could not add keyfile: %s\n", optarg);
+				exit(EXIT_FAILURE);
+			}
 			break;
 		case 'g':
-			contain_hidden = 1;
+			opts->hidden = 1;
 			break;
 		case 'i':
 			info_vol = 1;
 			break;
 		case 'j':
 			info_map = 1;
-			map_name = optarg;
+			_set_str_opt(map_name);
 			break;
 		case 'k':
-			keyfiles[nkeyfiles++] = optarg;
+			if ((error = opts_add_keyfile(opts, optarg)) != 0) {
+				fprintf(stderr, "Could not add keyfile: %s\n", optarg);
+				exit(EXIT_FAILURE);
+			}
 			break;
 		case 'm':
 			map_vol = 1;
-			map_name = optarg;
+			_set_str_opt(map_name);
 			break;
 		case 's':
-			flags |= TC_FLAG_SYS;
-			sys_dev = optarg;
+			opts->flags |= TC_FLAG_SYS;
+			_set_str_opt(sys_dev);
 			break;
 		case 't':
-			flags |= TC_FLAG_ALLOW_TRIM;
+			opts->flags |= TC_FLAG_ALLOW_TRIM;
 			break;
 		case 'u':
 			unmap_vol = 1;
-			map_name = optarg;
+			_set_str_opt(map_name);
 			break;
 		case 'v':
 			printf("tcplay v%d.%d\n", MAJ_VER, MIN_VER);
@@ -342,12 +344,12 @@ main(int argc, char *argv[])
 		case 'w':
 			fprintf(stderr, "WARNING: Using urandom as source of "
 			    "entropy for key material is a really bad idea.\n");
-			use_weak_keys = 1;
+			opts->weak_keys_and_salt = 1;
 			break;
 		case 'x':
-			if (h_prf != NULL)
+			if (opts->h_prf_algo != NULL)
 				usage();
-			if ((h_prf = check_prf_algo(optarg, 0)) == NULL) {
+			if ((opts->h_prf_algo = check_prf_algo(optarg, 0)) == NULL) {
 				if (strcmp(optarg, "help") == 0)
 					exit(EXIT_SUCCESS);
 				else
@@ -356,9 +358,9 @@ main(int argc, char *argv[])
 			}
 			break;
 		case 'y':
-			if (h_cipher_chain != NULL)
+			if (opts->h_cipher_chain != NULL)
 				usage();
-			if ((h_cipher_chain = check_cipher_chain(optarg, 0)) == NULL) {
+			if ((opts->h_cipher_chain = check_cipher_chain(optarg, 0)) == NULL) {
 				if (strcmp(optarg, "help") == 0)
 					exit(EXIT_SUCCESS);
 				else
@@ -367,32 +369,35 @@ main(int argc, char *argv[])
 			}
 			break;
 		case 'z':
-			use_secure_erase = 0;
+			opts->secure_erase = 0;
 			break;
 		case FLAG_LONG_FDE:
-			flags |= TC_FLAG_FDE;
+			opts->flags |= TC_FLAG_FDE;
 			break;
 		case FLAG_LONG_USE_BACKUP:
-			flags |= TC_FLAG_BACKUP;
+			opts->flags |= TC_FLAG_BACKUP;
 			break;
 		case FLAG_LONG_USE_HDR_FILE:
-			flags |= TC_FLAG_HDR_FROM_FILE;
-			hdr_file_in = optarg;
+			opts->flags |= TC_FLAG_HDR_FROM_FILE;
+			_set_str_opt(hdr_file_in);
 			break;
 		case FLAG_LONG_USE_HHDR_FILE:
-			flags |= TC_FLAG_H_HDR_FROM_FILE;
-			h_hdr_file_in = optarg;
+			opts->flags |= TC_FLAG_H_HDR_FROM_FILE;
+			_set_str_opt(h_hdr_file_in);
 			break;
 		case FLAG_LONG_MOD:
 			modify_vol = 1;
 			break;
 		case FLAG_LONG_MOD_KF:
-			new_keyfiles[n_newkeyfiles++] = optarg;
+			if ((error = opts_add_keyfile_new(opts, optarg)) != 0) {
+				fprintf(stderr, "Could not add keyfile: %s\n", optarg);
+				exit(EXIT_FAILURE);
+			}
 			break;
 		case FLAG_LONG_MOD_PRF:
-			if (new_prf != NULL)
+			if (opts->new_prf_algo != NULL)
 				usage();
-			if ((new_prf = check_prf_algo(optarg, 0)) == NULL) {
+			if ((opts->new_prf_algo = check_prf_algo(optarg, 0)) == NULL) {
 				if (strcmp(optarg, "help") == 0)
 					exit(EXIT_SUCCESS);
 				else
@@ -401,14 +406,13 @@ main(int argc, char *argv[])
 			}
 			break;
 		case FLAG_LONG_MOD_NONE:
-			new_prf = NULL;
-			n_newkeyfiles = 0;
-			flags |= TC_FLAG_ONLY_RESTORE;
-			flags |= TC_FLAG_BACKUP;
+			opts->new_prf_algo = NULL;
+			opts->flags |= TC_FLAG_ONLY_RESTORE;
+			opts->flags |= TC_FLAG_BACKUP;
 			break;
 		case FLAG_LONG_MOD_TO_FILE:
-			flags |= TC_FLAG_SAVE_TO_FILE;
-			hdr_file_out = optarg;
+			opts->flags |= TC_FLAG_SAVE_TO_FILE;
+			_set_str_opt(hdr_file_out);
 			break;
 		case 'h':
 		case '?':
@@ -422,56 +426,44 @@ main(int argc, char *argv[])
 	argv += optind;
 
 	/* Check arguments */
-	if (!(((map_vol || info_vol || create_vol || modify_vol) && dev != NULL) ||
-	    ((unmap_vol || info_map) && map_name != NULL)) ||
-	    (TC_FLAG_SET(flags, SYS) && TC_FLAG_SET(flags, FDE)) ||
+	if (!(((map_vol || info_vol || create_vol || modify_vol) && opts->dev != NULL) ||
+	    ((unmap_vol || info_map) && opts->map_name != NULL)) ||
+	    (TC_FLAG_SET(opts->flags, SYS) && TC_FLAG_SET(opts->flags, FDE)) ||
 	    (map_vol + info_vol + create_vol + unmap_vol + info_map + modify_vol > 1) ||
-	    (contain_hidden && !create_vol) ||
-	    (TC_FLAG_SET(flags, SYS) && (sys_dev == NULL)) ||
-	    (TC_FLAG_SET(flags, ONLY_RESTORE) && (n_newkeyfiles > 0 || new_prf != NULL)) ||
-	    (TC_FLAG_SET(flags, BACKUP) && (sys_dev != NULL || TC_FLAG_SET(flags, FDE))) ||
-	    (map_vol && (map_name == NULL)) ||
-	    (unmap_vol && (map_name == NULL)) ||
-	    (!modify_vol && n_newkeyfiles > 0) ||
-	    (!modify_vol && new_prf != NULL) ||
-	    (!modify_vol && TC_FLAG_SET(flags, ONLY_RESTORE)) ||
-	    (!modify_vol && TC_FLAG_SET(flags, SAVE_TO_FILE)) ||
-	    (!(protect_hidden || create_vol) && n_hkeyfiles > 0)) {
+	    (opts->hidden && !create_vol) ||
+	    (TC_FLAG_SET(opts->flags, SYS) && (opts->sys_dev == NULL)) ||
+	    (TC_FLAG_SET(opts->flags, ONLY_RESTORE) && (opts->n_newkeyfiles > 0 || opts->new_prf_algo != NULL)) ||
+	    (TC_FLAG_SET(opts->flags, BACKUP) && (opts->sys_dev != NULL || TC_FLAG_SET(opts->flags, FDE))) ||
+	    (map_vol && (opts->map_name == NULL)) ||
+	    (unmap_vol && (opts->map_name == NULL)) ||
+	    (!modify_vol && opts->n_newkeyfiles > 0) ||
+	    (!modify_vol && opts->new_prf_algo != NULL) ||
+	    (!modify_vol && TC_FLAG_SET(opts->flags, ONLY_RESTORE)) ||
+	    (!modify_vol && TC_FLAG_SET(opts->flags, SAVE_TO_FILE)) ||
+	    (!(opts->protect_hidden || create_vol) && opts->n_hkeyfiles > 0)) {
 		usage();
 		/* NOT REACHED */
 	}
 
 	/* Create a new volume */
 	if (create_vol) {
-		error = create_volume(dev, contain_hidden, keyfiles, nkeyfiles,
-		    h_keyfiles, n_hkeyfiles, prf, cipher_chain, h_prf,
-		    h_cipher_chain, NULL, NULL,
-		    0, 1 /* interactive */,
-		    use_secure_erase, use_weak_keys);
+		error = create_volume(opts);
 		if (error) {
-			tc_log(1, "could not create new volume on %s\n", dev);
+			tc_log(1, "could not create new volume on %s\n", opts->dev);
 		}
 	} else if (info_map) {
-		error = info_mapped_volume(map_name, 1 /* interactive */);
+		error = info_mapped_volume(opts);
 	} else if (info_vol) {
-		error = info_volume(dev, flags, sys_dev, protect_hidden,
-		    keyfiles, nkeyfiles, h_keyfiles, n_hkeyfiles, NULL, NULL,
-		    1 /* interactive */, DEFAULT_RETRIES, 0,
-		    hdr_file_in, h_hdr_file_in);
+		error = info_volume(opts);
 	} else if (map_vol) {
-		error = map_volume(map_name,
-		    dev, flags, sys_dev, protect_hidden,
-		    keyfiles, nkeyfiles, h_keyfiles, n_hkeyfiles, NULL, NULL,
-		    1 /* interactive */, DEFAULT_RETRIES, 0,
-		    hdr_file_in, h_hdr_file_in);
+		error = map_volume(opts);
 	} else if (unmap_vol) {
-		error = dm_teardown(map_name, NULL);
+		error = dm_teardown(opts->map_name, NULL);
 	} else if (modify_vol) {
-		error = modify_volume(dev, flags, sys_dev, keyfiles, nkeyfiles,
-		    new_keyfiles, n_newkeyfiles, new_prf, NULL, NULL,
-		    1 /* interactive */, DEFAULT_RETRIES, 0, use_weak_keys,
-		    hdr_file_in, h_hdr_file_in, hdr_file_out);
+		error = modify_volume(opts);
 	}
 
 	return error;
 }
+
+#undef _set_str_opt
