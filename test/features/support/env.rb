@@ -7,66 +7,16 @@ module TCplayLib
 
   TC_OK  = 0
   TC_ERR = -1
-
-  class TCApiOpts < FFI::Struct
-    # Common fields
-    layout :tc_device,                :pointer,
-           :tc_passphrase,            :pointer,
-           :tc_keyfiles,              :pointer,
-           :tc_passphrase_hidden,     :pointer,
-           :tc_keyfiles_hidden,       :pointer,
-
-    # Fields for mapping / info
-           :tc_map_name,              :pointer,
-           :tc_protect_hidden,        :int,
-
-    # Fields for mapping / info / modify
-           :tc_password_retries,      :int,
-           :tc_interactive_prompt,    :int,
-           :tc_prompt_timeout,        :ulong,
-           :tc_use_system_encryption, :int,
-           :tc_system_device,         :pointer,
-           :tc_use_fde,               :int,
-           :tc_use_backup,            :int,
-           :tc_allow_trim,            :int,
-
-    # Fields for modify
-           :tc_new_passphrase,        :pointer,
-           :tc_new_keyfiles,          :pointer,
-           :tc_new_prf_hash,          :pointer,
-           :tc_use_weak_salt,         :int,
-
-    # Fields for creation
-           :tc_cipher,                :pointer,
-           :tc_prf_hash,              :pointer,
-           :tc_cipher_hidden,         :pointer,
-           :tc_prf_hash_hidden,       :pointer,
-           :tc_size_hidden_in_bytes,  :uint64,
-           :tc_no_secure_erase,       :int,
-           :tc_use_weak_keys,         :int
-  end
-
-  class TCApiVolinfo < FFI::Struct
-    layout :tc_device,                [:char, 1024],
-           :tc_cipher,                [:char,  256],
-           :tc_prf,                   [:char,   64],
-           :tc_key_bits,              :int,
-           :tc_size,                  :uint64,
-           :tc_iv_offset,             :off_t,
-           :tc_block_offset,          :off_t
-  end
+  TC_ERR_UNIMPL = -255
 
   attach_function :tc_api_init, [ :int ], :int
   attach_function :tc_api_uninit, [ ], :int
-  attach_function :tc_api_info_volume, [ TCApiOpts.by_ref, TCApiVolinfo.by_ref ], :int
-  attach_function :tc_api_info_mapped_volume, [ TCApiOpts.by_ref, TCApiVolinfo.by_ref ], :int
-  attach_function :tc_api_create_volume, [ TCApiOpts.by_ref ], :int
-  attach_function :tc_api_map_volume, [ TCApiOpts.by_ref ], :int
-  attach_function :tc_api_unmap_volume, [ TCApiOpts.by_ref ], :int
-  attach_function :tc_api_modify_volume, [ TCApiOpts.by_ref ], :int
-  attach_function :tc_api_check_cipher, [ TCApiOpts.by_ref ], :int
-  attach_function :tc_api_check_prf_hash, [ TCApiOpts.by_ref ], :int
-  attach_function :tc_api_get_error_msg, [ ], :string
+
+  attach_function :tc_api_task_init, [ :string ], :pointer
+  attach_function :tc_api_task_uninit, [ :pointer ], :int
+  attach_function :tc_api_task_set, [ :pointer, :string, :varargs ], :int
+  attach_function :tc_api_task_do, [ :pointer ], :int
+  attach_function :tc_api_task_info_get, [ :pointer, :string, :varargs ], :int
 end
 
 

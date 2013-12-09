@@ -36,6 +36,7 @@
 
 #include "tcplay.h"
 #include "tcplay_api.h"
+#include "tcplay_api_internal.h"
 
 int
 tc_api_init(int verbose)
@@ -57,6 +58,7 @@ tc_api_uninit(void)
 	return TC_OK;
 }
 
+#if 0
 const char *
 tc_api_get_error_msg(void)
 {
@@ -96,303 +98,68 @@ tc_api_get_state(float *progress)
 	}
 
 }
+#endif
 
-int
-tc_api_create_volume(tc_api_opts *api_opts)
+#define _match(k, v) (strcmp(k, v) == 0)
+
+tc_api_task
+tc_api_task_init(const char *op)
 {
-	int nkeyfiles, n_hkeyfiles = 0;
-	int create_hidden;
-	int err;
-
-	if ((api_opts == NULL) ||
-	    (api_opts->tc_device == NULL)) {
-		errno = EFAULT;
-		return TC_ERR;
-	}
-
-	if ((err = tc_api_check_cipher(api_opts)) != TC_OK)
-		return TC_ERR;
-
-	if ((err = tc_api_check_prf_hash(api_opts)) != TC_OK)
-		return TC_ERR;
-
-	for (nkeyfiles = 0; (nkeyfiles < MAX_KEYFILES) &&
-	    (api_opts->tc_keyfiles != NULL) &&
-	    (api_opts->tc_keyfiles[nkeyfiles] != NULL); nkeyfiles++)
-		;
-
-	create_hidden = 0;
-
-	if (api_opts->tc_size_hidden_in_bytes > 0) {
-		create_hidden = 1;
-		for (n_hkeyfiles = 0; (n_hkeyfiles < MAX_KEYFILES) &&
-		    (api_opts->tc_keyfiles_hidden != NULL) &&
-		    (api_opts->tc_keyfiles_hidden[n_hkeyfiles] != NULL);
-		    n_hkeyfiles++)
-			;
-	}
-
-	err = create_volume(api_opts->tc_device, create_hidden,
-	    api_opts->tc_keyfiles, nkeyfiles,
-	    api_opts->tc_keyfiles_hidden, n_hkeyfiles,
-	    check_prf_algo(api_opts->tc_prf_hash, 1),
-	    check_cipher_chain(api_opts->tc_cipher, 1),
-	    api_opts->tc_prf_hash_hidden ? check_prf_algo(api_opts->tc_prf_hash_hidden, 1)   : NULL,
-	    api_opts->tc_cipher_hidden   ? check_cipher_chain(api_opts->tc_cipher_hidden, 1) : NULL,
-	    api_opts->tc_passphrase, api_opts->tc_passphrase_hidden,
-	    api_opts->tc_size_hidden_in_bytes, 0 /* non-interactive */,
-	    !api_opts->tc_no_secure_erase, api_opts->tc_use_weak_keys);
-
-	return (err) ? TC_ERR : TC_OK;
-}
-
-int
-tc_api_map_volume(tc_api_opts *api_opts)
-{
-	int nkeyfiles, n_hkeyfiles = 0;
-	int err;
-	int flags = 0;
-
-	if ((api_opts == NULL) ||
-	    (api_opts->tc_map_name == NULL) ||
-	    (api_opts->tc_device == NULL)) {
-		errno = EFAULT;
-		return TC_ERR;
-	}
-
-	for (nkeyfiles = 0; (nkeyfiles < MAX_KEYFILES) &&
-	    (api_opts->tc_keyfiles != NULL) &&
-	    (api_opts->tc_keyfiles[nkeyfiles] != NULL); nkeyfiles++)
-		;
-
-	if (api_opts->tc_protect_hidden) {
-		for (n_hkeyfiles = 0; (n_hkeyfiles < MAX_KEYFILES) &&
-		    (api_opts->tc_keyfiles_hidden != NULL) &&
-		    (api_opts->tc_keyfiles_hidden[n_hkeyfiles] != NULL);
-		    n_hkeyfiles++)
-			;
-	}
-
-	if (api_opts->tc_use_system_encryption)
-		flags |= TC_FLAG_SYS;
-	if (api_opts->tc_use_fde)
-		flags |= TC_FLAG_FDE;
-	if (api_opts->tc_use_backup)
-		flags |= TC_FLAG_BACKUP;
-	if (api_opts->tc_allow_trim)
-		flags |= TC_FLAG_ALLOW_TRIM;
-
-	err = map_volume(api_opts->tc_map_name, api_opts->tc_device,
-	    flags, api_opts->tc_system_device,
-	    api_opts->tc_protect_hidden, api_opts->tc_keyfiles, nkeyfiles,
-	    api_opts->tc_keyfiles_hidden, n_hkeyfiles,
-	    api_opts->tc_passphrase, api_opts->tc_passphrase_hidden,
-	    api_opts->tc_interactive_prompt, api_opts->tc_password_retries,
-	    (time_t)api_opts->tc_prompt_timeout, NULL, NULL);
-
-	return (err) ? TC_ERR : TC_OK;
-}
-
-int
-tc_api_info_volume(tc_api_opts *api_opts, tc_api_volinfo *vol_info)
-{
-	struct tcplay_info *info;
-	int nkeyfiles, n_hkeyfiles = 0;
-	int flags = 0;
-
-	if ((api_opts == NULL) ||
-	    (vol_info == NULL) ||
-	    (api_opts->tc_device == NULL)) {
-		errno = EFAULT;
-		return TC_ERR;
-	}
-
-	for (nkeyfiles = 0; (nkeyfiles < MAX_KEYFILES) &&
-	    (api_opts->tc_keyfiles != NULL) &&
-	    (api_opts->tc_keyfiles[nkeyfiles] != NULL); nkeyfiles++)
-		;
-
-	if (api_opts->tc_protect_hidden) {
-		for (n_hkeyfiles = 0; (n_hkeyfiles < MAX_KEYFILES) &&
-		    (api_opts->tc_keyfiles_hidden != NULL) &&
-		    (api_opts->tc_keyfiles_hidden[n_hkeyfiles] != NULL);
-		    n_hkeyfiles++)
-			;
-	}
-
-	if (api_opts->tc_use_system_encryption)
-		flags |= TC_FLAG_SYS;
-	if (api_opts->tc_use_fde)
-		flags |= TC_FLAG_FDE;
-	if (api_opts->tc_use_backup)
-		flags |= TC_FLAG_BACKUP;
-
-	info = info_map_common(api_opts->tc_device,
-	    flags, api_opts->tc_system_device,
-	    api_opts->tc_protect_hidden, api_opts->tc_keyfiles, nkeyfiles,
-	    api_opts->tc_keyfiles_hidden, n_hkeyfiles,
-	    api_opts->tc_passphrase, api_opts->tc_passphrase_hidden,
-	    api_opts->tc_interactive_prompt, api_opts->tc_password_retries,
-	    (time_t)api_opts->tc_prompt_timeout, NULL, NULL, NULL);
-
-	if (info == NULL || info->hdr == NULL)
-		return TC_ERR;
-
-	tc_cipher_chain_sprint(vol_info->tc_cipher, sizeof(vol_info->tc_cipher),
-	    info->cipher_chain);
-	vol_info->tc_key_bits = 8*tc_cipher_chain_klen(info->cipher_chain);
-	strncpy(vol_info->tc_prf, info->pbkdf_prf->name, sizeof(vol_info->tc_prf));
-	vol_info->tc_size = info->size * (off_t)info->hdr->sec_sz;
-	vol_info->tc_iv_offset = info->skip * (off_t)info->hdr->sec_sz;
-	vol_info->tc_block_offset = info->offset * (off_t)info->hdr->sec_sz;
-	strncpy(vol_info->tc_device, info->dev, sizeof(vol_info->tc_device));
-	vol_info->tc_device[sizeof(vol_info->tc_device)-1] = '\0';
-
-	free_safe_mem(info->hdr);
-	free_safe_mem(info);
-
-	return TC_OK;
-}
-
-int
-tc_api_info_mapped_volume(tc_api_opts *api_opts, tc_api_volinfo *vol_info)
-{
-	struct tcplay_info *info;
-
-	if ((api_opts == NULL) ||
-	    (vol_info == NULL) ||
-	    (api_opts->tc_map_name == NULL)) {
-		errno = EFAULT;
-		return TC_ERR;
-	}
-
-	info = dm_info_map(api_opts->tc_map_name);
-	if (info == NULL)
-		return TC_ERR;
-
-	tc_cipher_chain_sprint(vol_info->tc_cipher, sizeof(vol_info->tc_cipher),
-	    info->cipher_chain);
-	vol_info->tc_key_bits = 8*tc_cipher_chain_klen(info->cipher_chain);
-	strncpy(vol_info->tc_prf, "(unknown)", sizeof(vol_info->tc_prf));
-	vol_info->tc_size = info->size * (size_t)info->blk_sz;
-	vol_info->tc_iv_offset = info->skip * (off_t)info->blk_sz;
-	vol_info->tc_block_offset = info->offset * (off_t)info->blk_sz;
-	strncpy(vol_info->tc_device, info->dev, sizeof(vol_info->tc_device));
-	vol_info->tc_device[sizeof(vol_info->tc_device)-1] = '\0';
-
-	free_safe_mem(info);
-
-	return TC_OK;
-}
-
-int
-tc_api_modify_volume(tc_api_opts *api_opts)
-{
-	struct pbkdf_prf_algo *prf_hash = NULL;
-	int nkeyfiles, n_newkeyfiles = 0;
-	int flags = 0;
-	int error;
-
-	if ((api_opts == NULL) ||
-	    (api_opts->tc_device == NULL)) {
-		errno = EFAULT;
-		return TC_ERR;
-	}
-
-	if (api_opts->tc_new_prf_hash != NULL) {
-		if ((prf_hash = check_prf_algo(api_opts->tc_new_prf_hash, 1)) == NULL) {
-			errno = EINVAL;
-			return TC_ERR;
-		}
-	}
-
-	for (nkeyfiles = 0; (nkeyfiles < MAX_KEYFILES) &&
-	    (api_opts->tc_keyfiles != NULL) &&
-	    (api_opts->tc_keyfiles[nkeyfiles] != NULL); nkeyfiles++)
-		;
-
-	for (n_newkeyfiles = 0; (n_newkeyfiles < MAX_KEYFILES) &&
-	    (api_opts->tc_new_keyfiles != NULL) &&
-	    (api_opts->tc_new_keyfiles[n_newkeyfiles] != NULL); n_newkeyfiles++)
-		;
-
-	if (api_opts->tc_use_system_encryption)
-		flags |= TC_FLAG_SYS;
-	if (api_opts->tc_use_fde)
-		flags |= TC_FLAG_FDE;
-	if (api_opts->tc_use_backup)
-		flags |= TC_FLAG_BACKUP;
-
-	error = modify_volume(api_opts->tc_device,
-	    flags, api_opts->tc_system_device,
-	    api_opts->tc_keyfiles, nkeyfiles,
-	    api_opts->tc_new_keyfiles, n_newkeyfiles,
-	    prf_hash,
-	    api_opts->tc_passphrase, api_opts->tc_new_passphrase,
-	    api_opts->tc_interactive_prompt, api_opts->tc_password_retries,
-	    (time_t)api_opts->tc_prompt_timeout, api_opts->tc_use_weak_salt,
-	    NULL, NULL, NULL);
-
-	if (error)
-		return TC_ERR;
-
-	return TC_OK;
-}
-
-int
-tc_api_unmap_volume(tc_api_opts *api_opts)
-{
-	int err;
-
-	if ((api_opts == NULL) ||
-	    (api_opts->tc_map_name == NULL)) {
-		errno = EFAULT;
-		return TC_ERR;
-	}
-
-	err = dm_teardown(api_opts->tc_map_name, api_opts->tc_device);
-	return (err) ? TC_ERR : TC_OK;
-}
-
-
-tc_api_opts
-tc_api_opts_init(void)
-{
-	struct tc_api_opts *opts = NULL;
+	struct tc_api_task *task = NULL;
 	int fail = 1;
 
-	if ((opts = alloc_safe_mem(sizeof(*opts))) == NULL) {
+	if ((task = alloc_safe_mem(sizeof(*task))) == NULL) {
 		errno = ENOMEM;
 		goto out;
 	}
 
-	opts->opts = NULL;
-
-	if ((opts->opts = opts_init()) == NULL) {
+	if ((task->opts = opts_init()) == NULL) {
 		errno = ENOMEM;
+		goto out;
+	}
+
+	if (_match(op, "create")) {
+		task->op = TC_OP_CREATE;
+	} else if (_match(op, "map")) {
+		task->op = TC_OP_MAP;
+	} else if (_match(op, "unmap")) {
+		task->op = TC_OP_UNMAP;
+	} else if (_match(op, "info")) {
+		task->op = TC_OP_INFO;
+	} else if (_match(op, "info_mapped")) {
+		task->op = TC_OP_INFO_MAPPED;
+	} else if (_match(op, "modify")) {
+		task->op = TC_OP_MODIFY;
+	} else if (_match(op, "restore")) {
+		task->op = TC_OP_RESTORE;
+	} else {
+		errno = EINVAL;
 		goto out;
 	}
 
 	fail = 0;
 
 out:
-	if (opts != NULL) {
-		if (opts->opts != NULL)
-			opts_free(opts->opts);
-		free_safe_mem(opts);
+	if (fail && task != NULL) {
+		if (task->opts != NULL)
+			opts_free(task->opts);
+		free_safe_mem(task);
 	}
 
-	return fail ? NULL : opts;
+	return fail ? NULL : task;
 }
 
 int
-tc_api_opts_uninit(tc_api_opts opts)
+tc_api_task_uninit(tc_api_task task)
 {
-	opts_free(opts->opts);
-	free_safe_mem(opts);
+	if (task->last_info != NULL)
+		free_info(task->last_info);
+	opts_free(task->opts);
+	free_safe_mem(task);
+
+	return TC_OK;
 }
 
-#define _match(k, v) (strcmp(k, v) == 0)
 
 #define _set_str(k) \
 	do {							\
@@ -411,7 +178,7 @@ tc_api_opts_uninit(tc_api_opts opts)
 	} while (0)
 
 int
-tc_api_opts_set(tc_api_opts api_opts, const char *key, ...)
+tc_api_task_set(tc_api_task task, const char *key, ...)
 {
 	struct tcplay_opts *opts;
 	va_list ap;
@@ -420,7 +187,7 @@ tc_api_opts_set(tc_api_opts api_opts, const char *key, ...)
 	int i;
 	int r = TC_OK;
 
-	if (api_opts == NULL || ((opts = api_opts->opts) == NULL)) {
+	if (task == NULL || ((opts = task->opts) == NULL)) {
 		errno = EFAULT;
 		return TC_ERR;
 	}
@@ -693,7 +460,7 @@ _opts_check_map(struct tcplay_opts *opts)
 
 	if (!opts->protect_hidden) {
 		_zero(n_hkeyfiles);
-		_null(h_passphrase);
+		//_null(h_passphrase);
 	}
 
 	return 0;
@@ -750,7 +517,7 @@ _opts_check_info(struct tcplay_opts *opts)
 
 	if (!opts->protect_hidden) {
 		_zero(n_hkeyfiles);
-		_null(h_passphrase);
+		//_null(h_passphrase);
 	}
 
 	return 0;
@@ -824,43 +591,155 @@ _opts_check_restore(struct tcplay_opts *opts)
 }
 
 int
-tc_api_do(const char *op, tc_api_opts api_opts)
+tc_api_task_do(tc_api_task task)
 {
 	struct tcplay_opts *opts;
 	int r = TC_OK;
 
-	if (api_opts == NULL || ((opts = api_opts->opts) == NULL)) {
+	if (task == NULL || ((opts = task->opts) == NULL)) {
 		errno = EFAULT;
 		return TC_ERR;
 	}
 
-	if (api_opts->last_info != NULL) {
-		free_info(api_opts->last_info);
+	if (task->last_info != NULL) {
+		free_info(task->last_info);
 	}
 
-	if (_match(op, "create")) {
+	switch (task->op) {
+	case TC_OP_CREATE:
+		if ((r = _opts_check_create(task->opts)) != 0) {
+			errno = EINVAL;
+			return r;
+		}
 		r = create_volume(opts);
-	} else if (_match(op, "map")) {
+		break;
+
+	case TC_OP_MAP:
+		if ((r = _opts_check_map(task->opts)) != 0) {
+			errno = EINVAL;
+			return r;
+		}
 		r = map_volume(opts);
-	} else if (_match(op, "unmap")) {
+		break;
+
+	case TC_OP_UNMAP:
+		if ((r = _opts_check_unmap(task->opts)) != 0) {
+			errno = EINVAL;
+			return r;
+		}
 		r = dm_teardown(opts->map_name, opts->dev);
-	} else if (_match(op, "info")) {
-		if ((api_opts->last_info = info_map_common(opts, NULL)) == NULL) {
+		break;
+
+	case TC_OP_INFO:
+		if ((r = _opts_check_info(task->opts)) != 0) {
+			errno = EINVAL;
+			return r;
+		}
+		if ((task->last_info = info_map_common(opts, NULL)) == NULL) {
 			r = TC_ERR;
 		}
-	} else if (_match(op, "info_mapped")) {
-		if ((api_opts->last_info = dm_info_map(opts)) == NULL) {
+		break;
+
+	case TC_OP_INFO_MAPPED:
+		if ((r = _opts_check_info_mapped(task->opts)) != 0) {
+			errno = EINVAL;
+			return r;
+		}
+		if ((task->last_info = dm_info_map(opts->map_name)) == NULL) {
 			r = TC_ERR;
 		}
-	} else if (_match(op, "modify")) {
+		break;
+
+	case TC_OP_MODIFY:
+		if ((r = _opts_check_modify(task->opts)) != 0) {
+			errno = EINVAL;
+			return r;
+		}
 		r = modify_volume(opts);
-	} else if (_match(op, "restore")) {
+		break;
+
+	case TC_OP_RESTORE:
+		if ((r = _opts_check_restore(task->opts)) != 0) {
+			errno = EINVAL;
+			return r;
+		}
 		opts->flags |= TC_FLAG_ONLY_RESTORE;
 		r = modify_volume(opts);
 		opts->flags &= ~TC_FLAG_ONLY_RESTORE;
+		break;
+	}
+
+	return r;
+}
+
+
+int
+tc_api_task_info_get(tc_api_task task, const char *key, ...)
+{
+	char buf[1024];
+	va_list ap;
+	struct tcplay_info *info;
+	char *s;
+	int *ip;
+	int64_t *i64p;
+	int r = TC_OK;
+	size_t sz;
+
+	if (task == NULL || ((info = task->last_info) == NULL)) {
+		errno = EFAULT;
+		return TC_ERR;
+	}
+
+	va_start(ap, key);
+	sz = va_arg(ap, size_t);
+	if (_match(key, "device")) {
+		s = va_arg(ap, char *);
+		strncpy(s, info->dev, sz);
+	} else if (_match(key, "cipher")) {
+		s = va_arg(ap, char *);
+		tc_cipher_chain_sprint(buf, sizeof(buf), info->cipher_chain);
+		strncpy(s, buf, sz);
+	} else if (_match(key, "prf")) {
+		s = va_arg(ap, char *);
+		strncpy(s, info->pbkdf_prf->name, sz);
+	} else if (_match(key, "key_bits")) {
+		if (sz != sizeof(int)) {
+			errno = EFAULT;
+			r = TC_ERR;
+			goto out;
+		}
+		ip = va_arg(ap, int *);
+		*ip = 8*tc_cipher_chain_klen(info->cipher_chain);
+	} else if (_match(key, "size")) {
+		if (sz != sizeof(int64_t)) {
+			errno = EFAULT;
+			r = TC_ERR;
+			goto out;
+		}
+		i64p = va_arg(ap, int64_t *);
+		*i64p = (int64_t)info->size * (int64_t)info->hdr->sec_sz;
+	} else if (_match(key, "iv_offset")) {
+		if (sz != sizeof(int64_t)) {
+			errno = EFAULT;
+			r = TC_ERR;
+			goto out;
+		}
+		i64p = va_arg(ap, int64_t *);
+		*i64p = (int64_t)info->skip * (int64_t)info->hdr->sec_sz;
+	} else if (_match(key, "block_offset")) {
+		if (sz != sizeof(int64_t)) {
+			errno = EFAULT;
+			r = TC_ERR;
+			goto out;
+		}
+		i64p = va_arg(ap, int64_t *);
+		*i64p = (int64_t)info->offset * (int64_t)info->hdr->sec_sz;
 	} else {
 		r = TC_ERR_UNIMPL;
 	}
+
+out:
+	va_end(ap);
 
 	return r;
 }

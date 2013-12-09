@@ -400,7 +400,6 @@ new_info(const char *dev, int flags, struct tc_cipher_chain *cipher_chain,
 	return info;
 }
 
-static
 int
 free_info(struct tcplay_info *info)
 {
@@ -1261,7 +1260,7 @@ modify_volume(struct tcplay_opts *opts)
 		}
 	}
 
-	if ((error = get_disk_info(opts->dev, &blocks, &blksz)) != 0) {
+	if ((error = get_disk_info(dev, &blocks, &blksz)) != 0) {
 		tc_log(1, "could not get disk information\n");
 		goto out;
 	}
@@ -1274,14 +1273,14 @@ modify_volume(struct tcplay_opts *opts)
 			goto out;
 		}
 	} else {
-		if ((error = write_to_disk(opts->dev, offset, blksz, ehdr,
+		if ((error = write_to_disk(dev, offset, blksz, ehdr,
 		    sizeof(*ehdr))) != 0) {
 			tc_log(1, "Could not write volume header to device\n");
 			goto out;
 		}
 
 		if (!TC_FLAG_SET(opts->flags, SYS) && !TC_FLAG_SET(opts->flags, FDE)) {
-			if ((error = write_to_disk(opts->dev, offset_backup, blksz,
+			if ((error = write_to_disk(dev, offset_backup, blksz,
 			    ehdr_backup, sizeof(*ehdr_backup))) != 0) {
 				tc_log(1, "Could not write backup volume header to device\n");
 				goto out;

@@ -32,7 +32,7 @@ MIN_VER=2
 # their standard header files.
 WARNFLAGS= -Wsystem-headers -Wall -W -Wno-unused-parameter \
 	-Wstrict-prototypes -Wmissing-prototypes -Wpointer-arith \
-	-Wold-style-definition -Wreturn-type -Wcast-qual -Wwrite-strings \
+	-Wold-style-definition -Wreturn-type -Wwrite-strings \
 	-Wswitch -Wshadow -Wcast-align -Wunused-parameter -Wchar-subscripts \
 	-Winline -Wnested-externs
 

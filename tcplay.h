@@ -29,6 +29,8 @@
 
 /* Version of tcplay specified during build (CMakeLists.txt, Makefile.classic) */
 
+#ifndef _TCPLAY_H
+#define _TCPLAY_H
 
 #define MAX_BLKSZ		4096
 #define MAX_KEYSZ		192
@@ -226,6 +228,9 @@ int opts_add_keyfile(struct tcplay_opts *opts, const char *keyfile);
 int opts_add_keyfile_hidden(struct tcplay_opts *opts, const char *keyfile);
 int opts_add_keyfile_new(struct tcplay_opts *opts, const char *keyfile);
 void opts_free(struct tcplay_opts *opts);
+void opts_clear_keyfile(struct tcplay_opts *opts);
+void opts_clear_keyfile_hidden(struct tcplay_opts *opts);
+void opts_clear_keyfile_new(struct tcplay_opts *opts);
 
 void *read_to_safe_mem(const char *file, off_t offset, size_t *sz);
 int get_random(unsigned char *buf, size_t len, int weak);
@@ -288,6 +293,7 @@ void tc_log(int err, const char *fmt, ...);
 int tc_cipher_chain_klen(struct tc_cipher_chain *chain);
 char *tc_cipher_chain_sprint(char *buf, size_t bufsz,
     struct tc_cipher_chain *chain);
+int free_info(struct tcplay_info *info);
 void print_info(struct tcplay_info *info);
 int adjust_info(struct tcplay_info *info, struct tcplay_info *hinfo);
 int process_hdr(const char *dev, int flags, unsigned char *pass, int passlen,
@@ -314,6 +320,9 @@ extern summary_fn_t summary_fn;
 #define STATE_ERASE		2
 
 extern int tc_internal_state;
+#ifndef	__DECONST
+#define	__DECONST(type, var)	((type)(uintptr_t)(const void *)(var))
+#endif
 
 #define alloc_safe_mem(x) \
 	_alloc_safe_mem(x, __FILE__, __LINE__)
@@ -322,6 +331,8 @@ extern int tc_internal_state;
 	_strdup_safe_mem(x, __FILE__, __LINE__)
 
 #define free_safe_mem(x) \
-	_free_safe_mem(x, __FILE__, __LINE__)
+	_free_safe_mem(__DECONST(void *, x), __FILE__, __LINE__)
 
 #define __unused       __attribute__((__unused__))
+
+#endif

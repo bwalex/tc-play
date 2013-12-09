@@ -33,13 +33,13 @@
 #include <stddef.h>
 
 #define TC_OK		0
-#define TC_ERR_OTHER	-1
+#define TC_ERR		-1
 #define TC_ERR_UNIMPL	-255
 
-struct tc_api_opts;
+struct tc_api_task;
 struct tc_api_volinfo;
 
-typedef struct tc_api_opts *tc_api_opts;
+typedef struct tc_api_task *tc_api_task;
 typedef struct tc_api_volinfo *tc_api_volinfo;
 
 #ifdef __cplusplus
@@ -49,16 +49,22 @@ extern "C" {
 int tc_api_init(int verbose);
 int tc_api_uninit(void);
 
-tc_api_opts tc_api_opts_init(void);
-int tc_api_opts_uninit(tc_api_opts opts);
-int tc_api_opts_set(tc_api_opts opts, const char *key, ...);
+tc_api_task tc_api_task_init(const char *op);
+int tc_api_task_uninit(tc_api_task task);
+int tc_api_task_set(tc_api_task task, const char *key, ...);
+int tc_api_task_do(tc_api_task task);
 
-int tc_api_do(const char *op, tc_api_opts opts);
-
-
-const char *tc_api_get_error_msg(void);
-const char *tc_api_get_summary(void);
-tc_api_state tc_api_get_state(float *progress_pct);
+int tc_api_task_info_get(tc_api_task task, const char *key, ...);
+/*
+ * keys:
+ * device
+ * cipher
+ * prf
+ * key_bits
+ * size
+ * iv_offset
+ * block_offset
+ */
 
 #ifdef __cplusplus
 }
