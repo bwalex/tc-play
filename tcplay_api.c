@@ -626,6 +626,202 @@ out:
 	return r;
 }
 
+#define _not_null(x) \
+	if (opts->x == NULL) {	\
+		return -1;	\
+	}
+
+#define _null(x) \
+	if (opts->x != NULL) {	\
+		return -1;	\
+	}
+
+#define _zero(x) \
+	if (opts->x != 0) {	\
+		return -1;	\
+	}
+
+#define _not_set(x) \
+	if (TC_FLAG_SET(opts->flags, x)) {	\
+		return -1;			\
+	}
+
+static
+int
+_opts_check_create(struct tcplay_opts *opts)
+{
+	_not_null(dev);
+	_not_set(SYS);
+	_not_set(FDE);
+	_not_set(BACKUP);
+	_not_set(ONLY_RESTORE);
+	_not_set(ALLOW_TRIM);
+	_not_set(SAVE_TO_FILE);
+	_not_set(HDR_FROM_FILE);
+	_not_set(H_HDR_FROM_FILE);
+
+	_null(map_name);
+	_zero(protect_hidden);
+	_null(new_passphrase);
+	_null(new_prf_algo);
+	_zero(n_newkeyfiles);
+
+	if (opts->hidden_size_bytes && !opts->hidden) {
+		return -1;
+	}
+
+	return 0;
+}
+
+static
+int
+_opts_check_map(struct tcplay_opts *opts)
+{
+	_not_null(dev);
+	_not_null(map_name);
+	_not_set(ONLY_RESTORE);
+	_not_set(SAVE_TO_FILE);
+	_zero(hidden);
+	_zero(hidden_size_bytes);
+	_null(new_passphrase);
+	_null(new_prf_algo);
+	_zero(n_newkeyfiles);
+	_null(prf_algo);
+	_null(h_prf_algo);
+	_null(cipher_chain);
+	_null(h_cipher_chain);
+
+	if (!opts->protect_hidden) {
+		_zero(n_hkeyfiles);
+		_null(h_passphrase);
+	}
+
+	return 0;
+}
+
+static
+int
+_opts_check_unmap(struct tcplay_opts *opts)
+{
+	_not_null(map_name);
+	/* XXX: _not_null(dev); ? */
+	_zero(nkeyfiles);
+	_zero(n_hkeyfiles);
+	_null(prf_algo);
+	_null(cipher_chain);
+	_null(h_prf_algo);
+	_null(h_cipher_chain);
+	_null(passphrase);
+	_null(h_passphrase);
+	_zero(hidden);
+	_zero(protect_hidden);
+	_null(new_prf_algo);
+	_null(new_passphrase);
+	_zero(n_newkeyfiles);
+	_not_set(SYS);
+	_not_set(FDE);
+	_not_set(BACKUP);
+	_not_set(ONLY_RESTORE);
+	_not_set(ALLOW_TRIM);
+	_not_set(SAVE_TO_FILE);
+	_not_set(HDR_FROM_FILE);
+	_not_set(H_HDR_FROM_FILE);
+
+	return 0;
+}
+
+static
+int
+_opts_check_info(struct tcplay_opts *opts)
+{
+	_not_null(dev);
+	_null(map_name);
+	_not_set(ONLY_RESTORE);
+	_not_set(SAVE_TO_FILE);
+	_zero(hidden);
+	_zero(hidden_size_bytes);
+	_null(new_passphrase);
+	_null(new_prf_algo);
+	_zero(n_newkeyfiles);
+	_null(prf_algo);
+	_null(h_prf_algo);
+	_null(cipher_chain);
+	_null(h_cipher_chain);
+
+	if (!opts->protect_hidden) {
+		_zero(n_hkeyfiles);
+		_null(h_passphrase);
+	}
+
+	return 0;
+}
+
+static
+int
+_opts_check_info_mapped(struct tcplay_opts *opts)
+{
+	_not_null(map_name);
+	/* XXX: _not_null(dev); ? */
+	_zero(nkeyfiles);
+	_zero(n_hkeyfiles);
+	_null(prf_algo);
+	_null(cipher_chain);
+	_null(h_prf_algo);
+	_null(h_cipher_chain);
+	_null(passphrase);
+	_null(h_passphrase);
+	_zero(hidden);
+	_zero(protect_hidden);
+	_null(new_prf_algo);
+	_null(new_passphrase);
+	_zero(n_newkeyfiles);
+	_not_set(SYS);
+	_not_set(FDE);
+	_not_set(BACKUP);
+	_not_set(ONLY_RESTORE);
+	_not_set(ALLOW_TRIM);
+	_not_set(SAVE_TO_FILE);
+	_not_set(HDR_FROM_FILE);
+	_not_set(H_HDR_FROM_FILE);
+
+	return 0;
+}
+
+static
+int
+_opts_check_modify(struct tcplay_opts *opts)
+{
+	_not_null(dev);
+	_not_null(map_name);
+	_zero(hidden);
+	_zero(hidden_size_bytes);
+	_null(prf_algo);
+	_null(h_prf_algo);
+	_null(cipher_chain);
+	_null(h_cipher_chain);
+
+	if (!opts->protect_hidden) {
+		_zero(n_hkeyfiles);
+		_null(h_passphrase);
+	}
+
+	return 0;
+}
+
+
+static
+int
+_opts_check_restore(struct tcplay_opts *opts)
+{
+	if ((_opts_check_modify(opts)) < 0)
+		return -1;
+
+	_null(new_prf_algo);
+	_zero(n_newkeyfiles);
+	_null(new_passphrase);
+
+	return 0;
+}
 
 int
 tc_api_do(const char *op, tc_api_opts api_opts)
