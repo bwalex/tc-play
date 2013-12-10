@@ -131,6 +131,7 @@ Given /^I request information about volume ([^\s]+) with the API using the follo
   loop_dev = @losetup.get_device("volumes/#{vol}")
 
   task = TCplayLib.tc_api_task_init("info")
+  task.read_pointer().null?.should == false
 
   r = TCplayLib.tc_api_task_set(task, "dev", :string, loop_dev)
   r.should == TCplayLib::TC_OK
@@ -172,47 +173,48 @@ Given /^I request information about volume ([^\s]+) with the API using the follo
     #@err_str = TCplayLib.tc_api_get_error_msg()
   end
 
-  buf = FFI::MemoryPointer.new(1024)
-  r = TCplayLib.tc_api_task_info_get(task, "device", :size_t, 1024, :pointer, buf)
-  r.should == TCplayLib::TC_OK
-  @info['device'] = buf.read_string
+  unless @error
+    buf = FFI::MemoryPointer.new(1024)
+    r = TCplayLib.tc_api_task_info_get(task, "device", :size_t, 1024, :pointer, buf)
+    r.should == TCplayLib::TC_OK
+    @info['device'] = buf.read_string
 
-  r = TCplayLib.tc_api_task_info_get(task, "prf", :size_t, 1024, :pointer, buf)
-  r.should == TCplayLib::TC_OK
-  @info['pbkdf2 prf'] = buf.read_string.downcase
+    r = TCplayLib.tc_api_task_info_get(task, "prf", :size_t, 1024, :pointer, buf)
+    r.should == TCplayLib::TC_OK
+    @info['pbkdf2 prf'] = buf.read_string.downcase
 
-  r = TCplayLib.tc_api_task_info_get(task, "cipher", :size_t, 1024, :pointer, buf)
-  r.should == TCplayLib::TC_OK
-  @info['cipher'] = buf.read_string.downcase
+    r = TCplayLib.tc_api_task_info_get(task, "cipher", :size_t, 1024, :pointer, buf)
+    r.should == TCplayLib::TC_OK
+    @info['cipher'] = buf.read_string.downcase
 
-  buf = FFI::MemoryPointer.new :int
+    buf = FFI::MemoryPointer.new :int
 
-  r = TCplayLib.tc_api_task_info_get(task, "key_bits", :size_t, 4, :pointer, buf)
-  r.should == TCplayLib::TC_OK
-  @info['key length'] = "#{buf.get_int(0)} bits"
+    r = TCplayLib.tc_api_task_info_get(task, "key_bits", :size_t, 4, :pointer, buf)
+    r.should == TCplayLib::TC_OK
+    @info['key length'] = "#{buf.get_int(0)} bits"
 
-  buf = FFI::MemoryPointer.new :int64
+    buf = FFI::MemoryPointer.new :int64
 
-  r = TCplayLib.tc_api_task_info_get(task, "size", :size_t, 8, :pointer, buf)
-  r.should == TCplayLib::TC_OK
-  @info['volume size'] = "#{buf.get_int64(0)} bytes"
+    r = TCplayLib.tc_api_task_info_get(task, "size", :size_t, 8, :pointer, buf)
+    r.should == TCplayLib::TC_OK
+    @info['volume size'] = "#{buf.get_int64(0)} bytes"
 
-  r = TCplayLib.tc_api_task_info_get(task, "iv_offset", :size_t, 8, :pointer, buf)
-  r.should == TCplayLib::TC_OK
-  @info['iv offset'] =  "#{buf.get_int64(0)} bytes"
+    r = TCplayLib.tc_api_task_info_get(task, "iv_offset", :size_t, 8, :pointer, buf)
+    r.should == TCplayLib::TC_OK
+    @info['iv offset'] =  "#{buf.get_int64(0)} bytes"
 
-  r = TCplayLib.tc_api_task_info_get(task, "block_offset", :size_t, 8, :pointer, buf)
-  r.should == TCplayLib::TC_OK
-  @info['block offset'] = "#{buf.get_int64(0)} bytes"
+    r = TCplayLib.tc_api_task_info_get(task, "block_offset", :size_t, 8, :pointer, buf)
+    r.should == TCplayLib::TC_OK
+    @info['block offset'] = "#{buf.get_int64(0)} bytes"
+  end
 
   TCplayLib.tc_api_task_uninit(task)
 end
 
 
 Given /^I request information about mapped volume ([^\s]+) with the API$/ do |map|
-  opts = TCplayLib::TCApiOpts.new
-
   task = TCplayLib.tc_api_task_init("info_mapped")
+  task.read_pointer().null?.should == false
 
   r = TCplayLib.tc_api_task_set(task, "map_name", :string, map)
   r.should == TCplayLib::TC_OK
@@ -224,38 +226,40 @@ Given /^I request information about mapped volume ([^\s]+) with the API$/ do |ma
     #@err_str = TCplayLib.tc_api_get_error_msg()
   end
 
-  buf = FFI::MemoryPointer.new(1024)
-  r = TCplayLib.tc_api_task_info_get(task, "device", :size_t, 1024, :pointer, buf)
-  r.should == TCplayLib::TC_OK
-  @info['device'] = buf.read_string
+  unless @error
+    buf = FFI::MemoryPointer.new(1024)
+    r = TCplayLib.tc_api_task_info_get(task, "device", :size_t, 1024, :pointer, buf)
+    r.should == TCplayLib::TC_OK
+    @info['device'] = buf.read_string
 
-  r = TCplayLib.tc_api_task_info_get(task, "prf", :size_t, 1024, :pointer, buf)
-  r.should == TCplayLib::TC_OK
-  @info['pbkdf2 prf'] = buf.read_string.downcase
+    r = TCplayLib.tc_api_task_info_get(task, "prf", :size_t, 1024, :pointer, buf)
+    r.should == TCplayLib::TC_OK
+    @info['pbkdf2 prf'] = buf.read_string.downcase
 
-  r = TCplayLib.tc_api_task_info_get(task, "cipher", :size_t, 1024, :pointer, buf)
-  r.should == TCplayLib::TC_OK
-  @info['cipher'] = buf.read_string.downcase
+    r = TCplayLib.tc_api_task_info_get(task, "cipher", :size_t, 1024, :pointer, buf)
+    r.should == TCplayLib::TC_OK
+    @info['cipher'] = buf.read_string.downcase
 
-  buf = FFI::MemoryPointer.new :int
+    buf = FFI::MemoryPointer.new :int
 
-  r = TCplayLib.tc_api_task_info_get(task, "key_bits", :size_t, 4, :pointer, buf)
-  r.should == TCplayLib::TC_OK
-  @info['key length'] = "#{buf.get_int(0)} bits"
+    r = TCplayLib.tc_api_task_info_get(task, "key_bits", :size_t, 4, :pointer, buf)
+    r.should == TCplayLib::TC_OK
+    @info['key length'] = "#{buf.get_int(0)} bits"
 
-  buf = FFI::MemoryPointer.new :int64
+    buf = FFI::MemoryPointer.new :int64
 
-  r = TCplayLib.tc_api_task_info_get(task, "size", :size_t, 8, :pointer, buf)
-  r.should == TCplayLib::TC_OK
-  @info['volume size'] = "#{buf.get_int64(0)} bytes"
+    r = TCplayLib.tc_api_task_info_get(task, "size", :size_t, 8, :pointer, buf)
+    r.should == TCplayLib::TC_OK
+    @info['volume size'] = "#{buf.get_int64(0)} bytes"
 
-  r = TCplayLib.tc_api_task_info_get(task, "iv_offset", :size_t, 8, :pointer, buf)
-  r.should == TCplayLib::TC_OK
-  @info['iv offset'] =  "#{buf.get_int64(0)} bytes"
+    r = TCplayLib.tc_api_task_info_get(task, "iv_offset", :size_t, 8, :pointer, buf)
+    r.should == TCplayLib::TC_OK
+    @info['iv offset'] =  "#{buf.get_int64(0)} bytes"
 
-  r = TCplayLib.tc_api_task_info_get(task, "block_offset", :size_t, 8, :pointer, buf)
-  r.should == TCplayLib::TC_OK
-  @info['block offset'] = "#{buf.get_int64(0)} bytes"
+    r = TCplayLib.tc_api_task_info_get(task, "block_offset", :size_t, 8, :pointer, buf)
+    r.should == TCplayLib::TC_OK
+    @info['block offset'] = "#{buf.get_int64(0)} bytes"
+  end
 
   TCplayLib.tc_api_task_uninit(task)
 end
@@ -266,32 +270,49 @@ Given /^I modify volume ([^\s]+) with the API using the following settings:$/ do
 
   loop_dev = @losetup.get_device("volumes/#{vol}")
 
-  #opts = TCplayLib::TCApiOpts.new
+  task = TCplayLib.tc_api_task_init("modify")
 
-  #opts[:tc_device] = FFI::MemoryPointer.from_string(loop_dev)
+  r = TCplayLib.tc_api_task_set(task, "dev", :string, loop_dev)
+  r.should == TCplayLib::TC_OK
 
-  #unless s['keyfiles'].nil?
-  #  keyfiles = ParseHelper.csv_parse(s['keyfiles']) { |kf| "keyfiles/#{kf}" }
-  #  opts[:tc_keyfiles] = FFIHelper.str_array_to_p(keyfiles)
-  #end
+  unless s['keyfiles'].nil?
+    ParseHelper.csv_parse(s['keyfiles']) do |kf|
+      r = TCplayLib.tc_api_task_set(task, "keyfiles", :string, "keyfiles/#{kf}")
+      r.should == TCplayLib::TC_OK
+    end
+  end
 
-  #unless s['new_keyfiles'].nil?
-  #  new_keyfiles = ParseHelper.csv_parse(s['new_keyfiles']) { |kf| "keyfiles/#{kf}" }
-  #  opts[:tc_new_keyfiles] = FFIHelper.str_array_to_p(new_keyfiles)
-  #end
+  unless s['new_keyfiles'].nil?
+    ParseHelper.csv_parse(s['new_keyfiles']) do |kf|
+      r = TCplayLib.tc_api_task_set(task, "new_keyfiles", :string, "keyfiles/#{kf}")
+      r.should == TCplayLib::TC_OK
+    end
+  end
 
-  #opts[:tc_passphrase] = FFI::MemoryPointer.from_string(s['passphrase'] || '')
-  #opts[:tc_new_passphrase] = FFI::MemoryPointer.from_string(s['new_passphrase'] || '')
-  #opts[:tc_new_prf_hash] = FFI::MemoryPointer.from_string(s['new_pbkdf_prf'].strip) unless s['new_pbkdf_prf'].nil?
-  #opts[:tc_interactive_prompt] = 0
-  #opts[:tc_use_system_encryption] = 0
-  #opts[:tc_use_weak_salt] = 1
-  #opts[:tc_use_backup] = (s['use_backup'].nil? ? 0 : ParseHelper.is_yes(s['use_backup']))
+  r = TCplayLib.tc_api_task_set(task, "passphrase", :string, s['passphrase'] || '')
+  r.should == TCplayLib::TC_OK
+  r = TCplayLib.tc_api_task_set(task, "new_passphrase", :string, s['new_passphrase'] || '')
+  r.should == TCplayLib::TC_OK
 
-  #@error = (TCplayLib.tc_api_modify_volume(opts) == TCplayLib::TC_ERR)
-  #if (@error)
+  unless s['new_pbkdf_prf'].nil?
+    r = TCplayLib.tc_api_task_set(task, "new_prf_algo", :string, s['new_pbkdf_prf'].strip)
+    r.should == TCplayLib::TC_OK
+  end
+
+  r = TCplayLib.tc_api_task_set(task, "interactive", :int, 0)
+  r.should == TCplayLib::TC_OK
+  r = TCplayLib.tc_api_task_set(task, "weak_keys_and_salt", :int, 1)
+  r.should == TCplayLib::TC_OK
+  r = TCplayLib.tc_api_task_set(task, "use_backup_header", :int,
+    (s['use_backup'].nil? ? 0 : ParseHelper.is_yes(s['use_backup'])))
+  r.should == TCplayLib::TC_OK
+
+  @error = (TCplayLib.tc_api_task_do(task) != TCplayLib::TC_OK)
+  if (@error)
   #  #@err_str = TCplayLib.tc_api_get_error_msg()
-  #end
+  end
+
+  TCplayLib.tc_api_task_uninit(task)
 end
 
 

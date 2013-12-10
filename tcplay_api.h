@@ -55,16 +55,6 @@ int tc_api_task_set(tc_api_task task, const char *key, ...);
 int tc_api_task_do(tc_api_task task);
 
 int tc_api_task_info_get(tc_api_task task, const char *key, ...);
-/*
- * keys:
- * device
- * cipher
- * prf
- * key_bits
- * size
- * iv_offset
- * block_offset
- */
 
 #ifdef __cplusplus
 }

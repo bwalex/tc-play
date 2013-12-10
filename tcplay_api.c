@@ -559,7 +559,7 @@ int
 _opts_check_modify(struct tcplay_opts *opts)
 {
 	_not_null(dev);
-	_not_null(map_name);
+	_null(map_name);
 	_zero(hidden);
 	_zero(hidden_size_bytes);
 	_null(prf_algo);
@@ -692,16 +692,28 @@ tc_api_task_info_get(tc_api_task task, const char *key, ...)
 
 	va_start(ap, key);
 	sz = va_arg(ap, size_t);
+	if (sz < 1) {
+		errno = EINVAL;
+		r = TC_ERR;
+		goto out;
+	}
+
 	if (_match(key, "device")) {
 		s = va_arg(ap, char *);
 		strncpy(s, info->dev, sz);
+		s[sz-1] = '\0';
 	} else if (_match(key, "cipher")) {
 		s = va_arg(ap, char *);
 		tc_cipher_chain_sprint(buf, sizeof(buf), info->cipher_chain);
 		strncpy(s, buf, sz);
+		s[sz-1] = '\0';
 	} else if (_match(key, "prf")) {
 		s = va_arg(ap, char *);
-		strncpy(s, info->pbkdf_prf->name, sz);
+		if (info->pbkdf_prf)
+			strncpy(s, info->pbkdf_prf->name, sz);
+		else
+			strncpy(s, "(unknown)", sz);
+		s[sz-1] = '\0';
 	} else if (_match(key, "key_bits")) {
 		if (sz != sizeof(int)) {
 			errno = EFAULT;
@@ -717,7 +729,10 @@ tc_api_task_info_get(tc_api_task task, const char *key, ...)
 			goto out;
 		}
 		i64p = va_arg(ap, int64_t *);
-		*i64p = (int64_t)info->size * (int64_t)info->hdr->sec_sz;
+		if (info->hdr)
+			*i64p = (int64_t)info->size * (int64_t)info->hdr->sec_sz;
+		else
+			*i64p = (int64_t)info->size * (int64_t)info->blk_sz;
 	} else if (_match(key, "iv_offset")) {
 		if (sz != sizeof(int64_t)) {
 			errno = EFAULT;
@@ -725,7 +740,10 @@ tc_api_task_info_get(tc_api_task task, const char *key, ...)
 			goto out;
 		}
 		i64p = va_arg(ap, int64_t *);
-		*i64p = (int64_t)info->skip * (int64_t)info->hdr->sec_sz;
+		if (info->hdr)
+			*i64p = (int64_t)info->skip * (int64_t)info->hdr->sec_sz;
+		else
+			*i64p = (int64_t)info->skip * (int64_t)info->blk_sz;
 	} else if (_match(key, "block_offset")) {
 		if (sz != sizeof(int64_t)) {
 			errno = EFAULT;
@@ -733,7 +751,10 @@ tc_api_task_info_get(tc_api_task task, const char *key, ...)
 			goto out;
 		}
 		i64p = va_arg(ap, int64_t *);
-		*i64p = (int64_t)info->offset * (int64_t)info->hdr->sec_sz;
+		if (info->hdr)
+			*i64p = (int64_t)info->offset * (int64_t)info->hdr->sec_sz;
+		else
+			*i64p = (int64_t)info->offset * (int64_t)info->blk_sz;
 	} else {
 		r = TC_ERR_UNIMPL;
 	}
