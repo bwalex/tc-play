@@ -316,6 +316,37 @@ Given /^I modify volume ([^\s]+) with the API using the following settings:$/ do
 end
 
 
+Given /^I query the available PRFs with the API$/ do
+  @prfs = []
+
+  callback = Proc.new do |unused, name|
+    @prfs << name.downcase
+    0
+  end
+
+  r = TCplayLib.tc_api_prf_iterate(callback, nil)
+  r.should == TCplayLib::TC_OK
+end
+
+
+Given /^I query the available ciphers with the API$/ do
+  @ciphers = []
+
+  callback = Proc.new do |unused, name, klen, length|
+    @ciphers << {
+      :name   => name.upcase,
+      :klen   => "#{klen}",
+      :length => "#{length}"
+    }
+    0
+  end
+
+  r = TCplayLib.tc_api_cipher_iterate(callback, nil)
+  r.should == TCplayLib::TC_OK
+end
+
+
+
 Before('@api') do
   r = TCplayLib.tc_api_init(1)
   r.should == TCplayLib::TC_OK

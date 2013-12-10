@@ -9,8 +9,15 @@ module TCplayLib
   TC_ERR = -1
   TC_ERR_UNIMPL = -255
 
+  callback :tc_api_cipher_iterator_fn, [ :pointer, :string, :int, :int], :int
+  callback :tc_api_prf_iterator_fn, [ :pointer, :string], :int
+
   attach_function :tc_api_init, [ :int ], :int
   attach_function :tc_api_uninit, [ ], :int
+
+  attach_function :tc_api_has, [ :string ], :int
+  attach_function :tc_api_cipher_iterate, [ :tc_api_cipher_iterator_fn, :pointer ], :int
+  attach_function :tc_api_prf_iterate, [ :tc_api_prf_iterator_fn, :pointer ], :int
 
   attach_function :tc_api_task_init, [ :string ], :pointer
   attach_function :tc_api_task_uninit, [ :pointer ], :int

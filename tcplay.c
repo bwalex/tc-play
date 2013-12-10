@@ -253,7 +253,6 @@ tc_free_cipher_chain(struct tc_cipher_chain *chain)
 	return 0;
 }
 
-static
 int
 tc_cipher_chain_length(struct tc_cipher_chain *chain)
 {

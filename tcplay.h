@@ -291,6 +291,7 @@ struct pbkdf_prf_algo *check_prf_algo(const char *algo, int quiet);
 int tc_play_init(void);
 void tc_log(int err, const char *fmt, ...);
 int tc_cipher_chain_klen(struct tc_cipher_chain *chain);
+int tc_cipher_chain_length(struct tc_cipher_chain *chain);
 char *tc_cipher_chain_sprint(char *buf, size_t bufsz,
     struct tc_cipher_chain *chain);
 int free_info(struct tcplay_info *info);
@@ -314,6 +315,8 @@ typedef void(*summary_fn_t)(void);
 extern int tc_internal_verbose;
 extern char tc_internal_log_buffer[];
 extern summary_fn_t summary_fn;
+extern struct pbkdf_prf_algo pbkdf_prf_algos[];
+extern struct tc_cipher_chain *tc_cipher_chains[MAX_CIPHER_CHAINS];
 
 #define STATE_UNKNOWN		0
 #define STATE_GET_RANDOM	1
