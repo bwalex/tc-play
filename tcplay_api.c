@@ -38,6 +38,7 @@
 #include "tcplay_api.h"
 #include "tcplay_api_internal.h"
 
+
 int
 tc_api_init(int verbose)
 {
@@ -57,6 +58,73 @@ tc_api_uninit(void)
 	check_and_purge_safe_mem();
 	return TC_OK;
 }
+
+
+static const char *_caps[] = {
+	"trim",
+	NULL
+};
+
+int
+tc_api_has(const char *feature)
+{
+	const char *cap;
+	int i;
+
+	for (cap = _caps[0], i = 0; cap != NULL; cap = _caps[++i]) {
+		if ((strcmp(cap, feature)) == 0)
+			return TC_OK;
+	}
+
+	return TC_ERR_UNIMPL;
+}
+
+int
+tc_api_cipher_iterate(tc_api_cipher_iterator_fn fn, void *priv)
+{
+	int i;
+	struct tc_cipher_chain *chain;
+	int klen;
+	int length;
+	char buf[1024];
+
+	if (fn == NULL) {
+		errno = EFAULT;
+		return TC_ERR;
+	}
+
+	for (i = 0, chain = tc_cipher_chains[0]; chain != NULL;
+	     chain = tc_cipher_chains[++i]) {
+		tc_cipher_chain_sprint(buf, sizeof(buf), chain);
+		klen = tc_cipher_chain_klen(chain);
+		length = tc_cipher_chain_length(chain);
+		if ((fn(priv, buf, klen, length)) < 0)
+			break;
+	}
+
+	return TC_OK;
+}
+
+int
+tc_api_prf_iterate(tc_api_prf_iterator_fn fn, void *priv)
+{
+	int i;
+
+	if (fn == NULL) {
+		errno = EFAULT;
+		return TC_ERR;
+	}
+
+	/* start at 1 due to RIPEMD weirdness... */
+	for (i = 1; pbkdf_prf_algos[i].name != NULL; i++) {
+		if ((fn(priv, pbkdf_prf_algos[i].name)) < 0)
+			break;
+	}
+
+	return TC_OK;
+}
+
+
 
 #if 0
 const char *

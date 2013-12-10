@@ -42,12 +42,21 @@ struct tc_api_volinfo;
 typedef struct tc_api_task *tc_api_task;
 typedef struct tc_api_volinfo *tc_api_volinfo;
 
+typedef int (*tc_api_cipher_iterator_fn)(void *, const char *, int /* klen */, int /* length */);
+typedef int (*tc_api_prf_iterator_fn)(void *, const char *);
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 int tc_api_init(int verbose);
 int tc_api_uninit(void);
+
+int tc_api_has(const char *feature);
+
+int tc_api_cipher_iterate(tc_api_cipher_iterator_fn fn, void *priv);
+int tc_api_prf_iterate(tc_api_prf_iterator_fn fn, void *priv);
+
 
 tc_api_task tc_api_task_init(const char *op);
 int tc_api_task_uninit(tc_api_task task);
