@@ -832,6 +832,3 @@ out:
 
 	return r;
 }
-
-/* XXX: free_cipher_chain calls to opts cleanups here and in tcplay.c */
-/* XXX: free_info calls here in uninit */
