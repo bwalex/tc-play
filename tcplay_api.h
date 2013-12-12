@@ -37,10 +37,8 @@
 #define TC_ERR_UNIMPL	-255
 
 struct _tc_api_task;
-struct _tc_api_volinfo;
 
 typedef struct _tc_api_task *tc_api_task;
-typedef struct _tc_api_volinfo *tc_api_volinfo;
 
 typedef int (*tc_api_cipher_iterator_fn)(void *, const char *, int /* klen */, int /* length */);
 typedef int (*tc_api_prf_iterator_fn)(void *, const char *);
