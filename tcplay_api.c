@@ -173,7 +173,7 @@ tc_api_get_state(float *progress)
 tc_api_task
 tc_api_task_init(const char *op)
 {
-	struct tc_api_task *task = NULL;
+	tc_api_task task = NULL;
 	int fail = 1;
 
 	if ((task = alloc_safe_mem(sizeof(*task))) == NULL) {

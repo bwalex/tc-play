@@ -43,7 +43,7 @@ typedef enum tc_api_op {
 	TC_OP_RESTORE
 } tc_api_op;
 
-struct tc_api_task {
+struct _tc_api_task {
 	tc_api_op		op;
 	struct tcplay_opts	*opts;
 	struct tcplay_info	*last_info;
