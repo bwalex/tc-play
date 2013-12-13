@@ -728,10 +728,17 @@ create_volume(struct tcplay_opts *opts)
 	if (opts->secure_erase) {
 		tc_log(0, "Securely erasing the volume...\nThis process may take "
 		    "some time depending on the size of the volume\n");
+
+		if (opts->state_change_fn)
+			opts->state_change_fn(opts->api_ctx, "secure_erase", 1);
+
 		if ((error = secure_erase(opts->dev, blocks * blksz, blksz)) != 0) {
 			tc_log(1, "could not securely erase device %s\n", opts->dev);
 			goto out;
 		}
+
+		if (opts->state_change_fn)
+			opts->state_change_fn(opts->api_ctx, "secure_erase", 0);
 	}
 
 	tc_log(0, "Creating volume headers...\nDepending on your system, this "
@@ -743,6 +750,9 @@ create_volume(struct tcplay_opts *opts)
 		    "entropy for the key material. Odds are this is NOT "
 		    "what you want.\n");
 	}
+
+	if (opts->state_change_fn)
+		opts->state_change_fn(opts->api_ctx, "create_header", 1);
 
 	/* create encrypted headers */
 	ehdr = create_hdr((unsigned char *)pass,
@@ -766,6 +776,9 @@ create_volume(struct tcplay_opts *opts)
 			goto out;
 		}
 	}
+
+	if (opts->state_change_fn)
+		opts->state_change_fn(opts->api_ctx, "create_header", 0);
 
 	tc_log(0, "Writing volume headers to disk...\n");
 

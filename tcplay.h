@@ -179,6 +179,7 @@ struct tcplay_dm_table {
 };
 
 
+typedef int (*tc_state_change_fn)(void *, const char *, int);
 
 struct tcplay_opts {
 	/* (Mostly) common options */
@@ -220,6 +221,9 @@ struct tcplay_opts {
 	const char	*hdr_file_out;
 	const char	*new_keyfiles[MAX_KEYFILES];
 	int		n_newkeyfiles;
+
+	void		*api_ctx;
+	tc_state_change_fn	state_change_fn;
 };
 
 

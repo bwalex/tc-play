@@ -125,48 +125,12 @@ tc_api_prf_iterate(tc_api_prf_iterator_fn fn, void *priv)
 }
 
 
-
-#if 0
 const char *
-tc_api_get_error_msg(void)
+tc_api_task_get_error(tc_api_task task __unused)
 {
 	return tc_internal_log_buffer;
 }
 
-const char *
-tc_api_get_summary(void)
-{
-	if (summary_fn != NULL) {
-		summary_fn();
-		return tc_internal_log_buffer;
-	}
-
-	return NULL;
-}
-
-tc_api_state
-tc_api_get_state(float *progress)
-{
-	switch (tc_internal_state) {
-	case STATE_UNKNOWN:
-		return TC_STATE_UNKNOWN;
-
-	case STATE_ERASE:
-		if (progress != NULL)
-			*progress = get_secure_erase_progress();
-		return TC_STATE_ERASE;
-
-	case STATE_GET_RANDOM:
-		if (progress != NULL)
-			*progress = get_random_read_progress();
-		return TC_STATE_GET_RANDOM;
-
-	default:
-		return TC_STATE_UNKNOWN;
-	}
-
-}
-#endif
 
 #define _match(k, v) (strcmp(k, v) == 0)
 
@@ -253,6 +217,8 @@ tc_api_task_set(tc_api_task task, const char *key, ...)
 	const char *s;
 	int64_t i64;
 	int i;
+	tc_api_state_change_fn sc_fn;
+	void *vp;
 	int r = TC_OK;
 
 	if (task == NULL || ((opts = task->opts) == NULL)) {
@@ -451,6 +417,12 @@ tc_api_task_set(tc_api_task task, const char *key, ...)
 		} else {
 			opts->h_cipher_chain = NULL;
 		}
+	} else if (_match(key, "state_change_fn")) {
+		sc_fn = va_arg(ap, tc_api_state_change_fn);
+		opts->state_change_fn = sc_fn;
+	} else if (_match(key, "ctx")) {
+		vp = va_arg(ap, void *);
+		opts->api_ctx = vp;
 	} else {
 		r = TC_ERR_UNIMPL;
 	}

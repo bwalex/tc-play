@@ -36,12 +36,16 @@
 #define TC_ERR		-1
 #define TC_ERR_UNIMPL	-255
 
+#define TC_STATE_ENTER	1
+#define TC_STATE_EXIT	0
+
 struct _tc_api_task;
 
 typedef struct _tc_api_task *tc_api_task;
 
 typedef int (*tc_api_cipher_iterator_fn)(void *, const char *, int /* klen */, int /* length */);
 typedef int (*tc_api_prf_iterator_fn)(void *, const char *);
+typedef int (*tc_api_state_change_fn)(void *, const char *, int);
 
 #ifdef __cplusplus
 extern "C" {
@@ -62,6 +66,7 @@ int tc_api_task_set(tc_api_task task, const char *key, ...);
 int tc_api_task_do(tc_api_task task);
 
 int tc_api_task_info_get(tc_api_task task, const char *key, ...);
+const char *tc_api_task_get_error(tc_api_task task);
 
 #ifdef __cplusplus
 }
