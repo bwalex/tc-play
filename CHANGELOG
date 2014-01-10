@@ -1,4 +1,4 @@
-2013-??-?? Version 1.2 - Alex Hornung <alex@alexhornung.com>
+2013-??-?? Version 2.0 - Alex Hornung <alex@alexhornung.com>
 
  * Documented SIGINFO/SIGUSR1 behaviour in man page.
 
@@ -12,6 +12,8 @@
 
  * Add an option to allow TRIM (discards) on the mapped volume
    (issue #47).
+
+ * Complete API redesign.
 
 
 2013-07-31 Version 1.1 - Alex Hornung <alex@alexhornung.com>

@@ -23,7 +23,7 @@ the trial and error approach.
 
 Implementation notes
 ==========
-DragonFly BSD uses the hybrid OpenSSL + cryptodev(9) approach that can be 
+DragonFly BSD uses the hybrid OpenSSL + cryptodev(9) approach that can be
 found in crypto-dev.c. OpenSSL is only used for the hash/pbkdf2. The
 encryption/decryption is performed via cryptodev(9) with enabled cryptosoft.
 
