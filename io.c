@@ -34,6 +34,7 @@
 #include <linux/fs.h>
 #include <sys/ioctl.h>
 #endif
+#include <sys/stat.h>
 #include <sys/uio.h>
 #include <sys/select.h>
 #include <errno.h>
