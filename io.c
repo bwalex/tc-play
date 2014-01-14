@@ -364,7 +364,7 @@ write_to_file(const char *file, void *mem, size_t bytes)
 	int fd;
 	ssize_t w;
 
-	if ((fd = open(file, O_WRONLY)) < 0) {
+	if ((fd = open(file, O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR)) < 0) {
 		tc_log(1, "Error opening file %s\n", file);
 		return -1;
 	}
