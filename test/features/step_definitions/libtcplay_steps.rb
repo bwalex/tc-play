@@ -61,7 +61,7 @@ Given /^I create a volume ([^\s]+) of size (\d+)M using the API with the followi
   create_hidden = false
   s = params.rows_hash
 
-  IO.popen("dd if=/dev/zero of=\"volumes/#{vol}\" bs=1M count=#{size_mb.to_i} status=none") { |io| Process.wait(io.pid) }
+  IO.popen("dd if=/dev/zero of=\"volumes/#{vol}\" bs=1M count=#{size_mb.to_i} status=noxfer") { |io| Process.wait(io.pid) }
   loop_dev = @losetup.get_device("volumes/#{vol}")
 
   task = TCplayLib.tc_api_task_init("create")

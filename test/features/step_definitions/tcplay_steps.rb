@@ -8,7 +8,7 @@ Given /^I corrupt sectors ([^\s]+) to ([^\s]+) of volume ([^\s]+)$/ do |first,la
   last = last.to_i
   count = last-first+1
 
-  IO.popen("dd if=/dev/urandom of=\"#{loop_dev}\" bs=512 count=#{count} seek=#{first} status=none") { |io| Process.wait(io.pid) }
+  IO.popen("dd if=/dev/urandom of=\"#{loop_dev}\" bs=512 count=#{count} seek=#{first} status=noxfer") { |io| Process.wait(io.pid) }
 end
 
 
@@ -16,7 +16,7 @@ Given /^I corrupt sector ([^\s]+) of volume ([^\s]+)$/ do |first,vol|
   loop_dev = @losetup.get_device("volumes/#{vol}")
   first = first.to_i
 
-  IO.popen("dd if=/dev/urandom of=\"#{loop_dev}\" bs=512 count=1 seek=#{first} status=none") { |io| Process.wait(io.pid) }
+  IO.popen("dd if=/dev/urandom of=\"#{loop_dev}\" bs=512 count=1 seek=#{first} status=noxfer") { |io| Process.wait(io.pid) }
 end
 
 
@@ -26,6 +26,7 @@ Given /^I map volume ([^\s]+) as ([^\s]+) using the following settings:$/ do |vo
 
   loop_dev = @losetup.get_device("volumes/#{vol}")
   @args = [
+    "--no-retries",
     "-m #{map}",
     "-d #{loop_dev}"
   ]
@@ -39,6 +40,7 @@ Given /^I map volume ([^\s]+) as ([^\s]+) using the following settings:$/ do |vo
   end
 
   @args << "--use-backup" if ParseHelper.is_yes(s['use_backup'])
+  @args << "--use-hdr-file=#{s['header_file']}" unless s['header_file'].nil?
 
   s['passphrase'] ||= ''
   s['passphrase_hidden'] ||= ''
@@ -67,7 +69,7 @@ Given /^I create a volume ([^\s]+) of size (\d+)M with the following parameters:
   create_hidden = false
   s = params.rows_hash
 
-  IO.popen("dd if=/dev/zero of=\"volumes/#{vol}\" bs=1M count=#{size_mb.to_i} status=none") { |io| Process.wait(io.pid) }
+  IO.popen("dd if=/dev/zero of=\"volumes/#{vol}\" bs=1M count=#{size_mb.to_i} status=noxfer") { |io| Process.wait(io.pid) }
   loop_dev = @losetup.get_device("volumes/#{vol}")
   @args = [
     "-c",
@@ -130,6 +132,7 @@ Given /^I request information about volume ([^\s]+) using the following settings
 
   loop_dev = @losetup.get_device("volumes/#{vol}")
   @args = [
+    "--no-retries",
     "-i",
     "-d #{loop_dev}"
   ]
@@ -143,6 +146,7 @@ Given /^I request information about volume ([^\s]+) using the following settings
   end
 
   @args << "--use-backup" if ParseHelper.is_yes(s['use_backup'])
+  @args << "--use-hdr-file=#{s['header_file']}" unless s['header_file'].nil?
 
   s['passphrase'] ||= ''
   s['passphrase_hidden'] ||= ''
@@ -195,6 +199,7 @@ Given /^I modify volume ([^\s]+) using the following settings:$/ do |vol,setting
 
   loop_dev = @losetup.get_device("volumes/#{vol}")
   @args = [
+    "--no-retries",
     "--modify",
     "-d #{loop_dev}",
     "-w", # We don't want to wait for /dev/random to have enough entropy
@@ -233,6 +238,7 @@ Given /^I modify volume ([^\s]+) by restoring from the backup header using the f
 
   loop_dev = @losetup.get_device("volumes/#{vol}")
   @args = [
+    "--no-retries",
     "--modify",
     "--restore-from-backup-hdr",
     "-d #{loop_dev}",
@@ -248,6 +254,76 @@ Given /^I modify volume ([^\s]+) by restoring from the backup header using the f
       tcplay_io.expect /Passphrase:/, 10 do
         tcplay_io.write("#{s['passphrase']}\n")
       end
+    end
+  end
+  @error = ($? != 0)
+end
+
+
+Given(/^I modify volume ([^\s]+) by saving a header copy to ([^\s]+) using the following settings:$/) do |vol, hdr_file, settings|
+  s = settings.rows_hash
+  loop_dev = @losetup.get_device("volumes/#{vol}")
+  @args = [
+    "--no-retries",
+    "--modify",
+    "--save-hdr-backup=#{hdr_file}",
+    "-d #{loop_dev}",
+    "-w", # We don't want to wait for /dev/random to have enough entropy
+  ]
+
+  ParseHelper.csv_parse(s['keyfiles']) { |kf| @args << "-k \"keyfiles/#{kf}\"" } unless s['keyfiles'].nil?
+
+  s['passphrase'] ||= ''
+  s['new_passphrase'] ||= s['passphrase']
+
+  IO.popen("#{@tcplay} #{@args.join(' ')}", mode='r+') do |tcplay_io|
+    unless ParseHelper.is_yes(s['prompt_skipped'])
+      tcplay_io.expect /Passphrase:/, 10 do
+        tcplay_io.write("#{s['passphrase']}\n")
+      end
+    end
+
+    tcplay_io.expect /New passphrase/, 10 do
+      tcplay_io.write("#{s['new_passphrase']}\n")
+    end
+
+    tcplay_io.expect /Repeat/, 10 do
+      tcplay_io.write("#{s['new_passphrase']}\n")
+    end
+  end
+  @error = ($? != 0)
+end
+
+
+Given(/^I modify volume ([^\s]+) by restoring from header copy ([^\s]+) using the following settings:$/) do |vol, hdr_file, settings|
+  s = settings.rows_hash
+  loop_dev = @losetup.get_device("volumes/#{vol}")
+  @args = [
+    "--no-retries",
+    "--modify",
+    "--use-hdr-file=#{hdr_file}",
+    "-d #{loop_dev}",
+    "-w", # We don't want to wait for /dev/random to have enough entropy
+  ]
+
+  ParseHelper.csv_parse(s['keyfiles']) { |kf| @args << "-k \"keyfiles/#{kf}\"" } unless s['keyfiles'].nil?
+
+  s['passphrase'] ||= ''
+  s['new_passphrase'] ||= s['passphrase']
+
+  IO.popen("#{@tcplay} #{@args.join(' ')}", mode='r+') do |tcplay_io|
+    unless ParseHelper.is_yes(s['prompt_skipped'])
+      tcplay_io.expect /Passphrase:/, 10 do
+        tcplay_io.write("#{s['passphrase']}\n")
+      end
+    end
+
+    tcplay_io.expect /New passphrase/, 10 do
+      tcplay_io.write("#{s['new_passphrase']}\n")
+    end
+
+    tcplay_io.expect /Repeat/, 10 do
+      tcplay_io.write("#{s['new_passphrase']}\n")
     end
   end
   @error = ($? != 0)
