@@ -84,8 +84,6 @@ Given /^I create a volume ([^\s]+) of size (\d+)M using the API with the followi
   end
 
   if ParseHelper.is_yes(s['create_hidden'])
-    r = TCplayLib.tc_api_task_set(task, "hidden", :int, 1)
-    r.should == TCplayLib::TC_OK
     r = TCplayLib.tc_api_task_set(task, "hidden_size_bytes", :int64,
                                   1024*1024*s['hidden_mb'].to_i)
     r.should == TCplayLib::TC_OK

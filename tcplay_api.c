@@ -234,9 +234,6 @@ tc_api_task_set(tc_api_task task, const char *key, ...)
 	} else if (_match(key, "weak_keys_and_salt")) {
 		i = va_arg(ap, int);
 		opts->weak_keys_and_salt = i;
-	} else if (_match(key, "hidden")) {
-		i = va_arg(ap, int);
-		opts->hidden = i;
 	} else if (_match(key, "secure_erase")) {
 		i = va_arg(ap, int);
 		opts->secure_erase = i;
@@ -264,6 +261,7 @@ tc_api_task_set(tc_api_task task, const char *key, ...)
 	} else if (_match(key, "hidden_size_bytes")) {
 		i64 = va_arg(ap, int64_t);
 		opts->hidden_size_bytes = (disksz_t)i64;
+		opts->hidden = (i64 > 0);
 	} else if (_match(key, "retries")) {
 		i = va_arg(ap, int);
 		opts->retries = i;
@@ -420,7 +418,6 @@ tc_api_task_set(tc_api_task task, const char *key, ...)
 	} else if (_match(key, "state_change_fn")) {
 		sc_fn = va_arg(ap, tc_api_state_change_fn);
 		opts->state_change_fn = sc_fn;
-	} else if (_match(key, "ctx")) {
 		vp = va_arg(ap, void *);
 		opts->api_ctx = vp;
 	} else {
