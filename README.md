@@ -90,6 +90,13 @@ Or, if you only want the command line tool:
     make -f Makefile.classic tcplay
 
 
+Library
+==========
+In addition to providing a command line tool, tcplay is also available as a
+library. See the `tcplay.3` man page for more details on how to use the API.
+
+TODO: link examples
+
 
 Documentation
 ==========
