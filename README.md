@@ -70,6 +70,11 @@ clean up behind cmake using:
 
     make -f Makefile.classic clean_cmake_mess
 
+Before running `cmake`, make sure you have `pkg-config` installed; e.g. on a
+Debian or Ubuntu system you can install it using:
+
+    apt-get install pkg-config
+
 This process will check for dependencies and automatically select whether to
 use OpenSSL or gcrypt as PBKDF backend.
 
