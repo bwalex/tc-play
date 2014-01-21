@@ -1172,7 +1172,7 @@ modify_volume(struct tcplay_opts *opts)
 	int n_newkeyfiles = opts->n_newkeyfiles;
 	char *pass, *pass_again;
 	int ret = -1;
-	off_t offset, offset_backup;
+	off_t offset, offset_backup = 0;
 	const char *dev;
 	size_t blksz;
 	disksz_t blocks;
