@@ -46,8 +46,6 @@
 #include "tcplay.h"
 
 
-static int gcrypt_inited = 0;
-
 static int
 gcrypt_encrypt(void *ctx, size_t blk_len, const uint8_t *src, uint8_t *dst)
 {
@@ -197,10 +195,13 @@ syscrypt(struct tc_crypto_algo *cipher, unsigned char *key, size_t klen, unsigne
 int
 tc_crypto_init(void)
 {
-	if (gcrypt_inited)
-		return 0;
+	if (!gcry_check_version(GCRYPT_VERSION)) {
+		tc_log(1, "libgcrypt version mismatch\n");
+		return EINVAL;
+	}
 
-	gcrypt_inited = 1;
+	if (gcry_control(GCRYCTL_INITIALIZATION_FINISHED_P))
+		return 0;
 
 	gcry_control(GCRYCTL_SUSPEND_SECMEM_WARN);
 	gcry_control(GCRYCTL_INIT_SECMEM, 16384, 0);
@@ -210,4 +211,3 @@ tc_crypto_init(void)
 
 	return 0;
 }
-
