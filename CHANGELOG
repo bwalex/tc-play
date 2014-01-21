@@ -15,7 +15,8 @@
 
  * Add an option to use a header-in-a-file for most operations.
 
- * Add an option to save a header to a file to the modify operation.
+ * Add an option to save a header to a file to the modify operation
+   (issue #43).
 
  * Complete API redesign.
 
