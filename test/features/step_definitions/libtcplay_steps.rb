@@ -35,6 +35,11 @@ Given /^I map volume ([^\s]+) as ([^\s]+) with the API using the following setti
     protect_hidden = true
   end
 
+  if not s['header_file'].nil?
+    r = TCplayLib.tc_api_task_set(task, "header_from_file", :string, s['header_file'])
+    r.should == TCplayLib::TC_OK
+  end
+
   r = TCplayLib.tc_api_task_set(task, "passphrase", :string, s['passphrase'] || '')
   r.should == TCplayLib::TC_OK
   r = TCplayLib.tc_api_task_set(task, "h_passphrase", :string, s['passphrase_hidden'] || '')
@@ -152,6 +157,11 @@ Given /^I request information about volume ([^\s]+) with the API using the follo
     r = TCplayLib.tc_api_task_set(task, "protect_hidden", :int, 1)
     r.should == TCplayLib::TC_OK
     protect_hidden = true
+  end
+
+  if not s['header_file'].nil?
+    r = TCplayLib.tc_api_task_set(task, "header_from_file", :string, s['header_file'])
+    r.should == TCplayLib::TC_OK
   end
 
   r = TCplayLib.tc_api_task_set(task, "passphrase", :string, s['passphrase'] || '')
@@ -287,6 +297,11 @@ Given /^I modify volume ([^\s]+) with the API using the following settings:$/ do
     end
   end
 
+  if not s['header_file'].nil?
+    r = TCplayLib.tc_api_task_set(task, "header_from_file", :string, s['header_file'])
+    r.should == TCplayLib::TC_OK
+  end
+
   r = TCplayLib.tc_api_task_set(task, "passphrase", :string, s['passphrase'] || '')
   r.should == TCplayLib::TC_OK
   r = TCplayLib.tc_api_task_set(task, "new_passphrase", :string, s['new_passphrase'] || '')
@@ -303,6 +318,113 @@ Given /^I modify volume ([^\s]+) with the API using the following settings:$/ do
   r.should == TCplayLib::TC_OK
   r = TCplayLib.tc_api_task_set(task, "use_backup_header", :int,
     (s['use_backup'].nil? ? 0 : ParseHelper.is_yes(s['use_backup'])))
+  r.should == TCplayLib::TC_OK
+
+  @error = (TCplayLib.tc_api_task_do(task) != TCplayLib::TC_OK)
+  if (@error)
+  #  #@err_str = TCplayLib.tc_api_get_error_msg()
+  end
+
+  TCplayLib.tc_api_task_uninit(task)
+end
+
+Given /^I modify volume ([^\s]+) with the API by restoring from the backup header using the following settings:$/ do |vol,settings|
+  s = settings.rows_hash
+
+  loop_dev = @losetup.get_device("volumes/#{vol}")
+
+  task = TCplayLib.tc_api_task_init("restore")
+  r = TCplayLib.tc_api_task_set(task, "dev", :string, loop_dev)
+  r.should == TCplayLib::TC_OK
+
+  unless s['keyfiles'].nil?
+    ParseHelper.csv_parse(s['keyfiles']) do |kf|
+      r = TCplayLib.tc_api_task_set(task, "keyfiles", :string, "keyfiles/#{kf}")
+      r.should == TCplayLib::TC_OK
+    end
+  end
+
+  r = TCplayLib.tc_api_task_set(task, "passphrase", :string, s['passphrase'] || '')
+  r.should == TCplayLib::TC_OK
+
+  r = TCplayLib.tc_api_task_set(task, "interactive", :int, 0)
+  r.should == TCplayLib::TC_OK
+  r = TCplayLib.tc_api_task_set(task, "weak_keys_and_salt", :int, 1)
+  r.should == TCplayLib::TC_OK
+  r = TCplayLib.tc_api_task_set(task, "use_backup_header", :int, 1)
+  r.should == TCplayLib::TC_OK
+
+  @error = (TCplayLib.tc_api_task_do(task) != TCplayLib::TC_OK)
+  if (@error)
+  #  #@err_str = TCplayLib.tc_api_get_error_msg()
+  end
+
+  TCplayLib.tc_api_task_uninit(task)
+end
+
+
+Given(/^I modify volume ([^\s]+) with the API by saving a header copy to ([^\s]+) using the following settings:$/) do |vol, hdr_file, settings|
+  s = settings.rows_hash
+  loop_dev = @losetup.get_device("volumes/#{vol}")
+
+  task = TCplayLib.tc_api_task_init("modify")
+
+  r = TCplayLib.tc_api_task_set(task, "dev", :string, loop_dev)
+  r.should == TCplayLib::TC_OK
+
+  unless s['keyfiles'].nil?
+    ParseHelper.csv_parse(s['keyfiles']) do |kf|
+      r = TCplayLib.tc_api_task_set(task, "keyfiles", :string, "keyfiles/#{kf}")
+      r.should == TCplayLib::TC_OK
+    end
+  end
+
+  s['new_passphrase'] ||= s['passphrase']
+  r = TCplayLib.tc_api_task_set(task, "passphrase", :string, s['passphrase'] || '')
+  r.should == TCplayLib::TC_OK
+  r = TCplayLib.tc_api_task_set(task, "new_passphrase", :string, s['new_passphrase'])
+  r.should == TCplayLib::TC_OK
+
+  r = TCplayLib.tc_api_task_set(task, "save_header_to_file", :string, hdr_file)
+  r.should == TCplayLib::TC_OK
+
+  r = TCplayLib.tc_api_task_set(task, "interactive", :int, 0)
+  r.should == TCplayLib::TC_OK
+  r = TCplayLib.tc_api_task_set(task, "weak_keys_and_salt", :int, 1)
+  r.should == TCplayLib::TC_OK
+
+  @error = (TCplayLib.tc_api_task_do(task) != TCplayLib::TC_OK)
+  if (@error)
+  #  #@err_str = TCplayLib.tc_api_get_error_msg()
+  end
+
+  TCplayLib.tc_api_task_uninit(task)
+end
+
+
+Given(/^I modify volume ([^\s]+) with the API by restoring from header copy ([^\s]+) using the following settings:$/) do |vol, hdr_file, settings|
+  s = settings.rows_hash
+  loop_dev = @losetup.get_device("volumes/#{vol}")
+
+  task = TCplayLib.tc_api_task_init("restore")
+  r = TCplayLib.tc_api_task_set(task, "dev", :string, loop_dev)
+  r.should == TCplayLib::TC_OK
+
+  unless s['keyfiles'].nil?
+    ParseHelper.csv_parse(s['keyfiles']) do |kf|
+      r = TCplayLib.tc_api_task_set(task, "keyfiles", :string, "keyfiles/#{kf}")
+      r.should == TCplayLib::TC_OK
+    end
+  end
+
+  r = TCplayLib.tc_api_task_set(task, "passphrase", :string, s['passphrase'] || '')
+  r.should == TCplayLib::TC_OK
+
+  r = TCplayLib.tc_api_task_set(task, "interactive", :int, 0)
+  r.should == TCplayLib::TC_OK
+  r = TCplayLib.tc_api_task_set(task, "weak_keys_and_salt", :int, 1)
+  r.should == TCplayLib::TC_OK
+  r = TCplayLib.tc_api_task_set(task, "header_from_file", :string, hdr_file)
   r.should == TCplayLib::TC_OK
 
   @error = (TCplayLib.tc_api_task_do(task) != TCplayLib::TC_OK)
