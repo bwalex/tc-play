@@ -52,7 +52,7 @@ hours.
 
 On Ubuntu, the following dev packages are needed to build tcplay:
 
-    apt-get install libdevmapper-dev libgcrypt11-dev uuid-dev
+    apt-get install build-essential libdevmapper-dev libgcrypt11-dev uuid-dev
 
 
 cmake
