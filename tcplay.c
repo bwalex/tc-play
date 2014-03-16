@@ -1351,7 +1351,7 @@ out:
 #if defined(__DragonFly__)
 static
 int
-xlate_maj_min(char *start_path __unused, int max_depth __unused,
+xlate_maj_min(const char *start_path __unused, int max_depth __unused,
     char *buf, size_t bufsz, uint32_t maj, uint32_t min)
 {
 	dev_t dev = makedev(maj, min);
