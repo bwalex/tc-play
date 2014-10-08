@@ -221,7 +221,7 @@ tc_api_task_set(tc_api_task task, const char *key, ...)
 	void *vp;
 	int r = TC_OK;
 
-	if (task == NULL || ((opts = task->opts) == NULL)) {
+	if (task == NULL || key == NULL || ((opts = task->opts) == NULL)) {
 		errno = EFAULT;
 		return TC_ERR;
 	}
