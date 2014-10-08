@@ -360,7 +360,7 @@ and
 .Bd -ragged -offset indent
 .Nm Fl -create
 .Fl -device Ns = Ns Cm /dev/vn0
-.Fl -cipher Ns = Ns Cm AES-256-XTS,TWOFISH-256-XTS
+.Fl -cipher Ns = Ns Cm TWOFISH-256-XTS,AES-256-XTS
 .Fl -pbkdf-prf Ns = Ns Cm whirlpool
 .Fl -keyfile Ns = Ns Cm one.key
 .Fl -keyfile Ns = Ns Cm two.key
@@ -439,7 +439,7 @@ can for example be created with
 .Nm Fl -create
 .Fl -hidden
 .Fl -device Ns = Ns Cm /dev/loop0
-.Fl -cipher Ns = Ns Cm AES-256-XTS,TWOFISH-256-XTS
+.Fl -cipher Ns = Ns Cm TWOFISH-256-XTS,AES-256-XTS
 .Fl -pbkdf-prf Ns = Ns Cm whirlpool
 .Fl -keyfile Ns = Ns Cm one.key
 .Fl -cipher-hidden Ns = Ns Cm AES-256-XTS
