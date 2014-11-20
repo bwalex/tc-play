@@ -480,11 +480,11 @@ process_hdr(const char *dev, int flags, unsigned char *pass, int passlen,
 
 			if (verify_hdr(dhdr)) {
 #ifdef DEBUG
-				printf("tc_str: %.4s, tc_ver: %d, tc_min_ver: %d, "
+				printf("tc_str: %.4s, tc_ver: %d, tc_min_ver: %d.%.2X, "
 				    "crc_keys: %d, sz_vol: %"PRIu64", "
 				    "off_mk_scope: %"PRIu64", sz_mk_scope: %"PRIu64", "
 				    "flags: %d, sec_sz: %d crc_dhdr: %d\n",
-				    dhdr->tc_str, dhdr->tc_ver, dhdr->tc_min_ver,
+				    dhdr->tc_str, dhdr->tc_ver, dhdr->tc_min_ver >> 8, dhdr->tc_min_ver & 0x00FF
 				    dhdr->crc_keys, dhdr->sz_vol, dhdr->off_mk_scope,
 				    dhdr->sz_mk_scope, dhdr->flags, dhdr->sec_sz,
 				    dhdr->crc_dhdr);

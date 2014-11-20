@@ -73,7 +73,7 @@ decrypt_hdr(struct tchdr_enc *ehdr, struct tc_cipher_chain *cipher_chain,
 	}
 
 	BE_TO_HOST(16, dhdr->tc_ver);
-	LE_TO_HOST(16, dhdr->tc_min_ver);
+	BE_TO_HOST(16, dhdr->tc_min_ver);
 	BE_TO_HOST(32, dhdr->crc_keys);
 	BE_TO_HOST(64, dhdr->vol_ctime);
 	BE_TO_HOST(64, dhdr->hdr_ctime);
@@ -205,7 +205,7 @@ create_hdr(unsigned char *pass, int passlen, struct pbkdf_prf_algo *prf_algo,
 
 	memcpy(dhdr->tc_str, "TRUE", 4);
 	dhdr->tc_ver = 5;
-	dhdr->tc_min_ver = 7;
+	dhdr->tc_min_ver = 0x0700;
 	dhdr->crc_keys = crc32((void *)&dhdr->keys, 256);
 	dhdr->sz_vol = blocks * sec_sz;
 	if (hidden)
@@ -216,7 +216,7 @@ create_hdr(unsigned char *pass, int passlen, struct pbkdf_prf_algo *prf_algo,
 	dhdr->flags = 0;
 
 	HOST_TO_BE(16, dhdr->tc_ver);
-	HOST_TO_LE(16, dhdr->tc_min_ver);
+	HOST_TO_BE(16, dhdr->tc_min_ver);
 	HOST_TO_BE(32, dhdr->crc_keys);
 	HOST_TO_BE(64, dhdr->sz_vol);
 	HOST_TO_BE(64, dhdr->sz_hidvol);
@@ -337,7 +337,7 @@ struct tchdr_enc *copy_reencrypt_hdr(unsigned char *pass, int passlen,
 	}
 
 	HOST_TO_BE(16, info->hdr->tc_ver);
-	HOST_TO_LE(16, info->hdr->tc_min_ver);
+	HOST_TO_BE(16, info->hdr->tc_min_ver);
 	HOST_TO_BE(32, info->hdr->crc_keys);
 	HOST_TO_BE(64, info->hdr->vol_ctime);
 	HOST_TO_BE(64, info->hdr->hdr_ctime);
