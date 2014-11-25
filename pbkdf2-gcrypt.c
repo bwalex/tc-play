@@ -50,6 +50,8 @@ get_gcrypt_hash_id(struct pbkdf_prf_algo *hash)
 		return GCRY_MD_SHA512;
 	else if	(strcmp(hash->name, "whirlpool") == 0)
 		return GCRY_MD_WHIRLPOOL;
+	else if (strcmp(hash->name, "SHA256") == 0)
+		return GCRY_MD_SHA256;
 	else
 		return -1;
 }

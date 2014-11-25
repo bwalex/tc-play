@@ -218,7 +218,7 @@ tc_api_task_set(tc_api_task task, const char *key, ...)
 	int i;
 	tc_api_state_change_fn sc_fn;
 	void *vp;
-	int r = TC_OK;
+	int r = TC_OK, veracrypt_mode = 0;
 
 	if (task == NULL || key == NULL || ((opts = task->opts) == NULL)) {
 		errno = EFAULT;
@@ -230,6 +230,12 @@ tc_api_task_set(tc_api_task task, const char *key, ...)
 	if (_match(key, "interactive")) {
 		i = va_arg(ap, int);
 		opts->interactive = i;
+	} else if (_match(key, "veracrypt_mode")) {
+		i = va_arg(ap, int);
+		if (i)
+			opts->flags |= TC_FLAG_VERACRYPT_MODE;
+		else
+			opts->flags &= ~TC_FLAG_VERACRYPT_MODE;
 	} else if (_match(key, "weak_keys_and_salt")) {
 		i = va_arg(ap, int);
 		opts->weak_keys_and_salt = i;
@@ -362,7 +368,9 @@ tc_api_task_set(tc_api_task task, const char *key, ...)
 	} else if (_match(key, "prf_algo")) {
 		s = va_arg(ap, const char *);
 		if (s != NULL) {
-			if ((opts->prf_algo = check_prf_algo(s, 1)) == NULL) {
+			if (TC_FLAG_SET(opts->flags, VERACRYPT_MODE))
+				veracrypt_mode = 1;
+			if ((opts->prf_algo = check_prf_algo(veracrypt_mode, s, 1)) == NULL) {
 				errno = ENOENT;
 				r = TC_ERR;
 				goto out;
@@ -373,7 +381,9 @@ tc_api_task_set(tc_api_task task, const char *key, ...)
 	} else if (_match(key, "h_prf_algo")) {
 		s = va_arg(ap, const char *);
 		if (s != NULL) {
-			if ((opts->h_prf_algo = check_prf_algo(s, 1)) == NULL) {
+			if (TC_FLAG_SET(opts->flags, VERACRYPT_MODE))
+				veracrypt_mode = 1;
+			if ((opts->h_prf_algo = check_prf_algo(veracrypt_mode, s, 1)) == NULL) {
 				errno = ENOENT;
 				r = TC_ERR;
 				goto out;
@@ -384,7 +394,9 @@ tc_api_task_set(tc_api_task task, const char *key, ...)
 	} else if (_match(key, "new_prf_algo")) {
 		s = va_arg(ap, const char *);
 		if (s != NULL) {
-			if ((opts->new_prf_algo = check_prf_algo(s, 1)) == NULL) {
+			if (TC_FLAG_SET(opts->flags, VERACRYPT_MODE))
+				veracrypt_mode = 1;
+			if ((opts->new_prf_algo = check_prf_algo(veracrypt_mode, s, 1)) == NULL) {
 				errno = ENOENT;
 				r = TC_ERR;
 				goto out;

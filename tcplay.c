@@ -104,6 +104,20 @@ struct pbkdf_prf_algo pbkdf_prf_algos_standard_tc[] = {
 	{ NULL,		0    }
 };
 
+struct pbkdf_prf_algo pbkdf_prf_algos_boot_vc[] = {
+	{ "RIPEMD160",	327661 },
+	{ "SHA256",	200000 },
+	{ NULL,		0    }
+};
+
+struct pbkdf_prf_algo pbkdf_prf_algos_standard_vc[] = {
+	{ "SHA512",	500000 },
+	{ "whirlpool",	500000 },
+	{ "SHA256",	500000 },
+	{ "RIPEMD160",	655331 },
+	{ NULL,		0    }
+};
+
 struct tc_crypto_algo tc_crypto_algos[] = {
 #if 0
 	/* XXX: turns out TC doesn't support AES-128-XTS */
@@ -435,7 +449,7 @@ process_hdr(const char *dev, int flags, unsigned char *pass, int passlen,
 	struct tc_cipher_chain *cipher_chain = NULL;
 	struct pbkdf_prf_algo* pbkdf_prf_algos = NULL;
 	unsigned char *key;
-	int i, j, found, error;
+	int i, j, found, error, veracrypt_mode;
 
 	*pinfo = NULL;
 
@@ -443,17 +457,24 @@ process_hdr(const char *dev, int flags, unsigned char *pass, int passlen,
 		tc_log(1, "could not allocate safe key memory\n");
 		return ENOMEM;
 	}
+
+	if (TC_FLAG_SET(flags, VERACRYPT_MODE)) {
+		veracrypt_mode = 1;
+	}
+	else {
+		veracrypt_mode = 0;
+	}
 	
 	if (((TC_FLAG_SET(flags, SYS)) || (TC_FLAG_SET(flags, FDE))) && !hidden_header) {
 		// use only PRF with iterations count for boot encryption
 		// except in case of hidden operating system which uses normal iterations count
-		pbkdf_prf_algos = pbkdf_prf_algos_boot_tc;
+		pbkdf_prf_algos = veracrypt_mode? pbkdf_prf_algos_boot_vc : pbkdf_prf_algos_boot_tc;
 	}
 	else {
 		// use only PRF with iterations count for standard encryption
-		pbkdf_prf_algos = pbkdf_prf_algos_standard_tc;
+		pbkdf_prf_algos = veracrypt_mode? pbkdf_prf_algos_standard_vc : pbkdf_prf_algos_standard_tc;
 	}
-
+	
 	/* Start search for correct algorithm combination */
 	found = 0;
 	for (i = 0; !found && pbkdf_prf_algos[i].name != NULL; i++) {
@@ -493,7 +514,7 @@ process_hdr(const char *dev, int flags, unsigned char *pass, int passlen,
 				return EINVAL;
 			}
 
-			if (verify_hdr(dhdr)) {
+			if (verify_hdr(veracrypt_mode, dhdr)) {
 #ifdef DEBUG
 				printf("tc_str: %.4s, tc_ver: %d, tc_min_ver: %d.%.2X, "
 				    "crc_keys: %d, sz_vol: %"PRIu64", "
@@ -539,17 +560,24 @@ create_volume(struct tcplay_opts *opts)
 	struct tchdr_enc *ehdr, *hehdr;
 	struct tchdr_enc *ehdr_backup, *hehdr_backup;
 	uint64_t tmp;
-	int error, r, ret;
+	int error, r, ret, veracrypt_mode = 0;
 
 	pass = h_pass = pass_again = NULL;
 	ehdr = hehdr = NULL;
 	ehdr_backup = hehdr_backup = NULL;
 	ret = -1; /* Default to returning error */
 	
+	if (TC_FLAG_SET(opts->flags, VERACRYPT_MODE))
+		veracrypt_mode = 1;
+
 	if (opts->cipher_chain == NULL)
 		opts->cipher_chain = tc_cipher_chains[0];
-	if (opts->prf_algo == NULL)
-		opts->prf_algo = &pbkdf_prf_algos_standard_tc[0]; // default is RIPEMD160 with 2000 iterations
+	if (opts->prf_algo == NULL) {
+		if (veracrypt_mode)
+			opts->prf_algo = &pbkdf_prf_algos_standard_vc[0]; // default is SHA512 with 500000 iterations
+		else
+			opts->prf_algo = &pbkdf_prf_algos_standard_tc[0]; // default is RIPEMD160 with 2000 iterations
+	}
 	if (opts->h_cipher_chain == NULL)
 		opts->h_cipher_chain = opts->cipher_chain;
 	if (opts->h_prf_algo == NULL)
@@ -773,7 +801,7 @@ create_volume(struct tcplay_opts *opts)
 	ehdr = create_hdr((unsigned char *)pass,
 	    (opts->nkeyfiles > 0)?MAX_PASSSZ:strlen(pass),
 	    opts->prf_algo, opts->cipher_chain, blksz, blocks, VOL_RSVD_BYTES_START/blksz,
-	    blocks - (MIN_VOL_BYTES/blksz), 0, opts->weak_keys_and_salt, &ehdr_backup);
+	    blocks - (MIN_VOL_BYTES/blksz), veracrypt_mode, 0, opts->weak_keys_and_salt, &ehdr_backup);
 	if (ehdr == NULL) {
 		tc_log(1, "Could not create header\n");
 		goto out;
@@ -785,7 +813,7 @@ create_volume(struct tcplay_opts *opts)
 		    opts->h_cipher_chain,
 		    blksz, blocks,
 		    blocks - (VOL_RSVD_BYTES_END/blksz) - hidden_blocks,
-		    hidden_blocks, 1, opts->weak_keys_and_salt, &hehdr_backup);
+		    hidden_blocks, veracrypt_mode, 1, opts->weak_keys_and_salt, &hehdr_backup);
 		if (hehdr == NULL) {
 			tc_log(1, "Could not create hidden volume header\n");
 			goto out;
@@ -2020,10 +2048,11 @@ check_cipher_chain(const char *cipher_chain, int quiet)
 }
 
 struct pbkdf_prf_algo *
-check_prf_algo(const char *algo, int quiet)
+check_prf_algo(int veracrypt_mode, const char *algo, int quiet)
 {
 	int i, found = 0;
-	struct pbkdf_prf_algo *pbkdf_prf_algos = pbkdf_prf_algos_standard_tc;
+	struct pbkdf_prf_algo *pbkdf_prf_algos = 
+		(veracrypt_mode)? pbkdf_prf_algos_standard_vc : pbkdf_prf_algos_standard_tc;
 
 	for (i = 0; pbkdf_prf_algos[i].name != NULL; i++) {
 		if (strcmp(algo, pbkdf_prf_algos[i].name) == 0) {

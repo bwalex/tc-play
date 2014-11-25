@@ -89,11 +89,12 @@ decrypt_hdr(struct tchdr_enc *ehdr, struct tc_cipher_chain *cipher_chain,
 }
 
 int
-verify_hdr(struct tchdr_dec *hdr)
+verify_hdr(int veracrypt_mode, struct tchdr_dec *hdr)
 {
 	uint32_t crc;
 
-	if (memcmp(hdr->tc_str, TC_SIG, sizeof(hdr->tc_str)) != 0) {
+	if (   (!veracrypt_mode && (memcmp(hdr->tc_str, TC_SIG, sizeof(hdr->tc_str)) != 0))
+		|| ( veracrypt_mode && (memcmp(hdr->tc_str, VC_SIG, sizeof(hdr->tc_str)) != 0))) {
 #ifdef DEBUG
 		fprintf(stderr, "Signature mismatch\n");
 #endif
@@ -117,6 +118,11 @@ verify_hdr(struct tchdr_dec *hdr)
 
 	case 3:
 	case 4:
+		if (veracrypt_mode) {
+			/* Unsupported header version in VeraCrypt mode*/
+			tc_log(1, "Header version %d unsupported in VeraCrypt mode\n", hdr->tc_ver);
+			return 0;
+		}
 		hdr->sec_sz = 512;
 		break;
 	}
@@ -128,7 +134,7 @@ struct tchdr_enc *
 create_hdr(unsigned char *pass, int passlen, struct pbkdf_prf_algo *prf_algo,
     struct tc_cipher_chain *cipher_chain, size_t sec_sz,
     disksz_t total_blocks __unused,
-    off_t offset, disksz_t blocks, int hidden, int weak, struct tchdr_enc **backup_hdr)
+    off_t offset, disksz_t blocks, int veracrypt_mode, int hidden, int weak, struct tchdr_enc **backup_hdr)
 {
 	struct tchdr_enc *ehdr, *ehdr_backup;
 	struct tchdr_dec *dhdr;
@@ -203,9 +209,16 @@ create_hdr(unsigned char *pass, int passlen, struct pbkdf_prf_algo *prf_algo,
 		goto error;
 	}
 
-	memcpy(dhdr->tc_str, "TRUE", 4);
-	dhdr->tc_ver = 5;
-	dhdr->tc_min_ver = 0x0700;
+	if (veracrypt_mode == 0) {	
+		memcpy(dhdr->tc_str, TC_SIG, 4);
+		dhdr->tc_ver = 5;
+		dhdr->tc_min_ver = 0x0700;
+	}
+	else {
+		memcpy(dhdr->tc_str, VC_SIG, 4);
+		dhdr->tc_ver = 5;
+		dhdr->tc_min_ver = 0x010b;
+	}
 	dhdr->crc_keys = crc32((void *)&dhdr->keys, 256);
 	dhdr->sz_vol = blocks * sec_sz;
 	if (hidden)
