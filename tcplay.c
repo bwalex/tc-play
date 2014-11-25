@@ -92,9 +92,13 @@ tc_log(int is_err, const char *fmt, ...)
 }
 
 /* Supported algorithms */
-struct pbkdf_prf_algo pbkdf_prf_algos[] = {
-	{ "RIPEMD160",	2000 }, /* needs to come before the other RIPEMD160 */
+struct pbkdf_prf_algo pbkdf_prf_algos_boot_tc[] = {
 	{ "RIPEMD160",	1000 },
+	{ NULL,		0    }
+};
+
+struct pbkdf_prf_algo pbkdf_prf_algos_standard_tc[] = {
+	{ "RIPEMD160",	2000 },
 	{ "SHA512",	1000 },
 	{ "whirlpool",	1000 },
 	{ NULL,		0    }
@@ -424,11 +428,12 @@ adjust_info(struct tcplay_info *info, struct tcplay_info *hinfo)
 
 int
 process_hdr(const char *dev, int flags, unsigned char *pass, int passlen,
-    struct tchdr_enc *ehdr, struct tcplay_info **pinfo)
+    struct tchdr_enc *ehdr, int hidden_header, struct tcplay_info **pinfo)
 {
 	struct tchdr_dec *dhdr;
 	struct tcplay_info *info;
 	struct tc_cipher_chain *cipher_chain = NULL;
+	struct pbkdf_prf_algo* pbkdf_prf_algos = NULL;
 	unsigned char *key;
 	int i, j, found, error;
 
@@ -437,6 +442,16 @@ process_hdr(const char *dev, int flags, unsigned char *pass, int passlen,
 	if ((key = alloc_safe_mem(MAX_KEYSZ)) == NULL) {
 		tc_log(1, "could not allocate safe key memory\n");
 		return ENOMEM;
+	}
+	
+	if (((TC_FLAG_SET(flags, SYS)) || (TC_FLAG_SET(flags, FDE))) && !hidden_header) {
+		// use only PRF with iterations count for boot encryption
+		// except in case of hidden operating system which uses normal iterations count
+		pbkdf_prf_algos = pbkdf_prf_algos_boot_tc;
+	}
+	else {
+		// use only PRF with iterations count for standard encryption
+		pbkdf_prf_algos = pbkdf_prf_algos_standard_tc;
 	}
 
 	/* Start search for correct algorithm combination */
@@ -530,11 +545,11 @@ create_volume(struct tcplay_opts *opts)
 	ehdr = hehdr = NULL;
 	ehdr_backup = hehdr_backup = NULL;
 	ret = -1; /* Default to returning error */
-
+	
 	if (opts->cipher_chain == NULL)
 		opts->cipher_chain = tc_cipher_chains[0];
 	if (opts->prf_algo == NULL)
-		opts->prf_algo = &pbkdf_prf_algos[0];
+		opts->prf_algo = &pbkdf_prf_algos_standard_tc[0]; // default is RIPEMD160 with 2000 iterations
 	if (opts->h_cipher_chain == NULL)
 		opts->h_cipher_chain = opts->cipher_chain;
 	if (opts->h_prf_algo == NULL)
@@ -998,7 +1013,7 @@ info_map_common(struct tcplay_opts *opts, char *passphrase_out)
 
 		error = process_hdr(opts->dev, opts->flags, (unsigned char *)pass,
 		    (opts->nkeyfiles > 0)?MAX_PASSSZ:strlen(pass),
-		    ehdr, &info);
+		    ehdr, 0, &info);
 
 		/*
 		 * Try to process hidden header if we have to protect the hidden
@@ -1008,12 +1023,12 @@ info_map_common(struct tcplay_opts *opts, char *passphrase_out)
 		if (hehdr && (error || opts->protect_hidden)) {
 			if (error) {
 				error2 = process_hdr(opts->dev, opts->flags, (unsigned char *)pass,
-				    (opts->nkeyfiles > 0)?MAX_PASSSZ:strlen(pass), hehdr,
+				    (opts->nkeyfiles > 0)?MAX_PASSSZ:strlen(pass), hehdr, 1,
 				    &info);
 				is_hidden = !error2;
 			} else if (opts->protect_hidden) {
 				error2 = process_hdr(opts->dev, opts->flags, (unsigned char *)h_pass,
-				    (opts->n_hkeyfiles > 0)?MAX_PASSSZ:strlen(h_pass), hehdr,
+				    (opts->n_hkeyfiles > 0)?MAX_PASSSZ:strlen(h_pass), hehdr, 1,
 				    &hinfo);
 			}
 		}
@@ -2008,6 +2023,7 @@ struct pbkdf_prf_algo *
 check_prf_algo(const char *algo, int quiet)
 {
 	int i, found = 0;
+	struct pbkdf_prf_algo *pbkdf_prf_algos = pbkdf_prf_algos_standard_tc;
 
 	for (i = 0; pbkdf_prf_algos[i].name != NULL; i++) {
 		if (strcmp(algo, pbkdf_prf_algos[i].name) == 0) {

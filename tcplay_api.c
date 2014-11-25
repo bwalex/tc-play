@@ -115,9 +115,8 @@ tc_api_prf_iterate(tc_api_prf_iterator_fn fn, void *priv)
 		return TC_ERR;
 	}
 
-	/* start at 1 due to RIPEMD weirdness... */
-	for (i = 1; pbkdf_prf_algos[i].name != NULL; i++) {
-		if ((fn(priv, pbkdf_prf_algos[i].name)) < 0)
+	for (i = 0; pbkdf_prf_algos_standard_tc[i].name != NULL; i++) {
+		if ((fn(priv, pbkdf_prf_algos_standard_tc[i].name)) < 0)
 			break;
 	}
 

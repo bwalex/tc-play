@@ -302,7 +302,7 @@ int free_info(struct tcplay_info *info);
 void print_info(struct tcplay_info *info);
 int adjust_info(struct tcplay_info *info, struct tcplay_info *hinfo);
 int process_hdr(const char *dev, int flags, unsigned char *pass, int passlen,
-    struct tchdr_enc *ehdr, struct tcplay_info **pinfo);
+    struct tchdr_enc *ehdr, int hidden_header, struct tcplay_info **pinfo);
 int create_volume(struct tcplay_opts *opts);
 struct tcplay_info *info_map_common(struct tcplay_opts *opts,
     char *passphrase_out);
@@ -319,7 +319,8 @@ typedef void(*summary_fn_t)(void);
 extern int tc_internal_verbose;
 extern char tc_internal_log_buffer[];
 extern summary_fn_t summary_fn;
-extern struct pbkdf_prf_algo pbkdf_prf_algos[];
+extern struct pbkdf_prf_algo pbkdf_prf_algos_boot_tc[];
+extern struct pbkdf_prf_algo pbkdf_prf_algos_standard_tc[];
 extern struct tc_cipher_chain *tc_cipher_chains[MAX_CIPHER_CHAINS];
 
 #define STATE_UNKNOWN		0
