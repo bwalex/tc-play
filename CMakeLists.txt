@@ -11,7 +11,7 @@ set (SRCS_COMMON tcplay.c crc32.c safe_mem.c io.c hdr.c humanize.c crypto.c gene
 set (SRCS_LINUX  crypto-gcrypt.c)
 
 set (CFLAGS_LINUX  "-D_FILE_OFFSET_BITS=64 -D_GNU_SOURCE -D_DEFAULT_SOURCE")
-set (CFLAGS_WARN "-Wsystem-headers -Wall -W -Wno-unused-parameter -Wstrict-prototypes -Wmissing-prototypes -Wpointer-arith -Wold-style-definition -Wreturn-type -Wwrite-strings -Wswitch -Wshadow -Wcast-align -Wunused-parameter -Wchar-subscripts	-Winline -Wnested-externs")
+set (CFLAGS_WARN "-Wall -W -Wno-unused-parameter -Wstrict-prototypes -Wmissing-prototypes -Wpointer-arith -Wold-style-definition -Wreturn-type -Wwrite-strings -Wswitch -Wshadow -Wunused-parameter -Wchar-subscripts	-Winline -Wnested-externs")
 set (CFLAGS_DEBUG  "-O0 -g3 -DDEBUG")
 set (CFLAGS_OPT    "-O3")
 set (CFLAGS_VER    "-DMAJ_VER=${VERSION_MAJOR} -DMIN_VER=${VERSION_MINOR}")
