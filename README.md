@@ -130,7 +130,7 @@ how to write tests for tcplay.
 OS Support
 ==========
 tcplay is now available for both DragonFly BSD and Linux. It is a core part of
-the DragonFly BSD operating system and is available in a number of linux
+the DragonFly BSD operating system and is available in a number of Linux
 distros.
 
 
@@ -150,7 +150,7 @@ your changes into this repository so that there is a single point of contact.
 
 I've noticed that sometimes bugs are only reported downstream (e.g. in the
 distro's bugtracker). Please make sure those bugs are also reported upstream on
-github, otherwise odds are they will never reach me.
+Github, otherwise odds are they will never reach me.
 
 
 
