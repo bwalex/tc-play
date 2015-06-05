@@ -1826,6 +1826,9 @@ dm_setup(const char *mapname, struct tcplay_info *info)
 
 		free(uu);
 
+		if (TC_FLAG_SET(info->flags, READ_ONLY_MODE))
+			dm_task_set_ro(dmt);
+		
 		if (TC_FLAG_SET(info->flags, FDE)) {
 			/*
 			 * When the full disk encryption (FDE) flag is set,

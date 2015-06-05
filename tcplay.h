@@ -75,6 +75,7 @@
 #define TC_FLAG_HDR_FROM_FILE	0x0040
 #define TC_FLAG_H_HDR_FROM_FILE	0x0080
 #define TC_FLAG_VERACRYPT_MODE	0x0100
+#define TC_FLAG_READ_ONLY_MODE	0x0200
 
 #define TC_FLAG_SET(f, x)	((f & TC_FLAG_##x) == TC_FLAG_##x)
 

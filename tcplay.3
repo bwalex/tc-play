@@ -220,6 +220,8 @@ indicates the setting is optional.
 .It Li new_passphrase           Ta           Ta         Ta        Ta          Ta                Ta    "*"    Ta    ""
 .It Li new_keyfiles             Ta           Ta         Ta        Ta          Ta                Ta    "*"    Ta    ""
 .It Li new_prf_algo             Ta           Ta         Ta        Ta          Ta                Ta    "*"    Ta    ""
+.It Li read_only                Ta           Ta         Ta    "*" Ta          Ta                Ta    "*"    Ta    ""
+
 .El
 The varargs accepted by the
 .Fn tc_api_task_set
@@ -254,6 +256,10 @@ the salt.
 The vararg is of type
 .Ft int .
 It determines whether a secure erase is performed as part of the volume creation.
+.It read_only
+The vararg is of type
+.Ft int .
+It determines whether a mapper should be created in read only mode or not.
 .It hidden_size_bytes
 The vararg is of type
 .Ft int64_t .
