@@ -403,6 +403,7 @@ new_info(const char *dev, int flags, struct tc_cipher_chain *cipher_chain,
 	error = tc_cipher_chain_populate_keys(cipher_chain, hdr->keys);
 	if (error) {
 		tc_log(1, "could not populate keys in cipher chain\n");
+		free_safe_mem(info);
 		return NULL;
 	}
 
