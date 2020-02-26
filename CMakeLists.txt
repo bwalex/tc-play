@@ -1,7 +1,7 @@
 cmake_minimum_required (VERSION 2.6)
 
 project (tcplay)
-set (VERSION_MAJOR 2)
+set (VERSION_MAJOR 3)
 set (VERSION_MINOR 0)
 
 find_package (PkgConfig)
@@ -15,7 +15,7 @@ set (CFLAGS_WARN "-Wsystem-headers -Wall -W -Wno-unused-parameter -Wstrict-proto
 set (CFLAGS_DEBUG  "-O0 -g3 -DDEBUG")
 set (CFLAGS_OPT    "-O3")
 set (CFLAGS_VER    "-DMAJ_VER=${VERSION_MAJOR} -DMIN_VER=${VERSION_MINOR}")
-set (CFLAGS_COMMON "-std=c99 -fPIE ${CFLAGS_LINUX} ${CFLAGS_WARN} ${CFLAGS_VER}")
+set (CFLAGS_COMMON "-std=c99 ${CFLAGS_LINUX} ${CFLAGS_WARN} ${CFLAGS_VER}")
 if ($ENV{DEBUG})
 	set (CFLAGS_COMMON "${CFLAGS_COMMON} ${CFLAGS_DEBUG}")
 else()

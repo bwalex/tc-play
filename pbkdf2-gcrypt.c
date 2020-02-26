@@ -44,11 +44,13 @@ static
 int
 get_gcrypt_hash_id(struct pbkdf_prf_algo *hash)
 {
-	if	(strcmp(hash->name, "RIPEMD160") == 0)
+	if	(strcmp(hash->algo, "RIPEMD160") == 0)
 		return GCRY_MD_RMD160;
-	else if (strcmp(hash->name, "SHA512") == 0)
+	else if (strcmp(hash->algo, "SHA512") == 0)
 		return GCRY_MD_SHA512;
-	else if	(strcmp(hash->name, "whirlpool") == 0)
+	else if (strcmp(hash->algo, "SHA256") == 0)
+		return GCRY_MD_SHA256;
+	else if	(strcmp(hash->algo, "whirlpool") == 0)
 		return GCRY_MD_WHIRLPOOL;
 	else
 		return -1;

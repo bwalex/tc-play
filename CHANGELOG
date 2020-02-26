@@ -1,3 +1,8 @@
+2020-02-27 Version 3.0 - Alex Hornung <alex@alexhornung.com>
+
+ * Added support for VeraCrypt volumes. See man page for more details.
+
+
 2014-03-10 Version 2.0 - Alex Hornung <alex@alexhornung.com>
 
  * Documented SIGINFO/SIGUSR1 behaviour in man page.

@@ -362,7 +362,7 @@ end
 
 
 Before do
-  @tcplay = "../tcplay"
+  @tcplay = "#{ENV['BUILD_PATH'] || ".."}/tcplay"
   @maps = []
   @mappings = []
   @info = {}

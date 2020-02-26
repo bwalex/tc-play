@@ -18,6 +18,7 @@ Feature: Command line volume creation
       | PBKDF2 iterations  | 1000              |
       | Cipher             | AES-256-XTS       |
       | Key Length         | 512 bits          |
+      | Signature          | TRUE              |
       | Sector size        | 512               |
       | Volume size        | 19968 sectors     |
       | IV offset          | 256 sectors       |
@@ -41,6 +42,7 @@ Feature: Command line volume creation
       | PBKDF2 iterations  | 1000                        |
       | Cipher             | AES-256-XTS,SERPENT-256-XTS |
       | Key Length         | 1024 bits                   |
+      | Signature          | TRUE                        |
       | Sector size        | 512                         |
       | Volume size        | 19968 sectors               |
       | IV offset          | 256 sectors                 |
