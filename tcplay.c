@@ -1606,6 +1606,12 @@ dm_info_map(const char *map_name)
 		goto error;
 	}
 
+	info->cipher_chain = tc_dup_cipher_chain(info->cipher_chain);
+	if (info->cipher_chain == NULL) {
+		tc_log(1, "could not dup cipher chain\n");
+		goto error;
+	}
+
 	/* Copy over the name */
 	strncpy(info->dev, dm_table[outermost]->device, sizeof(info->dev));
 
@@ -1617,6 +1623,10 @@ dm_info_map(const char *map_name)
 	info->skip = dm_table[outermost]->skip;
 	info->offset = dm_table[outermost]->offset;
 	info->blk_sz = 512;
+
+	for (i = 0; i < 3; i++)
+		if (dm_table[i] != NULL)
+			free_safe_mem(dm_table[i]);
 
 	return info;
 
