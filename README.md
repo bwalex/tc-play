@@ -20,6 +20,11 @@ As it turns out, most technical documents on TrueCrypt contain mistakes, hence
 the trial and error approach.
 
 
+VeraCrypt support
+==========
+tcplay has support for creating, modifying and mapping VeraCrypt volumes. See
+the man page for more details.
+
 
 Implementation notes
 ==========
