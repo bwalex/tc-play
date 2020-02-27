@@ -24,7 +24,7 @@ LN?=ln
 # whether to enable debugging or not
 DEBUG?=no
 
-MAJ_VER=2
+MAJ_VER=3
 MIN_VER=0
 
 

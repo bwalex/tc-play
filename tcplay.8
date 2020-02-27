@@ -348,6 +348,28 @@ using the
 .Fl -protect-hidden
 option and specifying the passphrase and keyfiles for both the outer
 and hidden volumes.
+.Sh VERACRYPT SUPPORT
+.Nm
+offers both legacy TrueCrypt as well as VeraCrypt support.
+When creating a new volume, the selected PBKDF2 PRF determines whether
+the volume will use the TrueCrypt or VeraCrypt format.
+The formats are identical other than the rounds of the key derivation
+functions as well as the volume signature and minver fields in the
+header.
+Converting volumes from one format or another using
+.Nm
+is simply a matter of using the
+.Fl -modify
+option specifying a PBKDF2 PRF hash matching the intended target format
+with the
+.Fl -new-pbkdf-prf
+argument.
+.Pp
+PBKDF2 PRFs suffixed with
+.Dv -VC
+are VeraCrypt PRFs, whilst all others are legacy TrueCrypt PRFs.
+By default, new volumes are created with a VeraCrypt PRF to offer better
+security.
 .Sh EXAMPLES
 Create a new TrueCrypt volume on
 .Pa /dev/vn0

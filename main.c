@@ -274,7 +274,7 @@ main(int argc, char *argv[])
 		case 'a':
 			if (opts->prf_algo != NULL)
 				usage();
-			if ((opts->prf_algo = check_prf_algo(optarg, 0)) == NULL) {
+			if ((opts->prf_algo = check_prf_algo(optarg, 0, 0)) == NULL) {
 				if (strcmp(optarg, "help") == 0)
 					exit(EXIT_SUCCESS);
 				else
@@ -351,7 +351,7 @@ main(int argc, char *argv[])
 		case 'x':
 			if (opts->h_prf_algo != NULL)
 				usage();
-			if ((opts->h_prf_algo = check_prf_algo(optarg, 0)) == NULL) {
+			if ((opts->h_prf_algo = check_prf_algo(optarg, 0, 0)) == NULL) {
 				if (strcmp(optarg, "help") == 0)
 					exit(EXIT_SUCCESS);
 				else
@@ -399,7 +399,7 @@ main(int argc, char *argv[])
 		case FLAG_LONG_MOD_PRF:
 			if (opts->new_prf_algo != NULL)
 				usage();
-			if ((opts->new_prf_algo = check_prf_algo(optarg, 0)) == NULL) {
+			if ((opts->new_prf_algo = check_prf_algo(optarg, 0, 0)) == NULL) {
 				if (strcmp(optarg, "help") == 0)
 					exit(EXIT_SUCCESS);
 				else
