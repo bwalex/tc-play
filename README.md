@@ -113,7 +113,7 @@ Download for packaging
 ==========
 Latest release can be found as a (source) tarball at:
 
-https://github.com/bwalex/tc-play/archive/v2.0.tar.gz
+https://github.com/bwalex/tc-play/archive/v3.0.tar.gz
 
 
 
