@@ -1,6 +1,9 @@
-UNRELEASED - Alex Hornung <alex@alexhornung.com>
+2020-02-27 Version 3.1 - Alex Hornung <alex@alexhornung.com>
 
  * Various memory leak/use-after-free bugs (issue #67).
+
+ * Minor improvements to CMakeLists.txt to allow for empty LIB_SUFFIX and
+   overriding sbin/ vs bin/.
 
 
 2020-02-27 Version 3.0 - Alex Hornung <alex@alexhornung.com>

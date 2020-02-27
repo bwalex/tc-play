@@ -2,7 +2,7 @@ cmake_minimum_required (VERSION 2.6)
 
 project (tcplay)
 set (VERSION_MAJOR 3)
-set (VERSION_MINOR 0)
+set (VERSION_MINOR 1)
 
 find_package (PkgConfig)
 include (CheckLibraryExists)
@@ -63,7 +63,7 @@ else()
 endif()
 
 
-if (NOT LIB_SUFFIX)
+if (NOT (DEFINED LIB_SUFFIX))
 	message(STATUS "")
 	message(STATUS "LIB_SUFFIX variable is not defined. It will be autodetected now.")
 	message(STATUS "You can set it manually with -DLIB_SUFFIX=<value> (e.g. 64).")
@@ -76,6 +76,9 @@ if (NOT LIB_SUFFIX)
 	endif()
 endif()
 
+if (NOT (DEFINED SBIN_DIR))
+  set (SBIN_DIR "sbin")
+endif()
 
 
 add_executable(tcplay-bin main.c ${SRCS_COMMON} ${SRCS_LINUX} ${SRCS_PBKDF})
@@ -117,7 +120,7 @@ Cflags: -I\${includedir}
 
 # Installation targets
 install(TARGETS tcplay-bin tcplay-static tcplay-so
-	RUNTIME DESTINATION sbin             COMPONENT bin
+	RUNTIME DESTINATION ${SBIN_DIR}      COMPONENT bin
 	LIBRARY DESTINATION lib${LIB_SUFFIX} COMPONENT lib
 	ARCHIVE DESTINATION lib${LIB_SUFFIX} COMPONENT lib-dev
 )
