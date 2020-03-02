@@ -1,3 +1,9 @@
+2020-03-02 Version 3.3 - Alex Hornung <alex@alexhornung.com>
+
+ * Add new --prompt-passphrase option to reduce unlock time when both a
+   passphrase and keyfiles are required (issue #75).
+
+
 2020-02-27 Version 3.1 - Alex Hornung <alex@alexhornung.com>
 
  * Various memory leak/use-after-free bugs (issue #67).

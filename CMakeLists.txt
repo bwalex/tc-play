@@ -2,7 +2,7 @@ cmake_minimum_required (VERSION 2.6)
 
 project (tcplay)
 set (VERSION_MAJOR 3)
-set (VERSION_MINOR 1)
+set (VERSION_MINOR 3)
 
 find_package (PkgConfig)
 include (CheckLibraryExists)
