@@ -875,7 +875,9 @@ info_map_common(struct tcplay_opts *opts, char *passphrase_out)
 	 * Add one retry so we can do a first try without asking for
 	 * a password if keyfiles are passed in.
 	 */
-	if (opts->interactive && (opts->nkeyfiles > 0)) {
+	if (opts->interactive &&
+	    !opts->prompt_passphrase &&
+	    (opts->nkeyfiles > 0)) {
 		try_empty = 1;
 		++retries;
 	}

@@ -217,6 +217,7 @@ struct tcplay_opts {
 	int		protect_hidden;
 	int		retries;	/* XXX: default to DEFAULT_RETRIES */
 	time_t		timeout;
+	int		prompt_passphrase;
 
 	const char	*hdr_file_in;
 	const char	*h_hdr_file_in;
