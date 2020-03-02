@@ -47,12 +47,12 @@ Given /^I map volume ([^\s]+) as ([^\s]+) using the following settings:$/ do |vo
 
   IO.popen("#{@tcplay} #{@args.join(' ')}", mode='r+') do |tcplay_io|
     unless ParseHelper.is_yes(s['prompt_skipped'])
-      tcplay_io.expect /Passphrase/, 10 do
+      tcplay_io.expect /Passphrase/, 60 do
         tcplay_io.write("#{s['passphrase']}\n")
       end
     end
     if protect_hidden == true
-      tcplay_io.expect /Passphrase for hidden volume/, 10 do
+      tcplay_io.expect /Passphrase for hidden volume/, 60 do
         tcplay_io.write("#{s['passphrase_hidden']}\n")
       end
     end
@@ -155,12 +155,12 @@ Given /^I request information about volume ([^\s]+) using the following settings
 
   IO.popen("#{@tcplay} #{@args.join(' ')}", mode='r+') do |tcplay_io|
     unless ParseHelper.is_yes(s['prompt_skipped'])
-      tcplay_io.expect /Passphrase:/, 10 do
+      tcplay_io.expect /Passphrase:/, 60 do
         tcplay_io.write("#{s['passphrase']}\n")
       end
     end
     if protect_hidden == true
-      tcplay_io.expect /Passphrase for hidden volume:/, 10 do
+      tcplay_io.expect /Passphrase for hidden volume:/, 60 do
         tcplay_io.write("#{s['passphrase_hidden']}\n")
       end
     end
@@ -216,12 +216,12 @@ Given /^I modify volume ([^\s]+) using the following settings:$/ do |vol,setting
 
   IO.popen("#{@tcplay} #{@args.join(' ')}", mode='r+') do |tcplay_io|
     unless ParseHelper.is_yes(s['prompt_skipped'])
-      tcplay_io.expect /Passphrase:/, 10 do
+      tcplay_io.expect /Passphrase:/, 60 do
         tcplay_io.write("#{s['passphrase']}\n")
       end
     end
 
-    tcplay_io.expect /New passphrase/, 10 do
+    tcplay_io.expect /New passphrase/, 60 do
       tcplay_io.write("#{s['new_passphrase']}\n")
     end
 
@@ -251,7 +251,7 @@ Given /^I modify volume ([^\s]+) by restoring from the backup header using the f
 
   IO.popen("#{@tcplay} #{@args.join(' ')}", mode='r+') do |tcplay_io|
     unless ParseHelper.is_yes(s['prompt_skipped'])
-      tcplay_io.expect /Passphrase:/, 10 do
+      tcplay_io.expect /Passphrase:/, 60 do
         tcplay_io.write("#{s['passphrase']}\n")
       end
     end
@@ -278,12 +278,12 @@ Given(/^I modify volume ([^\s]+) by saving a header copy to ([^\s]+) using the f
 
   IO.popen("#{@tcplay} #{@args.join(' ')}", mode='r+') do |tcplay_io|
     unless ParseHelper.is_yes(s['prompt_skipped'])
-      tcplay_io.expect /Passphrase:/, 10 do
+      tcplay_io.expect /Passphrase:/, 60 do
         tcplay_io.write("#{s['passphrase']}\n")
       end
     end
 
-    tcplay_io.expect /New passphrase/, 10 do
+    tcplay_io.expect /New passphrase/, 60 do
       tcplay_io.write("#{s['new_passphrase']}\n")
     end
 
@@ -313,12 +313,12 @@ Given(/^I modify volume ([^\s]+) by restoring from header copy ([^\s]+) using th
 
   IO.popen("#{@tcplay} #{@args.join(' ')}", mode='r+') do |tcplay_io|
     unless ParseHelper.is_yes(s['prompt_skipped'])
-      tcplay_io.expect /Passphrase:/, 10 do
+      tcplay_io.expect /Passphrase:/, 60 do
         tcplay_io.write("#{s['passphrase']}\n")
       end
     end
 
-    tcplay_io.expect /New passphrase/, 10 do
+    tcplay_io.expect /New passphrase/, 60 do
       tcplay_io.write("#{s['new_passphrase']}\n")
     end
 
