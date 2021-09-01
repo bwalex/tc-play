@@ -33,24 +33,24 @@ Filesystem:
  5) Linux Ext4
 Select [2]: 1
 
-Enter password: 
+Enter password:
 WARNING: Short passwords are easy to crack using brute force techniques!
 
 We recommend choosing a password consisting of more than 20 characters. Are you sure you want to use a short password? (y=Yes/n=No) [No]: y
 
-Re-enter password: 
+Re-enter password:
 
-Enter keyfile path [none]: 
+Enter keyfile path [none]:
 
 Please type at least 320 randomly chosen characters and then press Enter:
 Characters remaining: 172
 Characters remaining: 33
 
 
-Done: 100.000%  Speed:   11 MB/s  Left: 0 s         
+Done: 100.000%  Speed:   11 MB/s  Left: 0 s
 
 The TrueCrypt volume has been successfully created.
-21:21:29 alex-laptop:~/src/truecrypt-7.1a-source 
+21:21:29 alex-laptop:~/src/truecrypt-7.1a-source
 % Main/truecrypt -t -c
 Volume type:
  1) Normal
@@ -88,16 +88,16 @@ Filesystem:
  5) Linux Ext4
 Select [2]: 1
 
-Enter password: 
+Enter password:
 WARNING: Short passwords are easy to crack using brute force techniques!
 
 We recommend choosing a password consisting of more than 20 characters. Are you sure you want to use a short password? (y=Yes/n=No) [No]: yes
 
-Re-enter password: 
+Re-enter password:
 
 Enter keyfile path [none]: /home/alex/src/tc-play/test/key.1
 Enter keyfile path [finish]: /home/alex/src/tc-play/test/key.2
-Enter keyfile path [finish]: 
+Enter keyfile path [finish]:
 
 
 

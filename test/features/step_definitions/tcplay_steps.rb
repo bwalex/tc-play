@@ -89,7 +89,7 @@ Given /^I create a volume ([^\s]+) of size (\d+)M with the following parameters:
   @args << "-b #{s['cipher'].strip}" unless s['cipher'].nil?
   @args << "-x #{s['pbkdf_prf_hidden'].strip}" unless s['pbkdf_prf_hidden'].nil?
   @args << "-y #{s['cipher_hidden'].strip}" unless s['cipher_hidden'].nil?
-  
+
   s['passphrase'] ||= ''
   s['passphrase_hidden'] ||= ''
 
@@ -377,4 +377,3 @@ After('@cmdline') do
 
   @files_to_delete.each { |f| File.unlink(f) }
 end
-

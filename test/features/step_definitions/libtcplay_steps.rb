@@ -209,7 +209,7 @@ Given /^I request information about volume ([^\s]+) with the API using the follo
 
     r = TCplayLib.tc_api_task_info_get(task, "iv_offset", :size_t, 8, :pointer, buf)
     r.should == TCplayLib::TC_OK
-    @info['iv offset'] =  "#{buf.get_int64(0)} bytes"
+    @info['iv offset'] = "#{buf.get_int64(0)} bytes"
 
     r = TCplayLib.tc_api_task_info_get(task, "block_offset", :size_t, 8, :pointer, buf)
     r.should == TCplayLib::TC_OK
@@ -262,7 +262,7 @@ Given /^I request information about mapped volume ([^\s]+) with the API$/ do |ma
 
     r = TCplayLib.tc_api_task_info_get(task, "iv_offset", :size_t, 8, :pointer, buf)
     r.should == TCplayLib::TC_OK
-    @info['iv offset'] =  "#{buf.get_int64(0)} bytes"
+    @info['iv offset'] = "#{buf.get_int64(0)} bytes"
 
     r = TCplayLib.tc_api_task_info_get(task, "block_offset", :size_t, 8, :pointer, buf)
     r.should == TCplayLib::TC_OK

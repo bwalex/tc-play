@@ -234,8 +234,8 @@ static struct option longopts[] = {
 	{ "weak-keys",		no_argument,		NULL, 'w' },
 	{ "insecure-erase",	no_argument,		NULL, 'z' },
 	{ "help",		no_argument,		NULL, 'h' },
-	{ "no-retries",         no_argument,            NULL, FLAG_LONG_NO_RETRIES },
-	{ NULL,			0,			NULL, 0   },
+	{ "no-retries",		no_argument,		NULL, FLAG_LONG_NO_RETRIES },
+	{ NULL,			0,			NULL, 0 },
 };
 
 #define _set_str_opt(opt) \

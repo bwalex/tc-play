@@ -17,8 +17,6 @@ Feature: Command line mapping/info tests using volume test2.tc
       | IV offset          | 256 sectors                                 |
       | Block offset       | 256 sectors                                 |
 
-
-
   Scenario: Map hidden volume in test2.tc
     Given I map volume test2.tc as tcplay_test using the following settings:
       | passphrase         | hidden             |
@@ -34,8 +32,6 @@ Feature: Command line mapping/info tests using volume test2.tc
       | Volume size        | 2040 sectors                                |
       | IV offset          | 7936 sectors                                |
       | Block offset       | 7936 sectors                                |
-
-
 
   Scenario: Map outer volume protecting hidden volume in test2.tc
     Given I map volume test2.tc as tcplay_test using the following settings:

@@ -172,4 +172,3 @@ xts_uninit(struct xts_ctx *ctx)
 
 	return 0;
 }
-
