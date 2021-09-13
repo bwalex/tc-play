@@ -58,4 +58,3 @@ pbkdf2(struct pbkdf_prf_algo *hash, const char *pass, int passlen,
 
 	return 0;
 }
-

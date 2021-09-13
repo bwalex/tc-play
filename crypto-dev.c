@@ -162,4 +162,3 @@ tc_crypto_init(void)
 
 	return 0;
 }
-

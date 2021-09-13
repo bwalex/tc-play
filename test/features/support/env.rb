@@ -120,4 +120,3 @@ class LOSetupHelper
     end
   end
 end
-

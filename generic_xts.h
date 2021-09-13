@@ -46,4 +46,3 @@ int xts_init(struct xts_ctx *ctxp, void *arg1, void *arg2, set_key_fn set_key_fn
 int xts_encrypt(struct xts_ctx *ctx, uint8_t *data, size_t len, uint8_t *iv);
 int xts_decrypt(struct xts_ctx *ctx, uint8_t *data, size_t len, uint8_t *iv);
 int xts_uninit(struct xts_ctx *ctxp);
-

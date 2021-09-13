@@ -39,7 +39,6 @@ Feature: Command line info/map using VeraCrypt volumes
       | IV offset          | 256 sectors                                 |
       | Block offset       | 256 sectors                                 |
 
-
   Scenario: Info about volume test_sha256.vc
     Given I request information about volume test_sha256.vc using the following settings:
       | passphrase         | testtest       |

@@ -29,4 +29,3 @@
 
 int _humanize_number(char *buf, size_t bufsz, uint64_t num);
 int _dehumanize_number(const char *buf, uint64_t *dest);
-

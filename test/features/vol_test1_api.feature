@@ -15,8 +15,6 @@ Feature: API mapping/info tests using volume test1.tc
       | IV offset          | 131072 bytes       |
       | Block offset       | 131072 bytes       |
 
-
-
   Scenario: Map hidden volume
     Given I map volume test1.tc as tcplay_test with the API using the following settings:
       | passphrase         | hidden             |
@@ -30,8 +28,6 @@ Feature: API mapping/info tests using volume test1.tc
       | Volume size        | 5242880 bytes      |
       | IV offset          | 15597568 bytes     |
       | Block offset       | 15597568 bytes     |
-
-
 
   Scenario: Map outer volume protecting hidden volume
     Given I map volume test1.tc as tcplay_test with the API using the following settings:
@@ -49,9 +45,7 @@ Feature: API mapping/info tests using volume test1.tc
       | IV offset          | 131072 bytes       |
       | Block offset       | 131072 bytes       |
 
-
-
- Scenario: Info on outer volume
+  Scenario: Info on outer volume
     Given I request information about volume test1.tc with the API using the following settings:
       | passphrase         | test               |
     Then I expect tcplay to report the following:
@@ -61,8 +55,6 @@ Feature: API mapping/info tests using volume test1.tc
       | Volume size        | 20709376 bytes     |
       | IV offset          | 131072 bytes       |
       | Block offset       | 131072 bytes       |
-
-
 
   Scenario: Info on hidden volume
     Given I request information about volume test1.tc with the API using the following settings:
@@ -74,8 +66,6 @@ Feature: API mapping/info tests using volume test1.tc
       | Volume size        | 5242880 bytes      |
       | IV offset          | 15597568 bytes     |
       | Block offset       | 15597568 bytes     |
-
-
 
   Scenario: Info on outer volume protecting hidden volume
     Given I request information about volume test1.tc with the API using the following settings:
@@ -89,4 +79,3 @@ Feature: API mapping/info tests using volume test1.tc
       | Volume size        | 15466496 bytes     |
       | IV offset          | 131072 bytes       |
       | Block offset       | 131072 bytes       |
-

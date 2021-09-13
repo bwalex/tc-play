@@ -153,4 +153,3 @@ include(CPack)
 cpack_add_component(bin DISPLAY_NAME bin REQUIRED INSTALL_TYPES all)
 cpack_add_component(lib DISPLAY_NAME lib REQUIRED INSTALL_TYPES all)
 cpack_add_component(lib-dev DISPLAY_NAME lib-dev REQUIRED INSTALL_TYPES all DEPENDS lib)
-
