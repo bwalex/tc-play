@@ -391,6 +391,24 @@ new_info(const char *dev, int flags, struct tc_cipher_chain *cipher_chain,
 	else
 		info->offset = hdr->off_mk_scope / hdr->sec_sz;	/* block offset */
 
+	if (hdr->tc_min_ver < 6) {
+		/* Volume layout v1 */
+		if (hdr->sz_hidvol == 0) {
+			info->offset = info->skip = HDR_SIZE_LEGACY / hdr->sec_sz;
+		} else {
+			disksz_t blocks;
+			size_t bsize;
+
+			if (get_disk_info(info->dev, &blocks, &bsize) != 0) {
+				tc_log(1, "cannot compute hidden volume size\n");
+				return NULL;
+			}
+
+			info->skip = ((blocks * bsize) - hdr->sz_mk_scope + HDR_OFFSET_HIDDEN_LEGACY) / hdr->sec_sz;
+			info->offset = info->skip;
+		}
+	}
+
 	/* Associate a key out of the key pool with each cipher in the chain */
 	error = tc_cipher_chain_populate_keys(cipher_chain, hdr->keys);
 	if (error) {
@@ -428,7 +446,13 @@ adjust_info(struct tcplay_info *info, struct tcplay_info *hinfo)
 	if (hinfo->hdr->sz_hidvol == 0)
 		return 1;
 
-	info->size -= hinfo->hdr->sz_hidvol / hinfo->hdr->sec_sz;
+	if (info->hdr->tc_min_ver < 6) {
+		/* Volume layout v1 */
+		info->size -= (hinfo->hdr->sz_mk_scope - HDR_OFFSET_HIDDEN_LEGACY) / hinfo->hdr->sec_sz;
+	} else {
+		info->size -= hinfo->hdr->sz_hidvol / hinfo->hdr->sec_sz;
+	}
+  
 	return 0;
 }
 
@@ -1028,6 +1052,32 @@ info_map_common(struct tcplay_opts *opts, char *passphrase_out)
 				    (opts->n_hkeyfiles > 0)?MAX_PASSSZ:strlen(h_pass), hehdr,
 				    &hinfo);
 			}
+
+			if (error2 && !TC_FLAG_SET(opts->flags, BACKUP)) {
+				/* Try layout v1 where hidden volume header is at the end of volume */
+
+				/* Always read blksz-sized chunks */
+				sz = blksz;
+
+				free_safe_mem(hehdr);
+				hehdr = (struct tchdr_enc *)read_to_safe_mem(opts->dev,
+				    HDR_OFFSET_HIDDEN_LEGACY, &sz);
+				if (hehdr == NULL) {
+					tc_log(1, "error read hdr_enc: %s", opts->dev);
+					goto out;
+				}
+
+				if (error) {
+					error2 = process_hdr(opts->dev, opts->flags, (unsigned char *)pass,
+					    (opts->nkeyfiles > 0)?MAX_PASSSZ:strlen(pass), hehdr,
+					    &info);
+					is_hidden = !error2;
+				} else if (opts->protect_hidden) {
+					error2 = process_hdr(opts->dev, opts->flags, (unsigned char *)h_pass,
+					    (opts->n_hkeyfiles > 0)?MAX_PASSSZ:strlen(h_pass), hehdr,
+					    &hinfo);
+				}
+			}
 		}
 
 		/* We need both to protect a hidden volume */
@@ -1212,6 +1262,13 @@ modify_volume(struct tcplay_opts *opts)
 	info = info_map_common(opts, pass);
 	if (info == NULL)
 		goto out;
+
+	if (info->hdr->tc_min_ver < 6) {
+		/* Volume layout v1 */
+		tc_log(1, "changes to volumes created with old versions "
+		    "(<6.0) of TrueCrypt are not supported\n ");
+		goto out;
+	}
 
 	if (opts->interactive && !TC_FLAG_SET(opts->flags, ONLY_RESTORE)) {
 		if (((pass = alloc_safe_mem(PASS_BUFSZ)) == NULL) ||
