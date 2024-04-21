@@ -45,6 +45,7 @@
 .Nm tc_api_task_get_error
 .Nd TrueCrypt volume management
 .Sh LIBRARY
+.ds doc-str-Lb-libtcplay TrueCrypt volume management (libtcplay, \-ltcplay)
 .Lb libtcplay
 .Sh SYNOPSIS
 .In tcplay_api.h
@@ -180,7 +181,7 @@ does, but without changing the passphrase, keyfiles or PRF algorithm.
 .Pp
 The
 .Fn tc_api_task_set
-function allows settting a number of different options for the current task.
+function allows setting a number of different options for the current task.
 The following table shows which keys are available on calls to
 .Fn tc_api_task_set
 for each of the operations.
@@ -536,7 +537,7 @@ to indicate that the operation completed successfully, or
 to indicate that the operation is not implemented
 , or
 .Dv TC_ERR
-to indicate that any other error occured.
+to indicate that any other error occurred.
 .Pp
 The
 .Fn tc_api_task_get_error
