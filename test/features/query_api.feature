@@ -17,6 +17,10 @@ Feature: API query functions
   Scenario: Query PRFs
     Given I query the available PRFs with the API
     Then I expect to see the following PRFs:
-      | whirlpool |
-      | SHA512    |
-      | RIPEMD160 |
+      | whirlpool    |
+      | SHA512       |
+      | RIPEMD160    |
+      | RIPEMD160-VC |
+      | SHA512-VC    |
+      | whirlpool-VC |
+      | SHA256-VC    |
