@@ -352,12 +352,12 @@ end
 
 Then /^I expect to see the following ciphers:$/ do |ciphers|
   ciphers.map_headers! { |h| h.to_sym }
-  @ciphers.should =~ ciphers.hashes
+  @ciphers.should match_array(ciphers.hashes)
 end
 
 Then /^I expect to see the following PRFs:$/ do |prfs|
   prfs = prfs.raw.map { |x| x.first.downcase }
-  @prfs.should =~ prfs
+  @prfs.should match_array(prfs)
 end
 
 
