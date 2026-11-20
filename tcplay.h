@@ -39,6 +39,7 @@
 #define TC_SIG			"TRUE"
 #define VC_SIG			"VERA"
 #define MAX_PASSSZ		64
+#define MAX_PIM_VALUE		2147468	/* VeraCrypt limit for a signed 32-bit iteration count */
 #define PASS_BUFSZ		256
 #define KPOOL_SZ		64
 #define MAX_KFILE_SZ		1048576	/* 1 MB */
@@ -151,6 +152,7 @@ struct tcplay_info {
 	struct tchdr_dec *hdr;
 	struct tc_cipher_chain *cipher_chain;
 	struct pbkdf_prf_algo *pbkdf_prf;
+	int iteration_count;
 	char key[MAX_KEYSZ*2 + 1];
 
 	int flags;
@@ -200,6 +202,7 @@ struct tcplay_opts {
 	struct tc_cipher_chain	*h_cipher_chain;
 	const char	*passphrase;
 	const char	*h_passphrase;
+	int		pim;
 	int		interactive;
 	int		weak_keys_and_salt;
 
@@ -308,8 +311,6 @@ char *tc_cipher_chain_sprint(char *buf, size_t bufsz,
 int free_info(struct tcplay_info *info);
 void print_info(struct tcplay_info *info);
 int adjust_info(struct tcplay_info *info, struct tcplay_info *hinfo);
-int process_hdr(const char *dev, int flags, unsigned char *pass, int passlen,
-    struct tchdr_enc *ehdr, struct tcplay_info **pinfo);
 int create_volume(struct tcplay_opts *opts);
 struct tcplay_info *info_map_common(struct tcplay_opts *opts,
     char *passphrase_out);

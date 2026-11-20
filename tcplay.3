@@ -109,6 +109,7 @@ library supports the following features:
 .Bl -column "some_long_feature" "Description"
 .It Sy Feature         Ta Sy Description
 .It Li trim            Ta    Allows enabling discards/TRIM when mapping a volume
+.It Li pim             Ta    Supports the VeraCrypt PIM for info and map operations
 .El
 .Pp
 The
@@ -206,6 +207,7 @@ indicates the setting is optional.
 .It Li cipher_chain             Ta    "*"    Ta         Ta        Ta          Ta                Ta           Ta    ""
 .It Li h_cipher_chain           Ta    "*"    Ta         Ta        Ta          Ta                Ta           Ta    ""
 .It Li protect_hidden           Ta           Ta    "*"  Ta    "*" Ta          Ta                Ta           Ta    ""
+.It Li pim                      Ta           Ta    "*"  Ta    "*" Ta          Ta                Ta           Ta    ""
 .It Li fde                      Ta           Ta    "*"  Ta    "*" Ta          Ta                Ta           Ta    ""
 .It Li sys                      Ta           Ta    "*"  Ta    "*" Ta          Ta                Ta    "?"    Ta    "?"
 .It Li use_backup_header        Ta           Ta    "*"  Ta    "*" Ta          Ta                Ta    "*"    Ta    "*"
@@ -291,6 +293,20 @@ The vararg is of type
 It determines whether the size of the outer volume should be adjusted to protect
 any hidden volume.
 Using this mode requires both outer and hidden passphrases and keyfiles.
+.It pim
+The vararg is an
+.Ft int
+from 0 to 2147468 inclusive.
+It specifies the VeraCrypt Personal Iterations Multiplier (PIM) for opening
+a non-system volume, including direct access to a hidden volume.
+A positive value selects VeraCrypt PBKDF2 with an iteration count of
+15000 + (1000 * PIM).
+The
+.Fa sys
+and
+.Fa fde
+options require a PIM of zero.
+Zero or an omitted option uses the default iteration count of each PRF.
 .It sys
 The vararg is of type
 .Ft const char * .

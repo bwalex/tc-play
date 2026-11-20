@@ -52,6 +52,7 @@
 #define FLAG_LONG_MOD_TO_FILE	0xff40
 #define FLAG_LONG_USE_HDR_FILE	0xfe01
 #define FLAG_LONG_USE_HHDR_FILE	0xfe02
+#define FLAG_LONG_PIM		0xfe03
 #define FLAG_LONG_NO_RETRIES	0xfabc
 
 
@@ -71,10 +72,10 @@ usage(void)
 	    "usage: tcplay -c -d device [-g] [-z] [-w] [-a pbkdf_hash] [-b cipher]\n"
 	    "              [-f keyfile_hidden] [-k keyfile] [-x pbkdf_hash] [-y cipher]\n"
 	    "       tcplay -i -d device [-e] [-p] [-f keyfile_hidden] [-k keyfile]\n"
-	    "              [-s system_device] [--fde] [--use-backup]\n"
+	    "              [-s system_device] [--fde] [--pim=N] [--use-backup]\n"
 	    "              [--use-hdr-file=hdr_file] [--use-hidden-hdr-file=hdr_file]\n"
 	    "       tcplay -m mapping -d device [-e] [-p] [-f keyfile_hidden] [-k keyfile]\n"
-	    "              [-s system_device] [--fde] [--use-backup] [--allow-trim]\n"
+	    "              [-s system_device] [--fde] [--pim=N] [--use-backup] [--allow-trim]\n"
 	    "              [--use-hdr-file=hdr_file] [--use-hidden-hdr-file=hdr_file]\n"
 	    "       tcplay --modify -d device [-k keyfile] [--new-keyfile=keyfile]\n"
 	    "              [--new-pbkdf-prf=pbkdf_hash] [-s system_device] [--fde]\n"
@@ -167,6 +168,9 @@ usage(void)
 	    "\t the header files on disk.\n"
 	    "\n"
 	    "Valid options for --info and --map are:\n"
+	    " --pim=N\n"
+	    "\t Sets the VeraCrypt Personal Iterations Multiplier for a non-system\n"
+	    "\t volume. Zero (the default) uses the standard PBKDF2 iteration count.\n"
 	    " -e, --protect-hidden\n"
 	    "\t Protect a hidden volume when mounting the outer volume.\n"
 	    " -p, --prompt-passphrase\n"
@@ -218,6 +222,7 @@ static struct option longopts[] = {
 	{ "protect-hidden",	no_argument,		NULL, 'e' },
 	{ "device",		required_argument,	NULL, 'd' },
 	{ "prompt-passphrase",	no_argument,		NULL, 'p' },
+	{ "pim",		required_argument,	NULL, FLAG_LONG_PIM },
 	{ "system-encryption",	required_argument,	NULL, 's' },
 	{ "allow-trim",		no_argument,		NULL, 't' },
 	{ "fde",		no_argument,		NULL, FLAG_LONG_FDE },
@@ -251,6 +256,7 @@ main(int argc, char *argv[])
 {
 	struct tcplay_opts *opts;
 	int ch, error;
+	long arg_pim = -1;
 	int info_vol = 0, map_vol = 0,
 	    unmap_vol = 0, info_map = 0,
 	    create_vol = 0, modify_vol = 0;
@@ -382,6 +388,19 @@ main(int argc, char *argv[])
 		case FLAG_LONG_FDE:
 			opts->flags |= TC_FLAG_FDE;
 			break;
+		case FLAG_LONG_PIM: {
+			char *end;
+
+			arg_pim = strtol(optarg, &end, 10);
+			if (*optarg < '0' || *optarg > '9' || *end != '\0' ||
+			    arg_pim > MAX_PIM_VALUE) {
+				fprintf(stderr, "PIM must be a decimal integer between 0 and %d.\n",
+				    MAX_PIM_VALUE);
+				return EXIT_FAILURE;
+			}
+			opts->pim = (int)arg_pim;
+			break;
+		}
 		case FLAG_LONG_USE_BACKUP:
 			opts->flags |= TC_FLAG_BACKUP;
 			break;
@@ -440,6 +459,7 @@ main(int argc, char *argv[])
 	if (!(((map_vol || info_vol || create_vol || modify_vol) && opts->dev != NULL) ||
 	    ((unmap_vol || info_map) && opts->map_name != NULL)) ||
 	    (TC_FLAG_SET(opts->flags, SYS) && TC_FLAG_SET(opts->flags, FDE)) ||
+	    (arg_pim >= 0 && !map_vol && !info_vol) ||
 	    (map_vol + info_vol + create_vol + unmap_vol + info_map + modify_vol > 1) ||
 	    (opts->hidden && !create_vol) ||
 	    (TC_FLAG_SET(opts->flags, SYS) && (opts->sys_dev == NULL)) ||

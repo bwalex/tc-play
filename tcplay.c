@@ -322,8 +322,7 @@ print_info(struct tcplay_info *info)
 
 	if (info->pbkdf_prf != NULL) {
 		printf("PBKDF2 PRF:\t\t%s\n", info->pbkdf_prf->name);
-		printf("PBKDF2 iterations:\t%d\n",
-		    info->pbkdf_prf->iteration_count);
+		printf("PBKDF2 iterations:\t%d\n", info->iteration_count);
 	}
 
 	printf("Cipher:\t\t\t%s\n",
@@ -432,12 +431,13 @@ adjust_info(struct tcplay_info *info, struct tcplay_info *hinfo)
 	return 0;
 }
 
-int
+static int
 process_hdr(const char *dev, int flags, unsigned char *pass, int passlen,
-    struct tchdr_enc *ehdr, struct tcplay_info **pinfo)
+    int pim, struct tchdr_enc *ehdr, struct tcplay_info **pinfo)
 {
 	struct tchdr_dec *dhdr;
 	struct tcplay_info *info;
+	struct pbkdf_prf_algo prf;
 	struct tc_cipher_chain *cipher_chain = NULL;
 	unsigned char *key;
 	int i, j, found, error;
@@ -452,19 +452,23 @@ process_hdr(const char *dev, int flags, unsigned char *pass, int passlen,
 	/* Start search for correct algorithm combination */
 	found = 0;
 	for (i = 0; !found && pbkdf_prf_algos[i].name != NULL; i++) {
+		prf = pbkdf_prf_algos[i];
+		if (pim > 0) {
+			if (prf.sys || strcmp(prf.sig, VC_SIG) != 0)
+				continue;
+			prf.iteration_count = 15000 + pim * 1000;
+		}
 #ifdef DEBUG
-		printf("\nTrying PRF algo %s (%d)\n", pbkdf_prf_algos[i].name,
-		    pbkdf_prf_algos[i].iteration_count);
+		printf("\nTrying PRF algo %s (%d)\n", prf.name, prf.iteration_count);
 		printf("Salt: ");
 		print_hex(ehdr->salt, 0, sizeof(ehdr->salt));
 #endif
-		error = pbkdf2(&pbkdf_prf_algos[i], (char *)pass, passlen,
+		error = pbkdf2(&prf, (char *)pass, passlen,
 		    ehdr->salt, sizeof(ehdr->salt),
 		    MAX_KEYSZ, key);
 
 		if (error) {
-			tc_log(1, "pbkdf failed for algorithm %s\n",
-			    pbkdf_prf_algos[i].name);
+			tc_log(1, "pbkdf failed for algorithm %s\n", prf.name);
 			free_safe_mem(key);
 			return EINVAL;
 		}
@@ -488,7 +492,7 @@ process_hdr(const char *dev, int flags, unsigned char *pass, int passlen,
 				return EINVAL;
 			}
 
-			if (verify_hdr(dhdr, &pbkdf_prf_algos[i])) {
+			if (verify_hdr(dhdr, &prf)) {
 #ifdef DEBUG
 				printf("tc_str: %.4s, tc_ver: %d, tc_min_ver: %d, "
 				    "crc_keys: %d, sz_vol: %"PRIu64", "
@@ -518,6 +522,7 @@ process_hdr(const char *dev, int flags, unsigned char *pass, int passlen,
 		return ENOMEM;
 	}
 
+	info->iteration_count = prf.iteration_count;
 	*pinfo = info;
 
 	return 0;
@@ -861,6 +866,12 @@ info_map_common(struct tcplay_opts *opts, char *passphrase_out)
 	int try_empty = 0;
 	int retries;
 
+	if (opts->pim > 0 && (opts->flags & (TC_FLAG_SYS | TC_FLAG_FDE))) {
+		tc_log(1, "A positive PIM requires a non-system VeraCrypt volume\n");
+		errno = EINVAL;
+		return NULL;
+	}
+
 	if ((error = get_disk_info(opts->dev, &blocks, &blksz)) != 0) {
 		tc_log(1, "could not get disk information\n");
 		return NULL;
@@ -1010,7 +1021,7 @@ info_map_common(struct tcplay_opts *opts, char *passphrase_out)
 
 		error = process_hdr(opts->dev, opts->flags, (unsigned char *)pass,
 		    (opts->nkeyfiles > 0)?MAX_PASSSZ:strlen(pass),
-		    ehdr, &info);
+		    opts->pim, ehdr, &info);
 
 		/*
 		 * Try to process hidden header if we have to protect the hidden
@@ -1020,13 +1031,13 @@ info_map_common(struct tcplay_opts *opts, char *passphrase_out)
 		if (hehdr && (error || opts->protect_hidden)) {
 			if (error) {
 				error2 = process_hdr(opts->dev, opts->flags, (unsigned char *)pass,
-				    (opts->nkeyfiles > 0)?MAX_PASSSZ:strlen(pass), hehdr,
-				    &info);
+				    (opts->nkeyfiles > 0)?MAX_PASSSZ:strlen(pass),
+				    opts->pim, hehdr, &info);
 				is_hidden = !error2;
 			} else if (opts->protect_hidden) {
 				error2 = process_hdr(opts->dev, opts->flags, (unsigned char *)h_pass,
-				    (opts->n_hkeyfiles > 0)?MAX_PASSSZ:strlen(h_pass), hehdr,
-				    &hinfo);
+				    (opts->n_hkeyfiles > 0)?MAX_PASSSZ:strlen(h_pass),
+				    0, hehdr, &hinfo);
 			}
 		}
 
