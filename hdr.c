@@ -316,10 +316,6 @@ struct tchdr_enc *copy_reencrypt_hdr(unsigned char *pass, int passlen,
 	key = key_backup = NULL;
 	ehdr = ehdr_backup = NULL;
 
-	/* By default stick to current PRF algo */
-	if (prf_algo == NULL)
-		prf_algo = info->pbkdf_prf;
-
 	if ((ehdr = (struct tchdr_enc *)alloc_safe_mem(sizeof(*ehdr))) == NULL) {
 		tc_log(1, "could not allocate safe ehdr memory\n");
 		goto error;
