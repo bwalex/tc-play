@@ -30,6 +30,7 @@ Given /^I map volume ([^\s]+) as ([^\s]+) using the following settings:$/ do |vo
     "-m #{map}",
     "-d #{loop_dev}"
   ]
+  @args << "--pim=#{Integer(s['pim'], 10)}" if s['pim']
 
   ParseHelper.csv_parse(s['keyfiles']) { |kf| @args << "-k \"keyfiles/#{kf}\"" } unless s['keyfiles'].nil?
   ParseHelper.csv_parse(s['keyfiles_hidden']) { |kf| @args << "-f \"keyfiles/#{kf}\"" } unless s['keyfiles_hidden'].nil?
@@ -136,6 +137,7 @@ Given /^I request information about volume ([^\s]+) using the following settings
     "-i",
     "-d #{loop_dev}"
   ]
+  @args << "--pim=#{Integer(s['pim'], 10)}" if s['pim']
 
   ParseHelper.csv_parse(s['keyfiles']) { |kf| @args << "-k \"keyfiles/#{kf}\"" } unless s['keyfiles'].nil?
   ParseHelper.csv_parse(s['keyfiles_hidden']) { |kf| @args << "-f \"keyfiles/#{kf}\"" } unless s['keyfiles_hidden'].nil?
