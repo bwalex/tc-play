@@ -89,6 +89,8 @@ Given /^I create a volume ([^\s]+) of size (\d+)M with the following parameters:
     create_hidden = true
   end
 
+  @args << "--pim=#{Integer(s['pim'], 10)}" if s['pim']
+  @args << "--pim-hidden=#{Integer(s['pim_hidden'], 10)}" if s['pim_hidden']
   @args << "-a #{s['pbkdf_prf'].strip}" unless s['pbkdf_prf'].nil?
   @args << "-b #{s['cipher'].strip}" unless s['cipher'].nil?
   @args << "-x #{s['pbkdf_prf_hidden'].strip}" unless s['pbkdf_prf_hidden'].nil?
@@ -100,9 +102,8 @@ Given /^I create a volume ([^\s]+) of size (\d+)M with the following parameters:
   @files_to_delete << "volumes/#{vol}"
 
   IO.popen("#{@tcplay} #{@args.join(' ')}", mode='r+') do |tcplay_io|
-    tcplay_io.expect /Passphrase/, 10 do
-      tcplay_io.write("#{s['passphrase']}\n")
-    end
+    next unless tcplay_io.expect(/Passphrase/, 10)
+    tcplay_io.write("#{s['passphrase']}\n")
 
     tcplay_io.expect /Repeat/, 10 do
       tcplay_io.write("#{s['passphrase']}\n")
@@ -124,6 +125,8 @@ Given /^I create a volume ([^\s]+) of size (\d+)M with the following parameters:
     tcplay_io.expect /Are you sure/, 10 do
       tcplay_io.write("y\n")
     end
+    tcplay_io.close_write
+    tcplay_io.read
   end
   @error = ($? != 0)
 end

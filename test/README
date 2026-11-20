@@ -81,12 +81,14 @@ created volume. Its size will be <size_mb> MB.
 The parameters are specified in a table - the following are all possible parameters:
 passphrase              | Any passphrase
 keyfiles                | path_to_kf1, path_to_kf2, ...
+pim                     | VeraCrypt PIM for the new volume
 pbkdf_prf               | Any valid tcplay PBKDF PRF
 cipher                  | Any valid tcplay cipher chain
 create_hidden           | yes/no
 hidden_mb               | A numeric size, e.g. 5.5 (meaning 5.5 MB)
 passphrase_hidden       | Any passphrase
 keyfiles_hidden         | path_to_kf1, path_to_kf2, ...
+pim_hidden              | VeraCrypt PIM for the new hidden volume
 pbkdf_prf_hidden        | Any valid tcplay PBKDF PRF
 cipher_hidden           | Any valid tcplay cipher chain
 
