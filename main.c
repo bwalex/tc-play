@@ -70,7 +70,8 @@ void
 usage(void)
 {
 	fprintf(stderr,
-	    "usage: tcplay -c -d device [-g] [-z] [-w] [-a pbkdf_hash] [-b cipher]\n"
+	    "usage: tcplay -c -d device [--pim=N] [-g [--pim-hidden=N]] [-z] [-w]\n"
+	    "              [-a pbkdf_hash] [-b cipher]\n"
 	    "              [-f keyfile_hidden] [-k keyfile] [-x pbkdf_hash] [-y cipher]\n"
 	    "       tcplay -i -d device [-e [--pim-hidden=N]] [-p] [-f keyfile_hidden] [-k keyfile]\n"
 	    "              [-s system_device] [--fde] [--pim=N] [--use-backup]\n"
@@ -117,6 +118,12 @@ usage(void)
 	    "\t To see valid options, specify '-b help'.\n"
 	    " -g, --hidden\n"
 	    "\t Specifies that the newly created volume will contain a hidden volume.\n"
+	    " --pim=N\n"
+	    "\t Sets the VeraCrypt PIM for the new volume. With --hidden, it applies\n"
+	    "\t to the outer volume. Zero (the default) uses the standard iteration count.\n"
+	    " --pim-hidden=N\n"
+	    "\t Sets the VeraCrypt PIM for the hidden volume. Requires --hidden.\n"
+	    "\t Defaults to zero independently of --pim.\n"
 	    " -x <pbkdf prf algorithm>, --pbkdf-prf=<pbkdf prf algorithm>\n"
 	    "\t Specifies which hashing function to use for the PBKDF password\n"
 	    "\t derivation when creating a new hidden volume.  By default, the\n"
@@ -467,7 +474,8 @@ main(int argc, char *argv[])
 	if (!(((map_vol || info_vol || create_vol || modify_vol) && opts->dev != NULL) ||
 	    ((unmap_vol || info_map) && opts->map_name != NULL)) ||
 	    (TC_FLAG_SET(opts->flags, SYS) && TC_FLAG_SET(opts->flags, FDE)) ||
-	    (arg_pim >= 0 && !map_vol && !info_vol) ||
+	    (arg_pim >= 0 && !map_vol && !info_vol &&
+	    (!create_vol || TC_FLAG_SET(opts->flags, SYS) || TC_FLAG_SET(opts->flags, FDE))) ||
 	    (map_vol + info_vol + create_vol + unmap_vol + info_map + modify_vol > 1) ||
 	    (opts->hidden && !create_vol) ||
 	    (TC_FLAG_SET(opts->flags, SYS) && (opts->sys_dev == NULL)) ||

@@ -449,6 +449,17 @@ adjust_info(struct tcplay_info *info, struct tcplay_info *hinfo)
 }
 
 static int
+apply_pim(struct pbkdf_prf_algo *prf, int pim)
+{
+	if (pim <= 0)
+		return 0;
+	if (prf->sys || strcmp(prf->sig, VC_SIG) != 0)
+		return EINVAL;
+	prf->iteration_count = 15000 + pim * 1000;
+	return 0;
+}
+
+static int
 process_hdr(const char *dev, int flags, unsigned char *pass, int passlen,
     int pim, struct tchdr_enc *ehdr, struct tcplay_info **pinfo)
 {
@@ -470,11 +481,8 @@ process_hdr(const char *dev, int flags, unsigned char *pass, int passlen,
 	found = 0;
 	for (i = 0; !found && pbkdf_prf_algos[i].name != NULL; i++) {
 		prf = pbkdf_prf_algos[i];
-		if (pim > 0) {
-			if (prf.sys || strcmp(prf.sig, VC_SIG) != 0)
-				continue;
-			prf.iteration_count = 15000 + pim * 1000;
-		}
+		if (apply_pim(&prf, pim) != 0)
+			continue;
 #ifdef DEBUG
 		printf("\nTrying PRF algo %s (%d)\n", prf.name, prf.iteration_count);
 		printf("Salt: ");
@@ -555,8 +563,16 @@ create_volume(struct tcplay_opts *opts)
 	size_t blksz;
 	struct tchdr_enc *ehdr, *hehdr;
 	struct tchdr_enc *ehdr_backup, *hehdr_backup;
+	const struct pbkdf_prf_algo *base_prf;
+	struct pbkdf_prf_algo outer_prf, hidden_prf;
 	uint64_t tmp;
 	int error, r, ret;
+
+	if (opts->h_pim >= 0 && !opts->hidden) {
+		tc_log(1, "A hidden volume PIM requires creating a hidden volume\n");
+		errno = EINVAL;
+		return -1;
+	}
 
 	pass = h_pass = pass_again = NULL;
 	ehdr = hehdr = NULL;
@@ -565,12 +581,32 @@ create_volume(struct tcplay_opts *opts)
 
 	if (opts->cipher_chain == NULL)
 		opts->cipher_chain = tc_cipher_chains[0];
-	if (opts->prf_algo == NULL)
-		opts->prf_algo = &pbkdf_prf_algos[DEFAULT_PRF_ALGO_IDX];
+
 	if (opts->h_cipher_chain == NULL)
 		opts->h_cipher_chain = opts->cipher_chain;
-	if (opts->h_prf_algo == NULL)
-		opts->h_prf_algo = opts->prf_algo;
+
+	base_prf = &pbkdf_prf_algos[DEFAULT_PRF_ALGO_IDX];
+	if (opts->prf_algo != NULL)
+		base_prf = opts->prf_algo;
+
+	outer_prf = *base_prf;
+	if (apply_pim(&outer_prf, opts->pim) != 0) {
+		tc_log(1, "A positive PIM for the outer volume requires a VeraCrypt PRF\n");
+		errno = EINVAL;
+		return -1;
+	}
+
+	if (opts->hidden) {
+		hidden_prf = *base_prf;
+		if (opts->h_prf_algo != NULL)
+			hidden_prf = *opts->h_prf_algo;
+
+		if (apply_pim(&hidden_prf, opts->h_pim) != 0) {
+			tc_log(1, "A positive PIM for the hidden volume requires a VeraCrypt PRF\n");
+			errno = EINVAL;
+			return -1;
+		}
+	}
 
 	if ((error = get_disk_info(opts->dev, &blocks, &blksz)) != 0) {
 		tc_log(1, "could not get disk info\n");
@@ -789,7 +825,7 @@ create_volume(struct tcplay_opts *opts)
 	/* create encrypted headers */
 	ehdr = create_hdr((unsigned char *)pass,
 	    (opts->nkeyfiles > 0)?MAX_PASSSZ:strlen(pass),
-	    opts->prf_algo, opts->cipher_chain, blksz, blocks, VOL_RSVD_BYTES_START/blksz,
+	    &outer_prf, opts->cipher_chain, blksz, blocks, VOL_RSVD_BYTES_START/blksz,
 	    blocks - (MIN_VOL_BYTES/blksz), 0, opts->weak_keys_and_salt, &ehdr_backup);
 	if (ehdr == NULL) {
 		tc_log(1, "Could not create header\n");
@@ -798,7 +834,7 @@ create_volume(struct tcplay_opts *opts)
 
 	if (opts->hidden) {
 		hehdr = create_hdr((unsigned char *)h_pass,
-		    (opts->n_hkeyfiles > 0)?MAX_PASSSZ:strlen(h_pass), opts->h_prf_algo,
+		    (opts->n_hkeyfiles > 0)?MAX_PASSSZ:strlen(h_pass), &hidden_prf,
 		    opts->h_cipher_chain,
 		    blksz, blocks,
 		    blocks - (VOL_RSVD_BYTES_END/blksz) - hidden_blocks,
@@ -2059,19 +2095,17 @@ check_cipher_chain(const char *cipher_chain, int quiet)
 struct pbkdf_prf_algo *
 check_prf_algo(const char *algo, int sys, int quiet)
 {
-	int i, found = 0;
+	int i;
 
 	for (i = 0; pbkdf_prf_algos[i].name != NULL; i++) {
 		if (sys != pbkdf_prf_algos[i].sys)
 			continue;
 
-		if (strcmp(algo, pbkdf_prf_algos[i].name) == 0) {
-			found = 1;
-			break;
-		}
+		if (strcmp(algo, pbkdf_prf_algos[i].name) == 0)
+			return &pbkdf_prf_algos[i];
 	}
 
-	if (!found && !quiet) {
+	if (!quiet) {
 		fprintf(stderr, "Valid PBKDF PRF algorithms are: ");
 		for (i = 0; pbkdf_prf_algos[i].name != NULL; i++) {
 			if (sys != pbkdf_prf_algos[i].sys)
@@ -2079,10 +2113,9 @@ check_prf_algo(const char *algo, int sys, int quiet)
 			fprintf(stderr, "%s ", pbkdf_prf_algos[i].name);
 		}
 		fprintf(stderr, "\n");
-		return NULL;
 	}
 
-	return &pbkdf_prf_algos[i];
+	return NULL;
 }
 
 int

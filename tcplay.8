@@ -39,7 +39,8 @@
 .Nm
 .Fl c
 .Fl d Ar device
-.Op Fl g
+.Op Fl -pim Ar number
+.Op Fl g Op Fl -pim-hidden Ar number
 .Op Fl z
 .Op Fl w
 .Op Fl a Ar pbkdf_hash
@@ -179,6 +180,34 @@ This option can appear multiple times; if so, multiple
 keyfiles will be used.
 .El
 .Pp
+The
+.Fl -create ,
+.Fl -info
+and
+.Fl -map
+commands accept the following VeraCrypt options.
+.Bl -tag -width indent
+.It Fl -pim Ns = Ns Ar number
+Specifies the Personal Iterations Multiplier (PIM) for the volume being
+created or opened, including a hidden volume opened directly.
+When creating or protecting a hidden volume, this option applies to the outer volume.
+The value is a decimal integer from 0 to 2147468.
+Zero or an omitted option uses the standard iteration count for the selected PBKDF2 PRF.
+A positive PIM applies to non-system VeraCrypt volumes and sets the iteration
+count to 15,000 plus 1,000 times the PIM.
+When creating a volume with a positive PIM, the selected PRF must be a VeraCrypt PRF.
+A newly created volume uses the same PIM for its primary and backup headers.
+.It Fl -pim-hidden Ns = Ns Ar number
+Specifies the hidden volume's PIM when creating it with
+.Fl -hidden
+or protecting it with
+.Fl -protect-hidden .
+The range is the same as for
+.Fl -pim .
+Zero or an omitted option uses the hidden volume's standard iteration count,
+independently of the outer volume's PIM.
+.El
+.Pp
 Additional options for the
 .Fl -create
 command are:
@@ -250,27 +279,6 @@ This option only applies to the
 and
 .Fl -map
 commands.
-.It Fl -pim Ns = Ns Ar number
-Specifies the VeraCrypt Personal Iterations Multiplier (PIM) for
-.Fl -info
-and
-.Fl -map .
-The value is a decimal integer from 0 to 2147468.
-Zero, the default, uses the standard iteration count for each PBKDF2 PRF.
-A positive PIM selects non-system VeraCrypt volumes and sets the iteration
-count to 15,000 plus 1,000 times the PIM.
-The PIM applies to the volume being opened, including a hidden volume
-opened directly.
-With
-.Fl -protect-hidden ,
-it applies to the outer volume.
-.It Fl -pim-hidden Ns = Ns Ar number
-Specifies the hidden volume's PIM when
-.Fl -protect-hidden
-is enabled.
-The range is the same as for
-.Fl -pim .
-Zero or an omitted option uses the hidden volume's default iteration count.
 .It Fl p, Fl -prompt-passphrase
 This option causes
 .Nm
@@ -437,6 +445,12 @@ and
 .Fl -map
 can more than halve the time required to unlock the volume.
 .Sh EXAMPLES
+Create a VeraCrypt outer volume with PIM 600 and a hidden volume with PIM 700.
+.Bd -ragged -offset indent
+.Nm Fl -create Fl -device Ns = Ns Ar device
+.Fl -pim Ns = Ns Cm 600 Fl -hidden Fl -pim-hidden Ns = Ns Cm 700
+.Ed
+.Pp
 Create a new TrueCrypt volume on
 .Pa /dev/vn0
 using the cipher cascade

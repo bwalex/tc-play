@@ -248,7 +248,7 @@ tc_api_task_set(tc_api_task task, const char *key, ...)
 	} else if (_match(key, "pim") || _match(key, "h_pim")) {
 		int pim = va_arg(ap, int);
 		if (pim < 0 || pim > MAX_PIM_VALUE ||
-		    (task->op != TC_OP_INFO && task->op != TC_OP_MAP)) {
+		    (task->op != TC_OP_CREATE && task->op != TC_OP_INFO && task->op != TC_OP_MAP)) {
 			errno = EINVAL;
 			r = TC_ERR;
 		} else if (_match(key, "h_pim")) {
