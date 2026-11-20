@@ -52,7 +52,7 @@
 .Fl i
 .Fl d Ar device
 .Op Fl -pim Ar number
-.Op Fl e
+.Op Fl e Op Fl -pim-hidden Ar number
 .Op Fl p
 .Op Fl f Ar keyfile_hidden
 .Op Fl k Ar keyfile
@@ -67,7 +67,7 @@
 .Fl m Ar mapping
 .Fl d Ar device
 .Op Fl -pim Ar number
-.Op Fl e
+.Op Fl e Op Fl -pim-hidden Ar number
 .Op Fl p
 .Op Fl f Ar keyfile_hidden
 .Op Fl k Ar keyfile
@@ -264,7 +264,13 @@ opened directly.
 With
 .Fl -protect-hidden ,
 it applies to the outer volume.
-The protected hidden volume uses the default PIM.
+.It Fl -pim-hidden Ns = Ns Ar number
+Specifies the hidden volume's PIM when
+.Fl -protect-hidden
+is enabled.
+The range is the same as for
+.Fl -pim .
+Zero or an omitted option uses the hidden volume's default iteration count.
 .It Fl p, Fl -prompt-passphrase
 This option causes
 .Nm

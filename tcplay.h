@@ -203,6 +203,7 @@ struct tcplay_opts {
 	const char	*passphrase;
 	const char	*h_passphrase;
 	int		pim;
+	int		h_pim;		/* -1 when omitted */
 	int		interactive;
 	int		weak_keys_and_salt;
 

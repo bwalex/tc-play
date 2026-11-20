@@ -110,6 +110,7 @@ library supports the following features:
 .It Sy Feature         Ta Sy Description
 .It Li trim            Ta    Allows enabling discards/TRIM when mapping a volume
 .It Li pim             Ta    Supports the VeraCrypt PIM for info and map operations
+.It Li h_pim           Ta    Supports a separate PIM when protecting a hidden volume
 .El
 .Pp
 The
@@ -208,6 +209,7 @@ indicates the setting is optional.
 .It Li h_cipher_chain           Ta    "*"    Ta         Ta        Ta          Ta                Ta           Ta    ""
 .It Li protect_hidden           Ta           Ta    "*"  Ta    "*" Ta          Ta                Ta           Ta    ""
 .It Li pim                      Ta           Ta    "*"  Ta    "*" Ta          Ta                Ta           Ta    ""
+.It Li h_pim                    Ta           Ta    "*"  Ta    "*" Ta          Ta                Ta           Ta    ""
 .It Li fde                      Ta           Ta    "*"  Ta    "*" Ta          Ta                Ta           Ta    ""
 .It Li sys                      Ta           Ta    "*"  Ta    "*" Ta          Ta                Ta    "?"    Ta    "?"
 .It Li use_backup_header        Ta           Ta    "*"  Ta    "*" Ta          Ta                Ta    "*"    Ta    "*"
@@ -307,6 +309,19 @@ and
 .Fa fde
 options require a PIM of zero.
 Zero or an omitted option uses the default iteration count of each PRF.
+.It h_pim
+The vararg is an
+.Ft int
+with the same range as
+.Fa pim .
+When
+.Fa protect_hidden
+is enabled,
+.Fa pim
+applies to the outer volume and
+.Fa h_pim
+applies to the hidden volume.
+Zero or an omitted option uses the hidden volume's default iteration count.
 .It sys
 The vararg is of type
 .Ft const char * .

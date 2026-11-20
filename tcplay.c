@@ -875,7 +875,7 @@ info_map_common(struct tcplay_opts *opts, char *passphrase_out)
 	struct tcplay_info *info, *hinfo = NULL;
 	char *pass;
 	char *h_pass;
-	int error, error2 = 0;
+	int error;
 	size_t sz;
 	size_t blksz;
 	disksz_t blocks;
@@ -883,7 +883,12 @@ info_map_common(struct tcplay_opts *opts, char *passphrase_out)
 	int try_empty = 0;
 	int retries;
 
-	if (opts->pim > 0 && (opts->flags & (TC_FLAG_SYS | TC_FLAG_FDE))) {
+	if (opts->h_pim >= 0 && !opts->protect_hidden) {
+		tc_log(1, "A hidden volume PIM requires hidden volume protection\n");
+		errno = EINVAL;
+		return NULL;
+	}
+	if ((opts->pim > 0 || opts->h_pim > 0) && (opts->flags & (TC_FLAG_SYS | TC_FLAG_FDE))) {
 		tc_log(1, "A positive PIM requires a non-system VeraCrypt volume\n");
 		errno = EINVAL;
 		return NULL;
@@ -1045,22 +1050,19 @@ info_map_common(struct tcplay_opts *opts, char *passphrase_out)
 		 * volume, or the decryption/verification of the main header
 		 * failed.
 		 */
-		if (hehdr && (error || opts->protect_hidden)) {
-			if (error) {
-				error2 = process_hdr(opts->dev, opts->flags, (unsigned char *)pass,
-				    (opts->nkeyfiles > 0)?MAX_PASSSZ:strlen(pass),
-				    opts->pim, hehdr, &info);
-				is_hidden = !error2;
-			} else if (opts->protect_hidden) {
-				error2 = process_hdr(opts->dev, opts->flags, (unsigned char *)h_pass,
-				    (opts->n_hkeyfiles > 0)?MAX_PASSSZ:strlen(h_pass),
-				    0, hehdr, &hinfo);
-			}
+		if (hehdr && error && !opts->protect_hidden) {
+			error = process_hdr(opts->dev, opts->flags, (unsigned char *)pass,
+			    (opts->nkeyfiles > 0)?MAX_PASSSZ:strlen(pass),
+			    opts->pim, hehdr, &info);
+			is_hidden = !error;
+		} else if (hehdr && !error && opts->protect_hidden) {
+			error = process_hdr(opts->dev, opts->flags, (unsigned char *)h_pass,
+			    (opts->n_hkeyfiles > 0)?MAX_PASSSZ:strlen(h_pass),
+			    opts->h_pim, hehdr, &hinfo);
 		}
 
 		/* We need both to protect a hidden volume */
-		if ((opts->protect_hidden && (error || error2)) ||
-		    (error && error2)) {
+		if (error || (opts->protect_hidden && hinfo == NULL)) {
 			if (!try_empty)
 				tc_log(1, "Incorrect password or not a TrueCrypt volume\n");
 
@@ -2109,6 +2111,7 @@ struct tcplay_opts *opts_init(void)
 	memset(opts, 0, sizeof(*opts));
 
 	opts->retries = DEFAULT_RETRIES;
+	opts->h_pim = -1;
 	opts->secure_erase = 1;
 
 	return opts;

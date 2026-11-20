@@ -53,6 +53,7 @@
 #define FLAG_LONG_USE_HDR_FILE	0xfe01
 #define FLAG_LONG_USE_HHDR_FILE	0xfe02
 #define FLAG_LONG_PIM		0xfe03
+#define FLAG_LONG_PIM_HIDDEN	0xfe04
 #define FLAG_LONG_NO_RETRIES	0xfabc
 
 
@@ -71,10 +72,10 @@ usage(void)
 	fprintf(stderr,
 	    "usage: tcplay -c -d device [-g] [-z] [-w] [-a pbkdf_hash] [-b cipher]\n"
 	    "              [-f keyfile_hidden] [-k keyfile] [-x pbkdf_hash] [-y cipher]\n"
-	    "       tcplay -i -d device [-e] [-p] [-f keyfile_hidden] [-k keyfile]\n"
+	    "       tcplay -i -d device [-e [--pim-hidden=N]] [-p] [-f keyfile_hidden] [-k keyfile]\n"
 	    "              [-s system_device] [--fde] [--pim=N] [--use-backup]\n"
 	    "              [--use-hdr-file=hdr_file] [--use-hidden-hdr-file=hdr_file]\n"
-	    "       tcplay -m mapping -d device [-e] [-p] [-f keyfile_hidden] [-k keyfile]\n"
+	    "       tcplay -m mapping -d device [-e [--pim-hidden=N]] [-p] [-f keyfile_hidden] [-k keyfile]\n"
 	    "              [-s system_device] [--fde] [--pim=N] [--use-backup] [--allow-trim]\n"
 	    "              [--use-hdr-file=hdr_file] [--use-hidden-hdr-file=hdr_file]\n"
 	    "       tcplay --modify -d device [-k keyfile] [--new-keyfile=keyfile]\n"
@@ -173,6 +174,8 @@ usage(void)
 	    "\t volume. Zero (the default) uses the standard PBKDF2 iteration count.\n"
 	    " -e, --protect-hidden\n"
 	    "\t Protect a hidden volume when mounting the outer volume.\n"
+	    " --pim-hidden=N\n"
+	    "\t Sets the VeraCrypt PIM for the hidden volume with --protect-hidden.\n"
 	    " -p, --prompt-passphrase\n"
 	    "\t Immediately prompt for a passphrase even if a keyfile is supplied.\n"
 	    " -s <disk path>, --system-encryption=<disk path>\n"
@@ -223,6 +226,7 @@ static struct option longopts[] = {
 	{ "device",		required_argument,	NULL, 'd' },
 	{ "prompt-passphrase",	no_argument,		NULL, 'p' },
 	{ "pim",		required_argument,	NULL, FLAG_LONG_PIM },
+	{ "pim-hidden",		required_argument,	NULL, FLAG_LONG_PIM_HIDDEN },
 	{ "system-encryption",	required_argument,	NULL, 's' },
 	{ "allow-trim",		no_argument,		NULL, 't' },
 	{ "fde",		no_argument,		NULL, FLAG_LONG_FDE },
@@ -388,7 +392,8 @@ main(int argc, char *argv[])
 		case FLAG_LONG_FDE:
 			opts->flags |= TC_FLAG_FDE;
 			break;
-		case FLAG_LONG_PIM: {
+		case FLAG_LONG_PIM:
+		case FLAG_LONG_PIM_HIDDEN: {
 			char *end;
 
 			arg_pim = strtol(optarg, &end, 10);
@@ -398,7 +403,10 @@ main(int argc, char *argv[])
 				    MAX_PIM_VALUE);
 				return EXIT_FAILURE;
 			}
-			opts->pim = (int)arg_pim;
+			if (ch == FLAG_LONG_PIM_HIDDEN)
+				opts->h_pim = (int)arg_pim;
+			else
+				opts->pim = (int)arg_pim;
 			break;
 		}
 		case FLAG_LONG_USE_BACKUP:
