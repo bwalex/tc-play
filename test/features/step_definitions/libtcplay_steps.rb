@@ -15,6 +15,15 @@ Given /^I map volume ([^\s]+) as ([^\s]+) with the API using the following setti
   r = TCplayLib.tc_api_task_set(task, "dev", :string, loop_dev)
   r.should == TCplayLib::TC_OK
 
+  if s['pim']
+    r = TCplayLib.tc_api_task_set(task, "pim", :int, Integer(s['pim'], 10))
+    r.should == TCplayLib::TC_OK
+  end
+  if s['pim_hidden']
+    r = TCplayLib.tc_api_task_set(task, "h_pim", :int, Integer(s['pim_hidden'], 10))
+    r.should == TCplayLib::TC_OK
+  end
+
   unless s['keyfiles'].nil?
     ParseHelper.csv_parse(s['keyfiles']) do |kf|
       r = TCplayLib.tc_api_task_set(task, "keyfiles", :string, "keyfiles/#{kf}")

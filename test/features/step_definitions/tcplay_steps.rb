@@ -31,6 +31,7 @@ Given /^I map volume ([^\s]+) as ([^\s]+) using the following settings:$/ do |vo
     "-d #{loop_dev}"
   ]
   @args << "--pim=#{Integer(s['pim'], 10)}" if s['pim']
+  @args << "--pim-hidden=#{Integer(s['pim_hidden'], 10)}" if s['pim_hidden']
 
   ParseHelper.csv_parse(s['keyfiles']) { |kf| @args << "-k \"keyfiles/#{kf}\"" } unless s['keyfiles'].nil?
   ParseHelper.csv_parse(s['keyfiles_hidden']) { |kf| @args << "-f \"keyfiles/#{kf}\"" } unless s['keyfiles_hidden'].nil?
@@ -57,11 +58,13 @@ Given /^I map volume ([^\s]+) as ([^\s]+) using the following settings:$/ do |vo
         tcplay_io.write("#{s['passphrase_hidden']}\n")
       end
     end
+    tcplay_io.close_write
+    tcplay_io.read # Keep stdout open for tcplay's final status message.
   end
 
   @error = ($? != 0)
 
-  @mappings << map
+  @mappings << map unless @error
   @maps = DMSetupHelper.get_crypt_mappings("#{map}")
 end
 
@@ -138,6 +141,7 @@ Given /^I request information about volume ([^\s]+) using the following settings
     "-d #{loop_dev}"
   ]
   @args << "--pim=#{Integer(s['pim'], 10)}" if s['pim']
+  @args << "--pim-hidden=#{Integer(s['pim_hidden'], 10)}" if s['pim_hidden']
 
   ParseHelper.csv_parse(s['keyfiles']) { |kf| @args << "-k \"keyfiles/#{kf}\"" } unless s['keyfiles'].nil?
   ParseHelper.csv_parse(s['keyfiles_hidden']) { |kf| @args << "-f \"keyfiles/#{kf}\"" } unless s['keyfiles_hidden'].nil?
@@ -335,6 +339,10 @@ end
 Then /^I expect dmsetup to have the following tables:$/ do |tables|
   tables.map_headers! { |h| h.to_sym }
   tables.diff!(@maps)
+end
+
+Then /^I expect no mapping named (\S+)$/ do |map|
+  File.exist?("/dev/mapper/#{map}").should == false
 end
 
 

@@ -41,9 +41,11 @@ name of the mapped device.
 The settings are specified in a table - the following are all possible settings:
 passphrase              | Any passphrase
 keyfiles                | path_to_kf1, path_to_kf2, ...
+pim                     | VeraCrypt PIM for the volume being opened
 protect_hidden          | yes/no
 passphrase_hidden       | Any passphrase
 keyfiles_hidden         | path_to_kf1, path_to_kf2, ...
+pim_hidden              | Hidden volume PIM with protect_hidden enabled
 use_backup              | yes/no
 
 
@@ -55,9 +57,11 @@ Where <volume_name> is a file name containing a volume.
 The settings are specified in a table - the following are all possible settings:
 passphrase              | Any passphrase
 keyfiles                | path_to_kf1, path_to_kf2, ...
+pim                     | VeraCrypt PIM for the volume being opened (CLI)
 protect_hidden          | yes/no
 passphrase_hidden       | Any passphrase
 keyfiles_hidden         | path_to_kf1, path_to_kf2, ...
+pim_hidden              | Hidden volume PIM with protect_hidden enabled (CLI)
 use_backup              | yes/no
 
 
@@ -117,7 +121,7 @@ The tables that should have been created by a previous "Given I map..." are
 specified as a table with the following headers:
 name                    | Name of the mapped volume
 begin                   | First sector of the table
-end                     | Last sector of the table
+end                     | Length of the table in sectors, as reported by dmsetup
 algo                    | Algorithm used for dm-crypt
 key                     | The master key, in hexadecimal
 offset                  | The offset on the raw device at which the volume starts
@@ -160,3 +164,7 @@ fields will be missing.
 
 
 * "Then I expect tcplay to fail"
+
+* "Then I expect no mapping named <map_name>"
+
+Checks that /dev/mapper/<map_name> does not exist after a mapping attempt.
