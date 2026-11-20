@@ -425,10 +425,27 @@ free_info(struct tcplay_info *info)
 int
 adjust_info(struct tcplay_info *info, struct tcplay_info *hinfo)
 {
-	if (hinfo->hdr->sz_hidvol == 0)
+	const struct tchdr_dec *outer = info->hdr;
+	const struct tchdr_dec *hidden = hinfo->hdr;
+	uint64_t outer_prefix_bytes;
+
+	if (hidden->sz_hidvol == 0 || hidden->off_mk_scope <= outer->off_mk_scope)
 		return 1;
 
-	info->size -= hinfo->hdr->sz_hidvol / hinfo->hdr->sec_sz;
+	/*
+	 * The outer mapping ends where the hidden data begins. The distance
+	 * between the two starting offsets gives the usable length in bytes,
+	 * even when there is unused space after the hidden data.
+	 * The hidden data must fit inside the outer volume, and the usable
+	 * length must be a whole number of outer volume sectors.
+	 */
+	outer_prefix_bytes = hidden->off_mk_scope - outer->off_mk_scope;
+	if (outer_prefix_bytes > outer->sz_mk_scope ||
+	    hidden->sz_hidvol > outer->sz_mk_scope - outer_prefix_bytes ||
+	    outer_prefix_bytes % info->blk_sz != 0)
+		return 1;
+
+	info->size = outer_prefix_bytes / info->blk_sz;
 	return 0;
 }
 
