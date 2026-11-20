@@ -290,8 +290,8 @@ It determines which cipher chain is used to encrypt the hidden volume.
 .It protect_hidden
 The vararg is of type
 .Ft int .
-It determines whether the size of the outer volume should be adjusted to protect
-any hidden volume.
+When enabled, the outer volume ends immediately before the first sector of
+the hidden volume.
 Using this mode requires both outer and hidden passphrases and keyfiles.
 .It pim
 The vararg is an
