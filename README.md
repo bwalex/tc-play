@@ -1,3 +1,12 @@
+Acknowledgments
+==========
+
+Special thanks to [Alex Hornung](https://github.com/bwalex) for creating
+[tc-play](https://github.com/bwalex/tc-play) and for the years he devoted to
+maintaining it. Behind the simplicity of opening an encrypted volume with a
+single command are countless hours of patient, thoughtful work. This fork owes
+its existence to that dedication and to Alex’s generosity in sharing his work.
+
 About
 ==========
 tcplay is a free (BSD-licensed), pretty much fully featured (including multiple

@@ -361,6 +361,28 @@ Then /^I expect tcplay to report the following:$/ do |expected_info|
   end
 end
 
+Then %r{^I expect valid checksums in both AES-256-XTS/SHA512-VC headers of volume (\S+) with passphrase "([^"]*)"$} do |vol, passphrase|
+  require 'openssl'
+  require 'zlib'
+
+  File.open("volumes/#{vol}", 'rb') do |volume|
+    offsets = { 'primary' => 0, 'backup' => volume.size - 128 * 1024 }
+    offsets.each do |name, offset|
+      volume.seek(offset)
+      salt = volume.read(64)
+      cipher = OpenSSL::Cipher.new('aes-256-xts')
+      cipher.decrypt
+      cipher.key = OpenSSL::PKCS5.pbkdf2_hmac(passphrase, salt, 500_000, cipher.key_len, 'SHA512')
+      cipher.iv = "\0" * cipher.iv_len
+      header = cipher.update(volume.read(448)) + cipher.final
+
+      stored_crc = header.byteslice(188, 4).unpack1('N')
+      expected_crc = Zlib.crc32(header.byteslice(0, 188))
+      stored_crc.should eq(expected_crc), "Incorrect CRC32 in the #{name} volume header"
+    end
+  end
+end
+
 Then /^I expect tcplay to succeed$/ do
   @error.should == false
 end
