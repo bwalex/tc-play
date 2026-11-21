@@ -175,3 +175,37 @@ Feature: API volume modification
       | Volume size        | 2097152 bytes               |
       | IV offset          | 8257536 bytes               |
       | Block offset       | 8257536 bytes               |
+
+  Scenario: Keep the VeraCrypt PIM when saving and restoring a header from file
+    Given I create a volume tmpvol1 of size 10M using the API with the following parameters:
+      | passphrase | test |
+      | pim        | 7    |
+    When I modify volume tmpvol1 with the API by saving a header copy to tmpvol1_pim_hdr using the following settings:
+      | passphrase     | test   |
+      | new_passphrase | backup |
+      | pim            | 7      |
+    Then I expect tcplay to succeed
+    When I modify volume tmpvol1 with the API by restoring from header copy tmpvol1_pim_hdr using the following settings:
+      | passphrase | backup |
+      | pim        | 13     |
+    Then I expect tcplay to fail
+    When I request information about volume tmpvol1 using the following settings:
+      | passphrase | test |
+      | pim        | 7    |
+    Then I expect tcplay to report the following:
+      | PBKDF2 iterations | 22000 |
+    When I modify volume tmpvol1 with the API by restoring from header copy tmpvol1_pim_hdr using the following settings:
+      | passphrase | backup |
+      | pim        | 7      |
+    Then I expect tcplay to succeed
+    When I request information about volume tmpvol1 using the following settings:
+      | passphrase | backup |
+      | pim        | 7      |
+    Then I expect tcplay to report the following:
+      | PBKDF2 iterations | 22000 |
+    When I request information about volume tmpvol1 using the following settings:
+      | passphrase | backup |
+      | pim        | 7      |
+      | use_backup | yes    |
+    Then I expect tcplay to report the following:
+      | PBKDF2 iterations | 22000 |

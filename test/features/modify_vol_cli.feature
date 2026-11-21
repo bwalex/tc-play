@@ -240,3 +240,36 @@ Feature: Command line volume modification
       | Volume size        | 4096 sectors                |
       | IV offset          | 16128 sectors               |
       | Block offset       | 16128 sectors               |
+
+  Scenario: Keep the VeraCrypt PIM when changing the passphrase, keyfiles and PRF
+    Given I create a volume tmpvol1 of size 10M with the following parameters:
+      | passphrase | test      |
+      | pbkdf_prf  | SHA512-VC |
+      | pim        | 7         |
+    When I modify volume tmpvol1 using the following settings:
+      | passphrase     | test      |
+      | pim            | 7         |
+      | new_passphrase | new       |
+      | new_keyfiles   | key.1     |
+      | new_pbkdf_prf  | SHA256-VC |
+    Then I expect tcplay to succeed
+    When I request information about volume tmpvol1 using the following settings:
+      | passphrase | new   |
+      | keyfiles   | key.1 |
+      | pim        | 7     |
+    Then I expect tcplay to report the following:
+      | PBKDF2 PRF        | SHA256-VC |
+      | PBKDF2 iterations | 22000     |
+    When I corrupt sector 0 of volume tmpvol1
+    And I modify volume tmpvol1 by restoring from the backup header using the following settings:
+      | passphrase | new   |
+      | keyfiles   | key.1 |
+      | pim        | 7     |
+    Then I expect tcplay to succeed
+    When I request information about volume tmpvol1 using the following settings:
+      | passphrase | new   |
+      | keyfiles   | key.1 |
+      | pim        | 7     |
+    Then I expect tcplay to report the following:
+      | PBKDF2 PRF        | SHA256-VC |
+      | PBKDF2 iterations | 22000     |

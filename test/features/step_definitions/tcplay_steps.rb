@@ -214,6 +214,7 @@ Given /^I modify volume ([^\s]+) using the following settings:$/ do |vol,setting
     "-w", # We don't want to wait for /dev/random to have enough entropy
   ]
 
+  @args << "--pim=#{Integer(s['pim'], 10)}" if s['pim']
   ParseHelper.csv_parse(s['keyfiles']) { |kf| @args << "-k \"keyfiles/#{kf}\"" } unless s['keyfiles'].nil?
   ParseHelper.csv_parse(s['new_keyfiles']) { |kf| @args << "--new-keyfile=\"keyfiles/#{kf}\"" } unless s['new_keyfiles'].nil?
 
@@ -237,6 +238,8 @@ Given /^I modify volume ([^\s]+) using the following settings:$/ do |vol,setting
     tcplay_io.expect /Repeat/, 10 do
       tcplay_io.write("#{s['new_passphrase']}\n")
     end
+    tcplay_io.close_write
+    tcplay_io.read
   end
   @error = ($? != 0)
 end
@@ -254,6 +257,7 @@ Given /^I modify volume ([^\s]+) by restoring from the backup header using the f
     "-w", # We don't want to wait for /dev/random to have enough entropy
   ]
 
+  @args << "--pim=#{Integer(s['pim'], 10)}" if s['pim']
   ParseHelper.csv_parse(s['keyfiles']) { |kf| @args << "-k \"keyfiles/#{kf}\"" } unless s['keyfiles'].nil?
 
   s['passphrase'] ||= ''
@@ -264,6 +268,8 @@ Given /^I modify volume ([^\s]+) by restoring from the backup header using the f
         tcplay_io.write("#{s['passphrase']}\n")
       end
     end
+    tcplay_io.close_write
+    tcplay_io.read
   end
   @error = ($? != 0)
 end

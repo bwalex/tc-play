@@ -101,6 +101,7 @@ Where <volume_name> is a file name containing a volume.
 The settings are specified in a table - the following are all possible settings:
 passphrase              | Any passphrase
 keyfiles                | path_to_kf1, path_to_kf2, ...
+pim                     | Current VeraCrypt PIM (CLI)
 new_passphrase          | Any passphrase
 new_keyfiles            | path_to_kf1, path_to_kf2, ...
 new_pbkdf_prf           | Any valid tcplay PBKDF PRF
@@ -114,6 +115,10 @@ Where <volume_name> is a file name containing a volume.
 The settings are specified in a table - the following are all possible settings:
 passphrase              | Any passphrase
 keyfiles                | path_to_kf1, path_to_kf2, ...
+pim                     | VeraCrypt PIM for the backup header
+
+The API steps for saving a header to a file and restoring it from a file also
+accept pim.
 
 
 

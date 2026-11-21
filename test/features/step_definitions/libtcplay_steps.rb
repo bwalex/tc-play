@@ -390,6 +390,11 @@ Given(/^I modify volume ([^\s]+) with the API by saving a header copy to ([^\s]+
   r = TCplayLib.tc_api_task_set(task, "dev", :string, loop_dev)
   r.should == TCplayLib::TC_OK
 
+  if s['pim']
+    r = TCplayLib.tc_api_task_set(task, "pim", :int, Integer(s['pim'], 10))
+    r.should == TCplayLib::TC_OK
+  end
+
   unless s['keyfiles'].nil?
     ParseHelper.csv_parse(s['keyfiles']) do |kf|
       r = TCplayLib.tc_api_task_set(task, "keyfiles", :string, "keyfiles/#{kf}")
@@ -411,7 +416,9 @@ Given(/^I modify volume ([^\s]+) with the API by saving a header copy to ([^\s]+
   r = TCplayLib.tc_api_task_set(task, "weak_keys_and_salt", :int, 1)
   r.should == TCplayLib::TC_OK
 
+  header_existed = File.exist?(hdr_file)
   @error = (TCplayLib.tc_api_task_do(task) != TCplayLib::TC_OK)
+  @files_to_delete << hdr_file if !header_existed && File.exist?(hdr_file)
   if (@error)
   #  #@err_str = TCplayLib.tc_api_get_error_msg()
   end
@@ -427,6 +434,11 @@ Given(/^I modify volume ([^\s]+) with the API by restoring from header copy ([^\
   task = TCplayLib.tc_api_task_init("restore")
   r = TCplayLib.tc_api_task_set(task, "dev", :string, loop_dev)
   r.should == TCplayLib::TC_OK
+
+  if s['pim']
+    r = TCplayLib.tc_api_task_set(task, "pim", :int, Integer(s['pim'], 10))
+    r.should == TCplayLib::TC_OK
+  end
 
   unless s['keyfiles'].nil?
     ParseHelper.csv_parse(s['keyfiles']) do |kf|
