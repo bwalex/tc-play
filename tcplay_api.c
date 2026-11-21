@@ -247,11 +247,15 @@ tc_api_task_set(tc_api_task task, const char *key, ...)
 		opts->protect_hidden = i;
 	} else if (_match(key, "pim") || _match(key, "h_pim")) {
 		int pim = va_arg(ap, int);
-		if (pim < 0 || pim > MAX_PIM_VALUE ||
-		    (task->op != TC_OP_CREATE && task->op != TC_OP_INFO && task->op != TC_OP_MAP)) {
+		int hidden = _match(key, "h_pim");
+		int supported = task->op == TC_OP_CREATE || task->op == TC_OP_INFO ||
+		    task->op == TC_OP_MAP || (!hidden &&
+		    (task->op == TC_OP_MODIFY || task->op == TC_OP_RESTORE));
+
+		if (pim < 0 || pim > MAX_PIM_VALUE || !supported) {
 			errno = EINVAL;
 			r = TC_ERR;
-		} else if (_match(key, "h_pim")) {
+		} else if (hidden) {
 			opts->h_pim = pim;
 		} else {
 			opts->pim = pim;

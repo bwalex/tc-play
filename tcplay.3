@@ -109,7 +109,7 @@ library supports the following features:
 .Bl -column "some_long_feature" "Description"
 .It Sy Feature         Ta Sy Description
 .It Li trim            Ta    Allows enabling discards/TRIM when mapping a volume
-.It Li pim             Ta    Supports the VeraCrypt PIM for create, info and map operations
+.It Li pim             Ta    Supports the VeraCrypt PIM for create, info, map, modify and restore operations
 .It Li h_pim           Ta    Supports a separate PIM when creating or protecting a hidden volume
 .El
 .Pp
@@ -208,7 +208,7 @@ indicates the setting is optional.
 .It Li cipher_chain             Ta    "*"    Ta         Ta        Ta          Ta                Ta           Ta    ""
 .It Li h_cipher_chain           Ta    "*"    Ta         Ta        Ta          Ta                Ta           Ta    ""
 .It Li protect_hidden           Ta           Ta    "*"  Ta    "*" Ta          Ta                Ta           Ta    ""
-.It Li pim                      Ta    "*"    Ta    "*"  Ta    "*" Ta          Ta                Ta           Ta    ""
+.It Li pim                      Ta    "*"    Ta    "*"  Ta    "*" Ta          Ta                Ta    "*"    Ta    "*"
 .It Li h_pim                    Ta    "*"    Ta    "*"  Ta    "*" Ta          Ta                Ta           Ta    ""
 .It Li fde                      Ta           Ta    "*"  Ta    "*" Ta          Ta                Ta           Ta    ""
 .It Li sys                      Ta           Ta    "*"  Ta    "*" Ta          Ta                Ta    "?"    Ta    "?"
@@ -309,6 +309,13 @@ and
 .Fa fde
 options require a PIM of zero.
 Zero or an omitted option uses the default iteration count of each PRF.
+The
+.Sy modify
+operation keeps the current PIM when writing the primary and backup headers
+or saving a header to a file.
+The
+.Sy restore
+operation uses the PIM, passphrase and keyfiles of the header being restored.
 .It h_pim
 The vararg is of type
 .Ft int .

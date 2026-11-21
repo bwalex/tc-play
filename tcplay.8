@@ -81,6 +81,7 @@
 .Nm
 .Fl -modify
 .Fl d Ar device
+.Op Fl -pim Ar number
 .Op Fl k Ar keyfile
 .Op Fl -new-keyfile Ar new_keyfile
 .Op Fl -new-pbkdf-prf Ar pbkdf_hash
@@ -94,6 +95,7 @@
 .Nm
 .Fl -modify
 .Fl d Ar device
+.Op Fl -pim Ar number
 .Op Fl k Ar keyfile
 .Fl -restore-from-backup-hdr
 .Op Fl w
@@ -180,12 +182,7 @@ This option can appear multiple times; if so, multiple
 keyfiles will be used.
 .El
 .Pp
-The
-.Fl -create ,
-.Fl -info
-and
-.Fl -map
-commands accept the following VeraCrypt options.
+The following options specify the VeraCrypt PIM.
 .Bl -tag -width indent
 .It Fl -pim Ns = Ns Ar number
 Specifies the Personal Iterations Multiplier (PIM) for the volume being
@@ -195,8 +192,13 @@ The value is a decimal integer from 0 to 2147468.
 Zero or an omitted option uses the standard iteration count for the selected PBKDF2 PRF.
 A positive PIM applies to non-system VeraCrypt volumes and sets the iteration
 count to 15,000 plus 1,000 times the PIM.
-When creating a volume with a positive PIM, the selected PRF must be a VeraCrypt PRF.
+When creating or modifying a volume with a positive PIM, the selected PRF
+must be a VeraCrypt PRF.
 A newly created volume uses the same PIM for its primary and backup headers.
+The
+.Fl -modify
+command keeps the current PIM when writing the primary and backup headers
+or saving a header to a file.
 .It Fl -pim-hidden Ns = Ns Ar number
 Specifies the hidden volume's PIM when creating it with
 .Fl -hidden
@@ -365,8 +367,8 @@ nor
 should be specified.
 This option implies
 .Fl -use-backup .
-Use this option to restore the volume headers from the backup
-header.
+Restoring both volume headers requires the passphrase and keyfiles of the
+backup header and, for VeraCrypt, its PIM.
 .El
 .Pp
 Sending a
@@ -592,8 +594,8 @@ command can be used:
 .Fl -restore-from-backup-hdr
 .Ed
 .Pp
-As with most other commands, which header is saved (used as source) depends
-on the passphrase and keyfiles used.
+The passphrase, keyfiles and, for VeraCrypt, the PIM determine whether the
+outer or hidden header is restored.
 .Pp
 To save a backup copy of a header, the following command can be used:
 .Bd -ragged -offset indent
@@ -603,26 +605,30 @@ To save a backup copy of a header, the following command can be used:
 .Ed
 .Pp
 As with most other commands, which header is saved (used as source) depends
-on the passphrase and keyfiles used.
+on the passphrase, keyfiles and, for VeraCrypt, the PIM.
 .Pp
 To restore a header from a backup header file, the following command can be
 used:
 .Bd -ragged -offset indent
 .Nm Fl -modify
-.Nm -use-hdr-file Ns = Ns Cm /tmp/sdb_backup_header.hdr
+.Fl -device Ns = Ns Cm /dev/sdb
+.Fl -restore-from-backup-hdr
+.Fl -use-hdr-file Ns = Ns Cm /tmp/sdb_backup_header.hdr
 .Ed
 .Pp
 Similarly, to restore a hidden header from a backup header file:
 .Bd -ragged -offset indent
 .Nm Fl -modify
-.Nm -use-hidden-hdr-file Ns = Ns Cm /tmp/sdb_backup_hidden_header.hdr
+.Fl -device Ns = Ns Cm /dev/sdb
+.Fl -restore-from-backup-hdr
+.Fl -use-hidden-hdr-file Ns = Ns Cm /tmp/sdb_backup_hidden_header.hdr
 .Ed
 .Pp
 Which header is used as the source of the operation will still depend on the
-passphrase and keyfiles used.
+passphrase, keyfiles and, for VeraCrypt, the PIM.
 Even if you use the
 .Fl -use-hidden-hdr-file
-option, if you specify the passphrase and keyfiles for the main header, the
+option, if the supplied credentials open the main header, the
 main header will be used instead.
 .Sh SEE ALSO
 .Xr crypttab 5 ,

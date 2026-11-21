@@ -1246,7 +1246,7 @@ modify_volume(struct tcplay_opts *opts)
 	struct tchdr_enc *ehdr, *ehdr_backup;
 	const char *new_passphrase = opts->new_passphrase;
 	const char **new_keyfiles = opts->new_keyfiles;
-	struct pbkdf_prf_algo *new_prf_algo = opts->new_prf_algo;
+	struct pbkdf_prf_algo prf;
 	int n_newkeyfiles = opts->n_newkeyfiles;
 	char *pass, *pass_again;
 	int ret = -1;
@@ -1272,12 +1272,21 @@ modify_volume(struct tcplay_opts *opts)
 		}
 		new_keyfiles = opts->keyfiles;
 		n_newkeyfiles = opts->nkeyfiles;
-		new_prf_algo = NULL;
 	}
 
 	info = info_map_common(opts, pass);
 	if (info == NULL)
 		goto out;
+
+	/* By default stick to current PRF algo */
+	prf = *info->pbkdf_prf;
+	if (opts->new_prf_algo != NULL && !TC_FLAG_SET(opts->flags, ONLY_RESTORE))
+		prf = *opts->new_prf_algo;
+	if (apply_pim(&prf, opts->pim) != 0) {
+		tc_log(1, "A positive PIM requires a VeraCrypt PRF\n");
+		errno = EINVAL;
+		goto out;
+	}
 
 	if (opts->interactive && !TC_FLAG_SET(opts->flags, ONLY_RESTORE)) {
 		if (((pass = alloc_safe_mem(PASS_BUFSZ)) == NULL) ||
@@ -1325,8 +1334,8 @@ modify_volume(struct tcplay_opts *opts)
 	}
 
 	ehdr = copy_reencrypt_hdr((unsigned char *)pass,
-	    (opts->n_newkeyfiles > 0)?MAX_PASSSZ:strlen(pass),
-	    new_prf_algo, opts->weak_keys_and_salt, info, &ehdr_backup);
+	    (n_newkeyfiles > 0)?MAX_PASSSZ:strlen(pass),
+	    &prf, opts->weak_keys_and_salt, info, &ehdr_backup);
 	if (ehdr == NULL) {
 		tc_log(1, "Could not create header\n");
 		goto out;
@@ -1393,7 +1402,7 @@ out:
 	if (ehdr_backup)
 		free_safe_mem(ehdr_backup);
 	if (info)
-		free_safe_mem(info);
+		free_info(info);
 
 	return ret;
 }

@@ -79,11 +79,11 @@ usage(void)
 	    "       tcplay -m mapping -d device [-e [--pim-hidden=N]] [-p] [-f keyfile_hidden] [-k keyfile]\n"
 	    "              [-s system_device] [--fde] [--pim=N] [--use-backup] [--allow-trim]\n"
 	    "              [--use-hdr-file=hdr_file] [--use-hidden-hdr-file=hdr_file]\n"
-	    "       tcplay --modify -d device [-k keyfile] [--new-keyfile=keyfile]\n"
+	    "       tcplay --modify -d device [--pim=N] [-k keyfile] [--new-keyfile=keyfile]\n"
 	    "              [--new-pbkdf-prf=pbkdf_hash] [-s system_device] [--fde]\n"
-	    "              [--use-backup] [--save-hdr-to-file=hdr_file] [-w]\n"
+	    "              [--use-backup] [--save-hdr-backup=hdr_file] [-w]\n"
 	    "              [--use-hdr-file=hdr_file] [--use-hidden-hdr-file=hdr_file]\n"
-	    "       tcplay --modify -d device [-k keyfile] --restore-from-backup-hdr [-w]\n"
+	    "       tcplay --modify -d device [--pim=N] [-k keyfile] --restore-from-backup-hdr [-w]\n"
 	    "       tcplay -j mapping\n"
 	    "       tcplay -u mapping\n"
 	    "       tcplay -h | -v\n"
@@ -141,6 +141,9 @@ usage(void)
 	    "\t testing.\n"
 	    "\n"
 	    "Valid options for --modify are:\n"
+	    " --pim=N\n"
+	    "\t Uses the current VeraCrypt PIM to open the source header and\n"
+	    "\t keeps it when writing the new headers.\n"
 	    " --new-keyfile=<key file>\n"
 	    "\t Specifies a key file to use for the password derivation, when\n"
 	    "\t re-encrypting the header, can appear multiple times.\n"
@@ -165,8 +168,8 @@ usage(void)
 	    " --restore-from-backup-hdr\n"
 	    "\t Implies --use-backup, no new PBKDF hashing function, no new keyfiles\n"
 	    "\t and no new passphrase.\n"
-	    "\t In other words, this will simply restore both headers from the backup\n"
-	    "\t header. This option cannot be used to restore from a backup header file.\n"
+	    "\t Restores both headers using the passphrase, keyfiles and PIM of\n"
+	    "\t the backup header.\n"
 	    " -w, --weak-keys\n"
 	    "\t Uses a weak source of entropy (urandom) for salt material. The\n"
 	    "\t key material is not affected, as the master keys are kept intact.\n"
@@ -474,8 +477,9 @@ main(int argc, char *argv[])
 	if (!(((map_vol || info_vol || create_vol || modify_vol) && opts->dev != NULL) ||
 	    ((unmap_vol || info_map) && opts->map_name != NULL)) ||
 	    (TC_FLAG_SET(opts->flags, SYS) && TC_FLAG_SET(opts->flags, FDE)) ||
-	    (arg_pim >= 0 && !map_vol && !info_vol &&
+	    (arg_pim >= 0 && !map_vol && !info_vol && !modify_vol &&
 	    (!create_vol || TC_FLAG_SET(opts->flags, SYS) || TC_FLAG_SET(opts->flags, FDE))) ||
+	    (modify_vol && opts->h_pim >= 0) ||
 	    (map_vol + info_vol + create_vol + unmap_vol + info_map + modify_vol > 1) ||
 	    (opts->hidden && !create_vol) ||
 	    (TC_FLAG_SET(opts->flags, SYS) && (opts->sys_dev == NULL)) ||
