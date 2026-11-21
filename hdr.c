@@ -35,6 +35,7 @@
 #include <endian.h>
 #endif
 #include <errno.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <inttypes.h>
@@ -256,7 +257,7 @@ create_hdr(unsigned char *pass, int passlen, struct pbkdf_prf_algo *prf_algo,
 	HOST_TO_BE(32, dhdr->sec_sz);
 	HOST_TO_BE(32, dhdr->flags);
 
-	dhdr->crc_dhdr = crc32((void *)dhdr, 188);
+	dhdr->crc_dhdr = crc32(dhdr, offsetof(struct tchdr_dec, crc_dhdr));
 	HOST_TO_BE(32, dhdr->crc_dhdr);
 
 	memset(iv, 0, sizeof(iv));
@@ -311,6 +312,7 @@ struct tchdr_enc *copy_reencrypt_hdr(unsigned char *pass, int passlen,
 	unsigned char *key, *key_backup;
 	unsigned char iv[128];
 	const struct sig_hdr_cfg *hdr_cfg;
+	const uint16_t header_version = info->hdr->tc_ver;
 	int error;
 
 	key = key_backup = NULL;
@@ -388,6 +390,8 @@ struct tchdr_enc *copy_reencrypt_hdr(unsigned char *pass, int passlen,
 	HOST_TO_BE(64, info->hdr->sz_mk_scope);
 	HOST_TO_BE(32, info->hdr->sec_sz);
 	HOST_TO_BE(32, info->hdr->flags);
+	if (header_version >= 4)
+		info->hdr->crc_dhdr = crc32(info->hdr, offsetof(struct tchdr_dec, crc_dhdr));
 	HOST_TO_BE(32, info->hdr->crc_dhdr);
 
 	memset(iv, 0, sizeof(iv));
