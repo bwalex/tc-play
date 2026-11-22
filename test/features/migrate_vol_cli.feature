@@ -28,3 +28,4 @@ Feature: Command line volume migration from TrueCrypt to VeraCrypt
       | Volume size        | 19968 sectors     |
       | IV offset          | 256 sectors       |
       | Block offset       | 256 sectors       |
+    And I expect valid checksums in both AES-256-XTS/SHA512-VC headers of volume tmpvol1 with passphrase "test"
