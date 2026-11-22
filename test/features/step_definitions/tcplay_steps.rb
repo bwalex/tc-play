@@ -215,6 +215,7 @@ Given /^I modify volume ([^\s]+) using the following settings:$/ do |vol,setting
   ]
 
   @args << "--pim=#{Integer(s['pim'], 10)}" if s['pim']
+  @args << "--new-pim=#{Integer(s['new_pim'], 10)}" if s['new_pim']
   ParseHelper.csv_parse(s['keyfiles']) { |kf| @args << "-k \"keyfiles/#{kf}\"" } unless s['keyfiles'].nil?
   ParseHelper.csv_parse(s['new_keyfiles']) { |kf| @args << "--new-keyfile=\"keyfiles/#{kf}\"" } unless s['new_keyfiles'].nil?
 
@@ -223,6 +224,7 @@ Given /^I modify volume ([^\s]+) using the following settings:$/ do |vol,setting
 
   s['passphrase'] ||= ''
   s['new_passphrase'] ||= ''
+  new_passphrase_prompt = nil
 
   IO.popen("#{@tcplay} #{@args.join(' ')}", mode='r+') do |tcplay_io|
     unless ParseHelper.is_yes(s['prompt_skipped'])
@@ -231,17 +233,18 @@ Given /^I modify volume ([^\s]+) using the following settings:$/ do |vol,setting
       end
     end
 
-    tcplay_io.expect /New passphrase/, 60 do
+    new_passphrase_prompt = tcplay_io.expect(/New passphrase:/, 60)
+    if new_passphrase_prompt
       tcplay_io.write("#{s['new_passphrase']}\n")
-    end
 
-    tcplay_io.expect /Repeat/, 10 do
+      tcplay_io.expect(/Repeat passphrase:/, 10).should_not be_nil
       tcplay_io.write("#{s['new_passphrase']}\n")
     end
     tcplay_io.close_write
     tcplay_io.read
   end
   @error = ($? != 0)
+  new_passphrase_prompt.should_not be_nil unless @error
 end
 
 

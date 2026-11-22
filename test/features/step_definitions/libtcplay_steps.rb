@@ -390,8 +390,9 @@ Given(/^I modify volume ([^\s]+) with the API by saving a header copy to ([^\s]+
   r = TCplayLib.tc_api_task_set(task, "dev", :string, loop_dev)
   r.should == TCplayLib::TC_OK
 
-  if s['pim']
-    r = TCplayLib.tc_api_task_set(task, "pim", :int, Integer(s['pim'], 10))
+  %w[pim new_pim].each do |setting|
+    next unless s[setting]
+    r = TCplayLib.tc_api_task_set(task, setting, :int, Integer(s[setting], 10))
     r.should == TCplayLib::TC_OK
   end
 
@@ -402,11 +403,13 @@ Given(/^I modify volume ([^\s]+) with the API by saving a header copy to ([^\s]+
     end
   end
 
-  s['new_passphrase'] ||= s['passphrase']
+  s['new_passphrase'] ||= s['passphrase'] unless s['new_pim']
   r = TCplayLib.tc_api_task_set(task, "passphrase", :string, s['passphrase'] || '')
   r.should == TCplayLib::TC_OK
-  r = TCplayLib.tc_api_task_set(task, "new_passphrase", :string, s['new_passphrase'])
-  r.should == TCplayLib::TC_OK
+  if s['new_passphrase']
+    r = TCplayLib.tc_api_task_set(task, "new_passphrase", :string, s['new_passphrase'])
+    r.should == TCplayLib::TC_OK
+  end
 
   r = TCplayLib.tc_api_task_set(task, "save_header_to_file", :string, hdr_file)
   r.should == TCplayLib::TC_OK

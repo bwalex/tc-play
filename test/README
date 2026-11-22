@@ -91,6 +91,7 @@ The settings are specified in a table - the following are all possible settings:
 passphrase              | Any passphrase
 keyfiles                | path_to_kf1, path_to_kf2, ...
 pim                     | Current VeraCrypt PIM (CLI)
+new_pim                 | New VeraCrypt PIM, or 0 for the default (CLI)
 new_passphrase          | Any passphrase
 new_keyfiles            | path_to_kf1, path_to_kf2, ...
 new_pbkdf_prf           | Any valid tcplay PBKDF PRF
@@ -105,7 +106,7 @@ keyfiles                | path_to_kf1, path_to_kf2, ...
 pim                     | VeraCrypt PIM for the backup header
 
 The API steps for saving a header to a file and restoring it from a file also
-accept pim.
+accept pim. The save step accepts new_pim for the header written to the file.
 
 * "Then I expect dmsetup to have the following tables:"
 

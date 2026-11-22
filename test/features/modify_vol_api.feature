@@ -209,3 +209,30 @@ Feature: API volume modification
       | use_backup | yes    |
     Then I expect tcplay to report the following:
       | PBKDF2 iterations | 22000 |
+
+  Scenario: Reset the PIM on a saved header and keep the volume's original PIM
+    Given I create a volume tmpvol1 of size 10M using the API with the following parameters:
+      | passphrase | test      |
+      | pbkdf_prf  | SHA512-VC |
+      | pim        | 7         |
+    When I modify volume tmpvol1 with the API by saving a header copy to tmpvol1_pim_hdr using the following settings:
+      | passphrase | test |
+      | pim        | 7    |
+      | new_pim    | 0    |
+    Then I expect tcplay to succeed
+    When I request information about volume tmpvol1 using the following settings:
+      | passphrase  | test            |
+      | header_file | tmpvol1_pim_hdr |
+    Then I expect tcplay to report the following:
+      | PBKDF2 iterations | 500000 |
+    When I request information about volume tmpvol1 using the following settings:
+      | passphrase | test |
+      | pim        | 7    |
+    Then I expect tcplay to report the following:
+      | PBKDF2 iterations | 22000 |
+    When I request information about volume tmpvol1 using the following settings:
+      | passphrase | test |
+      | pim        | 7    |
+      | use_backup | yes  |
+    Then I expect tcplay to report the following:
+      | PBKDF2 iterations | 22000 |

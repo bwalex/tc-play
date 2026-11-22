@@ -273,3 +273,58 @@ Feature: Command line volume modification
     Then I expect tcplay to report the following:
       | PBKDF2 PRF        | SHA256-VC |
       | PBKDF2 iterations | 22000     |
+
+  Scenario Outline: Change the VeraCrypt PIM and keep or replace the passphrase
+    Given I create a volume tmpvol1 of size 10M with the following parameters:
+      | passphrase | test  |
+      | keyfiles   | key.1 |
+      | pim        | 7     |
+    When I modify volume tmpvol1 using the following settings:
+      | passphrase     | test             |
+      | keyfiles       | key.1            |
+      | pim            | 7                |
+      | new_passphrase | <new_passphrase> |
+      | new_pim        | 13               |
+    Then I expect tcplay to succeed
+    When I request information about volume tmpvol1 using the following settings:
+      | passphrase | <new_passphrase> |
+      | keyfiles   | key.1            |
+      | pim        | 7                |
+    Then I expect tcplay to fail
+    When I request information about volume tmpvol1 using the following settings:
+      | passphrase | <new_passphrase> |
+      | keyfiles   | key.1            |
+      | pim        | 13               |
+    Then I expect tcplay to report the following:
+      | PBKDF2 iterations | 28000 |
+    When I request information about volume tmpvol1 using the following settings:
+      | passphrase | <new_passphrase> |
+      | keyfiles   | key.1            |
+      | pim        | 13               |
+      | use_backup | yes              |
+    Then I expect tcplay to report the following:
+      | PBKDF2 iterations | 28000 |
+
+    Examples:
+      | new_passphrase |
+      | test           |
+      | changed        |
+
+  Scenario: Reject a new PIM on a TrueCrypt volume even when a VeraCrypt PRF is requested
+    Given I create a volume tmpvol1 of size 10M with the following parameters:
+      | passphrase | test   |
+      | pbkdf_prf  | SHA512 |
+    When I modify volume tmpvol1 using the following settings:
+      | passphrase    | test      |
+      | new_pbkdf_prf | SHA512-VC |
+      | new_pim       | 7         |
+    Then I expect tcplay to fail
+    When I request information about volume tmpvol1 using the following settings:
+      | passphrase | test |
+    Then I expect tcplay to report the following:
+      | Signature | TRUE |
+    When I request information about volume tmpvol1 using the following settings:
+      | passphrase | test |
+      | use_backup | yes  |
+    Then I expect tcplay to report the following:
+      | Signature | TRUE |
