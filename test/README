@@ -6,8 +6,6 @@ and are grouped by Feature.
 The .feature files in features/ contain the Scenarios. What each step in a
 scenario does is defined in the step_definitions files.
 
-
-
 Running the tests
 ============
 To run the tests, you first need to bootstrap the environment. Running the
@@ -26,7 +24,6 @@ To be able to run the tests, you need to have 'libtcplay.so' and 'tcplay' in
 the source directory. To get them, just change to the source directory and run
 
     make -f Makefile.classic clean all
-
 
 Steps
 ============
@@ -48,8 +45,6 @@ keyfiles_hidden         | path_to_kf1, path_to_kf2, ...
 pim_hidden              | Hidden volume PIM with protect_hidden enabled
 use_backup              | yes/no
 
-
-
 * "Given I request information about volume <volume_name> using the following settings:"
 * "Given I request information about volume <volume_name> with the API using the following settings:"
 
@@ -64,14 +59,10 @@ keyfiles_hidden         | path_to_kf1, path_to_kf2, ...
 pim_hidden              | Hidden volume PIM with protect_hidden enabled (CLI)
 use_backup              | yes/no
 
-
-
 * "Given I request information about mapped volume <map_name>"
 * "Given I request information about mapped volume <map_name> with the API"
 
 Where <map_name> is the mapped name of a volume previously mapped.
-
-
 
 * "Given I create a volume <volume_name> of size <size_mb>M with the following parameters:"
 * "Given I create a volume <volume_name> of size <size_mb>M using the API with the following parameters:"
@@ -92,8 +83,6 @@ pim_hidden              | VeraCrypt PIM for the new hidden volume
 pbkdf_prf_hidden        | Any valid tcplay PBKDF PRF
 cipher_hidden           | Any valid tcplay cipher chain
 
-
-
 * "Given I modify volume <volume_name> using the following settings:"
 * "Given I modify volume <volume_name> with the API using the following settings:"
 
@@ -107,8 +96,6 @@ new_keyfiles            | path_to_kf1, path_to_kf2, ...
 new_pbkdf_prf           | Any valid tcplay PBKDF PRF
 use_backup              | yes/no
 
-
-
 * "Given I modify volume <volume_name> by restoring from the backup header using the following settings:"
 
 Where <volume_name> is a file name containing a volume.
@@ -119,8 +106,6 @@ pim                     | VeraCrypt PIM for the backup header
 
 The API steps for saving a header to a file and restoring it from a file also
 accept pim.
-
-
 
 * "Then I expect dmsetup to have the following tables:"
 
@@ -133,8 +118,6 @@ algo                    | Algorithm used for dm-crypt
 key                     | The master key, in hexadecimal
 offset                  | The offset on the raw device at which the volume starts
 iv_offset               | The IV offset
-
-
 
 * "Then I expect tcplay to report the following:"
 
@@ -164,11 +147,7 @@ The "Given I request information about mapped volume" steps will
 generate the same information, except the PBKDF2 and CRC Key Data
 fields will be missing.
 
-
-
 * "Then I expect tcplay to succeed"
-
-
 
 * "Then I expect tcplay to fail"
 
