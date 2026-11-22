@@ -57,7 +57,7 @@ struct sig_hdr_cfg {
 
 struct sig_hdr_cfg sig_hdr_cfgs[] = {
 	{ TC_SIG,	0x0007 },
-	{ VC_SIG,	0x0b01 },
+	{ VC_SIG,	VC_MIN_VER },
 	{ NULL,		0x0000 }
 };
 

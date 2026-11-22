@@ -82,6 +82,7 @@
 .Fl -modify
 .Fl d Ar device
 .Op Fl -pim Ar number
+.Op Fl -new-pim Ar number
 .Op Fl k Ar keyfile
 .Op Fl -new-keyfile Ar new_keyfile
 .Op Fl -new-pbkdf-prf Ar pbkdf_hash
@@ -128,8 +129,8 @@ Information such as key CRC and the PBKDF2 PRF is not available
 via this command.
 .It Fl -modify
 Modify the volume header.
-This mode allows changing passphrase, keyfiles, PBKDF2 PRF as
-well as restoring from a backup header.
+This mode can change the passphrase, keyfiles, PBKDF2 PRF or VeraCrypt PIM.
+It can also restore the volume header from a backup.
 .It Fl m Ar mapping , Fl -map Ns = Ns Ar mapping
 Map the encrypted TrueCrypt volume on the device specified by
 .Fl -device
@@ -195,10 +196,9 @@ count to 15,000 plus 1,000 times the PIM.
 When creating or modifying a volume with a positive PIM, the selected PRF
 must be a VeraCrypt PRF.
 A newly created volume uses the same PIM for its primary and backup headers.
-The
-.Fl -modify
-command keeps the current PIM when writing the primary and backup headers
-or saving a header to a file.
+With
+.Fl -modify ,
+this is the current PIM used to open the header.
 .It Fl -pim-hidden Ns = Ns Ar number
 Specifies the hidden volume's PIM when creating it with
 .Fl -hidden
@@ -345,6 +345,22 @@ Additional options only for the
 .Fl -modify
 command are:
 .Bl -tag -width indent
+.It Fl -new-pim Ns = Ns Ar number
+Sets the PIM for both headers of an existing non-system VeraCrypt volume.
+The volume must use the format with an on-device backup header.
+The range is the same as for
+.Fl -pim .
+Omitting this option keeps the current PIM.
+Zero restores the standard iteration count for the selected VeraCrypt PRF.
+The command prompts for the new passphrase and its confirmation.
+To change only the PIM, enter the current passphrase at both prompts.
+The current keyfiles are reused unless
+.Fl -new-keyfile
+is specified.
+Changing the PIM preserves the data encryption keys.
+With
+.Fl -save-hdr-backup ,
+only the saved copy uses the new PIM.
 .It Fl -new-pbkdf-prf Ns = Ns Ar pbkdf_hash
 Specifies which hash algorithm to use for the PBKDF2 password
 derivation on reencrypting the volume header.
@@ -360,11 +376,13 @@ volume header.
 This option can appear multiple times; if so, multiple
 keyfiles will be used.
 .It Fl -restore-from-backup-hdr
-If this option is specified, neither
+This option cannot be combined with
+.Fl -new-pim
+or
+.Fl -new-keyfile .
+Restoration uses the PRF of the backup header, so
 .Fl -new-pbkdf-prf
-nor
-.Fl -new-keyfile
-should be specified.
+should be omitted.
 This option implies
 .Fl -use-backup .
 Restoring both volume headers requires the passphrase and keyfiles of the

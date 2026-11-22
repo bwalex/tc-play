@@ -38,6 +38,7 @@
 #define HDR_OFFSET_SYS		31744	/* 512 * (63 -1) */
 #define TC_SIG			"TRUE"
 #define VC_SIG			"VERA"
+#define VC_MIN_VER		0x0b01	/* 01 0b on disk, read as little-endian */
 #define MAX_PASSSZ		64
 #define MAX_PIM_VALUE		2147468	/* VeraCrypt limit for a signed 32-bit iteration count */
 #define PASS_BUFSZ		256
@@ -227,6 +228,7 @@ struct tcplay_opts {
 	const char	*h_hdr_file_in;
 
 	/* Options for modify only */
+	int		new_pim;	/* -1 when omitted */
 	struct pbkdf_prf_algo	*new_prf_algo;
 	const char	*new_passphrase;
 	const char	*hdr_file_out;

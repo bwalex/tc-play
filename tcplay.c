@@ -449,11 +449,17 @@ adjust_info(struct tcplay_info *info, struct tcplay_info *hinfo)
 }
 
 static int
+supports_pim(const struct pbkdf_prf_algo *prf)
+{
+	return !prf->sys && strcmp(prf->sig, VC_SIG) == 0;
+}
+
+static int
 apply_pim(struct pbkdf_prf_algo *prf, int pim)
 {
 	if (pim <= 0)
 		return 0;
-	if (prf->sys || strcmp(prf->sig, VC_SIG) != 0)
+	if (!supports_pim(prf))
 		return EINVAL;
 	prf->iteration_count = 15000 + pim * 1000;
 	return 0;
@@ -1248,6 +1254,9 @@ modify_volume(struct tcplay_opts *opts)
 	const char **new_keyfiles = opts->new_keyfiles;
 	struct pbkdf_prf_algo prf;
 	int n_newkeyfiles = opts->n_newkeyfiles;
+	int restore = TC_FLAG_SET(opts->flags, ONLY_RESTORE);
+	int change_pim = opts->new_pim >= 0;
+	int write_pim = change_pim ? opts->new_pim : opts->pim;
 	char *pass, *pass_again;
 	int ret = -1;
 	off_t offset, offset_backup = 0;
@@ -1260,7 +1269,12 @@ modify_volume(struct tcplay_opts *opts)
 	pass = pass_again = NULL;
 	info = NULL;
 
-	if (TC_FLAG_SET(opts->flags, ONLY_RESTORE)) {
+	if (change_pim && (restore || (opts->flags & (TC_FLAG_SYS | TC_FLAG_FDE)))) {
+		tc_log(1, "A new PIM can only be set when modifying a non-system VeraCrypt volume\n");
+		errno = EINVAL;
+		goto out;
+	}
+	if (restore) {
 		if (opts->interactive) {
 			if ((pass = alloc_safe_mem(PASS_BUFSZ)) == NULL) {
 				tc_log(1, "could not allocate safe "
@@ -1270,6 +1284,8 @@ modify_volume(struct tcplay_opts *opts)
 		} else {
 			new_passphrase = opts->passphrase;
 		}
+	}
+	if (restore || (change_pim && n_newkeyfiles == 0)) {
 		new_keyfiles = opts->keyfiles;
 		n_newkeyfiles = opts->nkeyfiles;
 	}
@@ -1278,17 +1294,24 @@ modify_volume(struct tcplay_opts *opts)
 	if (info == NULL)
 		goto out;
 
-	/* By default stick to current PRF algo */
-	prf = *info->pbkdf_prf;
-	if (opts->new_prf_algo != NULL && !TC_FLAG_SET(opts->flags, ONLY_RESTORE))
-		prf = *opts->new_prf_algo;
-	if (apply_pim(&prf, opts->pim) != 0) {
-		tc_log(1, "A positive PIM requires a VeraCrypt PRF\n");
+	if (change_pim && (!supports_pim(info->pbkdf_prf) || info->hdr->tc_min_ver != VC_MIN_VER)) {
+		tc_log(1, "Changing the PIM requires a VeraCrypt volume with primary and backup headers\n");
 		errno = EINVAL;
 		goto out;
 	}
 
-	if (opts->interactive && !TC_FLAG_SET(opts->flags, ONLY_RESTORE)) {
+	/* By default stick to current PRF algo */
+	prf = *info->pbkdf_prf;
+	if (opts->new_prf_algo != NULL && !restore)
+		prf = *opts->new_prf_algo;
+	if ((change_pim && !supports_pim(&prf)) ||
+	    apply_pim(&prf, write_pim) != 0) {
+		tc_log(1, "This PIM setting requires a VeraCrypt PRF\n");
+		errno = EINVAL;
+		goto out;
+	}
+
+	if (opts->interactive && !restore) {
 		if (((pass = alloc_safe_mem(PASS_BUFSZ)) == NULL) ||
 		   ((pass_again = alloc_safe_mem(PASS_BUFSZ)) == NULL)) {
 			tc_log(1, "could not allocate safe passphrase memory\n");
@@ -1318,6 +1341,8 @@ modify_volume(struct tcplay_opts *opts)
 			goto out;
 		}
 
+		if (change_pim && new_passphrase == NULL)
+			new_passphrase = opts->passphrase;
 		if (new_passphrase != NULL) {
 			strncpy(pass, new_passphrase, MAX_PASSSZ);
 			pass[MAX_PASSSZ] = '\0';
@@ -2154,6 +2179,7 @@ struct tcplay_opts *opts_init(void)
 
 	opts->retries = DEFAULT_RETRIES;
 	opts->h_pim = -1;
+	opts->new_pim = -1;
 	opts->secure_erase = 1;
 
 	return opts;

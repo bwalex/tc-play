@@ -111,6 +111,7 @@ library supports the following features:
 .It Li trim            Ta    Allows enabling discards/TRIM when mapping a volume
 .It Li pim             Ta    Supports the VeraCrypt PIM for create, info, map, modify and restore operations
 .It Li h_pim           Ta    Supports a separate PIM when creating or protecting a hidden volume
+.It Li new_pim         Ta    Supports changing the PIM of an existing VeraCrypt volume
 .El
 .Pp
 The
@@ -172,12 +173,14 @@ Request information about a mapped TrueCrypt volume.
 .It Sy unmap
 Unmap a mapped TrueCrypt volume.
 .It Sy modify
-Modify the TrueCrypt volume by changing the passphrase, keyfiles, PRF algorithm,
-restoring from a backup header, restoring from a header file or saving to a header file.
+Change the passphrase, keyfiles, PRF algorithm or VeraCrypt PIM.
+The header can be read from a backup and the modified header can be saved to a file.
 .It Sy restore
-Modify the TrueCrypt volume as
-.Sy modify
-does, but without changing the passphrase, keyfiles or PRF algorithm.
+Restore the volume headers using the passphrase, keyfiles, PIM and PRF of the
+source header.
+To use the backup header on the device, set
+.Fa use_backup_header
+to 1.
 .El
 .Pp
 The
@@ -224,6 +227,7 @@ indicates the setting is optional.
 .It Li new_passphrase           Ta           Ta         Ta        Ta          Ta                Ta    "*"    Ta    ""
 .It Li new_keyfiles             Ta           Ta         Ta        Ta          Ta                Ta    "*"    Ta    ""
 .It Li new_prf_algo             Ta           Ta         Ta        Ta          Ta                Ta    "*"    Ta    ""
+.It Li new_pim                  Ta           Ta         Ta        Ta          Ta                Ta    "*"    Ta    ""
 .El
 The varargs accepted by the
 .Fn tc_api_task_set
@@ -311,8 +315,7 @@ options require a PIM of zero.
 Zero or an omitted option uses the default iteration count of each PRF.
 The
 .Sy modify
-operation keeps the current PIM when writing the primary and backup headers
-or saving a header to a file.
+operation uses this PIM to open the current header.
 The
 .Sy restore
 operation uses the PIM, passphrase and keyfiles of the header being restored.
@@ -463,6 +466,28 @@ The vararg is of type
 and must be a valid PBKDF2 PRF algorithm.
 It determines which PBKDF2 PRF algorithm is used when reencrypting the (modified)
 volume header.
+.It new_pim
+The vararg is of type
+.Ft int .
+It sets the PIM for both headers of an existing non-system VeraCrypt volume.
+The volume must use the format with an on-device backup header.
+The range is the same as for
+.Fa pim .
+Omitting this option keeps the current PIM.
+Zero restores the standard iteration count for the selected VeraCrypt PRF.
+In interactive mode, the new passphrase is requested and confirmed.
+To keep the current passphrase, enter it at both prompts.
+In batch mode, omitting
+.Fa new_passphrase
+keeps the current passphrase.
+The current keyfiles are reused unless replacement keyfiles are supplied with
+.Fa new_keyfiles .
+Changing the PIM preserves the data encryption keys.
+With
+.Fa save_header_to_file ,
+only the saved copy uses the new PIM.
+This option cannot be used with
+.Sy restore .
 .It state_change_fn
 The first vararg is of type
 .Fa tc_api_state_change_fn
