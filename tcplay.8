@@ -236,9 +236,11 @@ and
 commands are:
 .Bl -tag -width indent
 .It Fl e, Fl -protect-hidden
-Specifies that an outer volume will be queried or mapped, but
-its reported size will be adjusted accordingly to the size of
-the hidden volume contained in it.
+Limits the outer volume to the sectors before the start of the hidden volume.
+The same limit applies to the size reported by
+.Fl -info
+and to the device created by
+.Fl -map .
 Both the hidden volume and outer volume passphrase and keyfiles
 will be required.
 This option only applies to the
