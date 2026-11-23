@@ -6,8 +6,6 @@ and are grouped by Feature.
 The .feature files in features/ contain the Scenarios. What each step in a
 scenario does is defined in the step_definitions files.
 
-
-
 Running the tests
 ============
 To run the tests, you first need to bootstrap the environment. Running the
@@ -27,7 +25,6 @@ the source directory. To get them, just change to the source directory and run
 
     make -f Makefile.classic clean all
 
-
 Steps
 ============
 The tcplay tests have the following step definitions, some of which use the command line
@@ -41,12 +38,12 @@ name of the mapped device.
 The settings are specified in a table - the following are all possible settings:
 passphrase              | Any passphrase
 keyfiles                | path_to_kf1, path_to_kf2, ...
+pim                     | VeraCrypt PIM for the volume being opened
 protect_hidden          | yes/no
 passphrase_hidden       | Any passphrase
 keyfiles_hidden         | path_to_kf1, path_to_kf2, ...
+pim_hidden              | Hidden volume PIM with protect_hidden enabled
 use_backup              | yes/no
-
-
 
 * "Given I request information about volume <volume_name> using the following settings:"
 * "Given I request information about volume <volume_name> with the API using the following settings:"
@@ -55,19 +52,17 @@ Where <volume_name> is a file name containing a volume.
 The settings are specified in a table - the following are all possible settings:
 passphrase              | Any passphrase
 keyfiles                | path_to_kf1, path_to_kf2, ...
+pim                     | VeraCrypt PIM for the volume being opened (CLI)
 protect_hidden          | yes/no
 passphrase_hidden       | Any passphrase
 keyfiles_hidden         | path_to_kf1, path_to_kf2, ...
+pim_hidden              | Hidden volume PIM with protect_hidden enabled (CLI)
 use_backup              | yes/no
-
-
 
 * "Given I request information about mapped volume <map_name>"
 * "Given I request information about mapped volume <map_name> with the API"
 
 Where <map_name> is the mapped name of a volume previously mapped.
-
-
 
 * "Given I create a volume <volume_name> of size <size_mb>M with the following parameters:"
 * "Given I create a volume <volume_name> of size <size_mb>M using the API with the following parameters:"
@@ -77,16 +72,16 @@ created volume. Its size will be <size_mb> MB.
 The parameters are specified in a table - the following are all possible parameters:
 passphrase              | Any passphrase
 keyfiles                | path_to_kf1, path_to_kf2, ...
+pim                     | VeraCrypt PIM for the new volume
 pbkdf_prf               | Any valid tcplay PBKDF PRF
 cipher                  | Any valid tcplay cipher chain
 create_hidden           | yes/no
 hidden_mb               | A numeric size, e.g. 5.5 (meaning 5.5 MB)
 passphrase_hidden       | Any passphrase
 keyfiles_hidden         | path_to_kf1, path_to_kf2, ...
+pim_hidden              | VeraCrypt PIM for the new hidden volume
 pbkdf_prf_hidden        | Any valid tcplay PBKDF PRF
 cipher_hidden           | Any valid tcplay cipher chain
-
-
 
 * "Given I modify volume <volume_name> using the following settings:"
 * "Given I modify volume <volume_name> with the API using the following settings:"
@@ -95,12 +90,12 @@ Where <volume_name> is a file name containing a volume.
 The settings are specified in a table - the following are all possible settings:
 passphrase              | Any passphrase
 keyfiles                | path_to_kf1, path_to_kf2, ...
+pim                     | Current VeraCrypt PIM (CLI)
+new_pim                 | New VeraCrypt PIM, or 0 for the default (CLI)
 new_passphrase          | Any passphrase
 new_keyfiles            | path_to_kf1, path_to_kf2, ...
 new_pbkdf_prf           | Any valid tcplay PBKDF PRF
 use_backup              | yes/no
-
-
 
 * "Given I modify volume <volume_name> by restoring from the backup header using the following settings:"
 
@@ -108,8 +103,10 @@ Where <volume_name> is a file name containing a volume.
 The settings are specified in a table - the following are all possible settings:
 passphrase              | Any passphrase
 keyfiles                | path_to_kf1, path_to_kf2, ...
+pim                     | VeraCrypt PIM for the backup header
 
-
+The API steps for saving a header to a file and restoring it from a file also
+accept pim. The save step accepts new_pim for the header written to the file.
 
 * "Then I expect dmsetup to have the following tables:"
 
@@ -117,13 +114,11 @@ The tables that should have been created by a previous "Given I map..." are
 specified as a table with the following headers:
 name                    | Name of the mapped volume
 begin                   | First sector of the table
-end                     | Last sector of the table
+end                     | Length of the table in sectors, as reported by dmsetup
 algo                    | Algorithm used for dm-crypt
 key                     | The master key, in hexadecimal
 offset                  | The offset on the raw device at which the volume starts
 iv_offset               | The IV offset
-
-
 
 * "Then I expect tcplay to report the following:"
 
@@ -153,10 +148,10 @@ The "Given I request information about mapped volume" steps will
 generate the same information, except the PBKDF2 and CRC Key Data
 fields will be missing.
 
-
-
 * "Then I expect tcplay to succeed"
 
-
-
 * "Then I expect tcplay to fail"
+
+* "Then I expect no mapping named <map_name>"
+
+Checks that /dev/mapper/<map_name> does not exist after a mapping attempt.

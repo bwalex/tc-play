@@ -101,3 +101,53 @@ Feature: API volume creation
       | Volume size        | 2097152 bytes               |
       | IV offset          | 8257536 bytes               |
       | Block offset       | 8257536 bytes               |
+
+  Scenario: Create outer and hidden VeraCrypt volumes with separate PIMs
+    Given I create a volume tmpvol1 of size 10M using the API with the following parameters:
+      | passphrase        | outer-volume-test-password      |
+      | keyfiles          | key.1                           |
+      | pbkdf_prf         | SHA512-VC                       |
+      | pim               | 7                               |
+      | create_hidden     | yes                             |
+      | hidden_mb         | 2                               |
+      | passphrase_hidden | hidden-volume-test-password     |
+      | keyfiles_hidden   | key.1, key.2                    |
+      | cipher_hidden     | AES-256-XTS,SERPENT-256-XTS     |
+      | pim_hidden        | 13                              |
+    Then I expect tcplay to succeed
+    When I request information about volume tmpvol1 using the following settings:
+      | passphrase | outer-volume-test-password |
+      | keyfiles   | key.1                      |
+      | pim        | 7                          |
+    Then I expect tcplay to report the following:
+      | PBKDF2 iterations | 22000         |
+      | Volume size       | 19968 sectors |
+    When I request information about volume tmpvol1 using the following settings:
+      | passphrase | hidden-volume-test-password |
+      | keyfiles   | key.1, key.2                |
+      | pim        | 13                          |
+    Then I expect tcplay to report the following:
+      | PBKDF2 iterations | 28000                       |
+      | Cipher            | AES-256-XTS,SERPENT-256-XTS |
+      | Volume size       | 4096 sectors                |
+    When I request information about volume tmpvol1 using the following settings:
+      | passphrase | outer-volume-test-password |
+      | keyfiles   | key.1                      |
+      | pim        | 7                          |
+      | use_backup | yes                        |
+    Then I expect tcplay to report the following:
+      | PBKDF2 iterations | 22000         |
+      | Volume size       | 19968 sectors |
+    When I request information about volume tmpvol1 using the following settings:
+      | passphrase | hidden-volume-test-password |
+      | keyfiles   | key.1, key.2                |
+      | pim        | 13                          |
+      | use_backup | yes                         |
+    Then I expect tcplay to report the following:
+      | PBKDF2 iterations | 28000        |
+      | Volume size       | 4096 sectors |
+    When I request information about volume tmpvol1 using the following settings:
+      | passphrase | hidden-volume-test-password |
+      | keyfiles   | key.1, key.2                |
+      | pim        | 7                           |
+    Then I expect tcplay to fail
